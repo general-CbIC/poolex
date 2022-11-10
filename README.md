@@ -1,6 +1,6 @@
 # Poolex
 
-**TODO: Add description**
+Pure elixir pool manager.
 
 ## Installation
 
