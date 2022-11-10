@@ -17,8 +17,8 @@ defmodule Poolex do
     :ok
   end
 
-  @spec get_state() :: Poolex.State.t()
-  def get_state do
+  @spec get_state(pool_id()) :: Poolex.State.t()
+  def get_state(_pool_id) do
     %Poolex.State{}
   end
 
