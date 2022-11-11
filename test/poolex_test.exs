@@ -48,4 +48,37 @@ defmodule PoolexTest do
       assert state.worker_args == [fn 0 -> 0 end]
     end
   end
+
+  describe "run/2" do
+    test "updates worker's state" do
+      Poolex.start_link(@pool_name,
+        worker_module: Agent,
+        worker_args: fn 0 -> 0 end,
+        workers_count: 1
+      )
+
+      Poolex.run(@pool_name, fn pid -> Agent.update(pid, fn _state -> 1 end) end)
+
+      [agent_pid] = Poolex.get_state(@pool_name).idle_workers_pids
+
+      assert 1 == Agent.get(agent_pid, fn state -> state end)
+    end
+  end
+
+  describe "restarting terminated processes" do
+    test "works" do
+      Poolex.start_link(@pool_name,
+        worker_module: Agent,
+        worker_args: fn 0 -> 0 end,
+        workers_count: 1
+      )
+
+      [agent_pid] = Poolex.get_state(@pool_name).idle_workers_pids
+
+      Process.exit(agent_pid, :normal)
+
+      [new_agent_pid] = Poolex.get_state(@pool_name).idle_workers_pids
+      assert agent_pid != new_agent_pid
+    end
+  end
 end
