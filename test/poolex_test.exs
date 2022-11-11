@@ -6,9 +6,11 @@ defmodule PoolexTest do
 
   describe "state" do
     test "valid after initialization" do
+      initial_fun = fn -> 0 end
+
       Poolex.start_link(@pool_name,
         worker_module: Agent,
-        worker_args: fn 0 -> 0 end,
+        worker_args: [initial_fun],
         workers_count: 5
       )
 
@@ -20,13 +22,13 @@ defmodule PoolexTest do
       assert state.idle_workers_count == 5
       assert Enum.count(state.idle_workers_pids) == 5
       assert state.worker_module == Agent
-      assert state.worker_args == [fn 0 -> 0 end]
+      assert state.worker_args == [initial_fun]
     end
 
     test "valid after holding some workers" do
       Poolex.start_link(@pool_name,
         worker_module: Agent,
-        worker_args: fn 0 -> 0 end,
+        worker_args: [fn -> 0 end],
         workers_count: 5
       )
 
@@ -45,7 +47,7 @@ defmodule PoolexTest do
       assert state.idle_workers_count == 4
       assert Enum.count(state.idle_workers_pids) == 4
       assert state.worker_module == Agent
-      assert state.worker_args == [fn 0 -> 0 end]
+      assert state.worker_args == [fn -> 0 end]
     end
   end
 
@@ -53,7 +55,7 @@ defmodule PoolexTest do
     test "updates worker's state" do
       Poolex.start_link(@pool_name,
         worker_module: Agent,
-        worker_args: fn 0 -> 0 end,
+        worker_args: [fn -> 0 end],
         workers_count: 1
       )
 
@@ -69,7 +71,7 @@ defmodule PoolexTest do
     test "works" do
       Poolex.start_link(@pool_name,
         worker_module: Agent,
-        worker_args: fn 0 -> 0 end,
+        worker_args: [fn -> 0 end],
         workers_count: 1
       )
 
