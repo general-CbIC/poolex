@@ -17,8 +17,12 @@ defmodule Poolex do
   @spec run(pool_id(), (worker :: pid() -> any())) :: :ok | {:error, :all_workers_are_busy}
   def run(pool_id, fun) do
     case GenServer.call(pool_id, :get_idle_worker) do
-      {:ok, pid} -> fun.(pid)
-      error -> error
+      {:ok, pid} ->
+        fun.(pid)
+        GenServer.cast(pool_id, {:release_busy_worker, pid})
+
+      error ->
+        error
     end
   end
 
@@ -86,5 +90,25 @@ defmodule Poolex do
 
   def handle_call(:get_state, _from, state) do
     {:reply, state, state}
+  end
+
+  def handle_cast(
+        {:release_busy_worker, worker_pid},
+        %State{
+          busy_workers_pids: busy_workers_pids,
+          busy_workers_count: busy_workers_count,
+          idle_workers_pids: idle_workers_pids,
+          idle_workers_count: idle_workers_count
+        } = state
+      ) do
+    state = %State{
+      state
+      | busy_workers_count: busy_workers_count - 1,
+        busy_workers_pids: List.delete(busy_workers_pids, worker_pid),
+        idle_workers_count: idle_workers_count + 1,
+        idle_workers_pids: [worker_pid | idle_workers_pids]
+    }
+
+    {:noreply, state}
   end
 end
