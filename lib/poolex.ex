@@ -14,14 +14,17 @@ defmodule Poolex do
     GenServer.start_link(__MODULE__, opts, name: pool_id)
   end
 
-  @spec run(pool_id(), (worker :: pid() -> any())) :: :ok
-  def run(_pool_id, _fun) do
-    :ok
+  @spec run(pool_id(), (worker :: pid() -> any())) :: :ok | {:error, :all_workers_are_busy}
+  def run(pool_id, fun) do
+    case GenServer.call(pool_id, :get_idle_worker) do
+      {:ok, pid} -> fun.(pid)
+      error -> error
+    end
   end
 
   @spec get_state(pool_id()) :: State.t()
   def get_state(pool_id) do
-    :sys.get_state(pool_id)
+    GenServer.call(pool_id, :get_state)
   end
 
   def init(opts) do
@@ -52,5 +55,36 @@ defmodule Poolex do
   defp start_workers(workers_count, worker_module, worker_args, workers_pids) do
     {:ok, pid} = apply(worker_module, :start_link, worker_args)
     start_workers(workers_count - 1, worker_module, worker_args, [pid | workers_pids])
+  end
+
+  def handle_call(:get_idle_worker, _from, %State{idle_workers_count: 0} = state) do
+    {:reply, {:error, :all_workers_are_busy}, state}
+  end
+
+  def handle_call(
+        :get_idle_worker,
+        _from,
+        %State{
+          idle_workers_count: idle_workers_count,
+          idle_workers_pids: idle_workers_pids,
+          busy_workers_count: busy_workers_count,
+          busy_workers_pids: busy_workers_pids
+        } = state
+      ) do
+    [idle_worker_pid | rest_idle_workers_pids] = idle_workers_pids
+
+    state = %State{
+      state
+      | idle_workers_count: idle_workers_count - 1,
+        idle_workers_pids: rest_idle_workers_pids,
+        busy_workers_count: busy_workers_count + 1,
+        busy_workers_pids: [idle_worker_pid | busy_workers_pids]
+    }
+
+    {:reply, {:ok, idle_worker_pid}, state}
+  end
+
+  def handle_call(:get_state, _from, state) do
+    {:reply, state, state}
   end
 end

@@ -26,9 +26,11 @@ defmodule PoolexTest do
     end
 
     test "valid after holding some workers" do
+      initial_fun = fn -> 0 end
+
       Poolex.start_link(@pool_name,
         worker_module: Agent,
-        worker_args: [fn -> 0 end],
+        worker_args: [initial_fun],
         workers_count: 5
       )
 
@@ -39,6 +41,9 @@ defmodule PoolexTest do
         end)
       end)
 
+      # Is it the best way to wait spawn?
+      :timer.sleep(100)
+
       state = Poolex.get_state(@pool_name)
 
       assert state.__struct__ == Poolex.State
@@ -47,7 +52,7 @@ defmodule PoolexTest do
       assert state.idle_workers_count == 4
       assert Enum.count(state.idle_workers_pids) == 4
       assert state.worker_module == Agent
-      assert state.worker_args == [fn -> 0 end]
+      assert state.worker_args == [initial_fun]
     end
   end
 
