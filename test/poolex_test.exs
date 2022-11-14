@@ -34,15 +34,18 @@ defmodule PoolexTest do
         workers_count: 5
       )
 
+      test_process = self()
+
       spawn(fn ->
         Poolex.run(@pool_name, fn _pid ->
+          Process.send(test_process, nil, [])
           :timer.sleep(:timer.seconds(5))
-          :ok
         end)
       end)
 
-      # Is it the best way to wait spawn?
-      :timer.sleep(100)
+      receive do
+        _message -> nil
+      end
 
       state = Poolex.get_state(@pool_name)
 
