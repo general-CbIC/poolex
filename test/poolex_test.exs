@@ -85,9 +85,13 @@ defmodule PoolexTest do
 
       [agent_pid] = Poolex.get_state(@pool_name).idle_workers_pids
 
-      Process.exit(agent_pid, :normal)
+      Process.exit(agent_pid, :kill)
+
+      # To be sure that DOWN message will be handed
+      :timer.sleep(1)
 
       [new_agent_pid] = Poolex.get_state(@pool_name).idle_workers_pids
+
       assert agent_pid != new_agent_pid
     end
   end
