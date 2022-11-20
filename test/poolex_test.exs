@@ -76,7 +76,7 @@ defmodule PoolexTest do
   end
 
   describe "restarting terminated processes" do
-    test "works" do
+    test "works on idle workers" do
       Poolex.start_link(@pool_name,
         worker_module: Agent,
         worker_args: [fn -> 0 end],
@@ -84,6 +84,38 @@ defmodule PoolexTest do
       )
 
       [agent_pid] = Poolex.get_state(@pool_name).idle_workers_pids
+
+      Process.exit(agent_pid, :kill)
+
+      # To be sure that DOWN message will be handed
+      :timer.sleep(1)
+
+      [new_agent_pid] = Poolex.get_state(@pool_name).idle_workers_pids
+
+      assert agent_pid != new_agent_pid
+    end
+
+    test "works on busy workers" do
+      Poolex.start_link(@pool_name,
+        worker_module: Agent,
+        worker_args: [fn -> 0 end],
+        workers_count: 1
+      )
+
+      test_process = self()
+
+      spawn(fn ->
+        Poolex.run(@pool_name, fn _pid ->
+          Process.send(test_process, nil, [])
+          :timer.sleep(:timer.seconds(5))
+        end)
+      end)
+
+      receive do
+        _message -> nil
+      end
+
+      [agent_pid] = Poolex.get_state(@pool_name).busy_workers_pids
 
       Process.exit(agent_pid, :kill)
 
