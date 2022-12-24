@@ -1,4 +1,5 @@
 defmodule Poolex.State do
+  @moduledoc false
   defstruct busy_workers_count: 0,
             busy_workers_pids: [],
             idle_workers_count: 0,
