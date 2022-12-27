@@ -60,7 +60,7 @@ defmodule PoolexTest do
   end
 
   describe "run/2" do
-    test "updates worker's state" do
+    test "updates agent's state" do
       Poolex.start_link(@pool_name,
         worker_module: Agent,
         worker_args: [fn -> 0 end],
@@ -72,6 +72,18 @@ defmodule PoolexTest do
       [agent_pid] = Poolex.get_state(@pool_name).idle_workers_pids
 
       assert 1 == Agent.get(agent_pid, fn state -> state end)
+    end
+
+    test "get result from custom worker" do
+      Poolex.start_link(@pool_name,
+        worker_module: SomeWorker,
+        worker_args: [],
+        workers_count: 2
+      )
+
+      Poolex.run(@pool_name, fn pid ->
+        assert :some_result == GenServer.call(pid, :do_some_work)
+      end)
     end
   end
 
