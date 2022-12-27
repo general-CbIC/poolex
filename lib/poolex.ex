@@ -1,4 +1,7 @@
 defmodule Poolex do
+  @moduledoc """
+  Poolex is a simple process pool manager.
+  """
   use GenServer
 
   alias Poolex.State
@@ -7,6 +10,7 @@ defmodule Poolex do
   @type pool_id() :: atom()
   @type poolex_option() ::
           {:worker_module, module()}
+          | {:worker_start_fun, atom()}
           | {:worker_args, list(any())}
           | {:workers_count, pos_integer()}
 
@@ -36,16 +40,22 @@ defmodule Poolex do
     worker_module = Keyword.fetch!(opts, :worker_module)
     workers_count = Keyword.fetch!(opts, :workers_count)
 
+    worker_start_fun = Keyword.get(opts, :worker_start_fun, :start)
     worker_args = Keyword.get(opts, :worker_args, [])
-
-    worker_pids = start_workers(workers_count, worker_module, worker_args)
 
     {:ok, monitor_id} = Monitoring.init(pool_id)
 
-    Enum.each(worker_pids, &Monitoring.add(monitor_id, &1))
+    worker_pids =
+      Enum.map(1..workers_count, fn _ ->
+        {:ok, worker_pid} = start_worker(worker_module, worker_start_fun, worker_args)
+        Monitoring.add(monitor_id, worker_pid)
+
+        worker_pid
+      end)
 
     state = %State{
       worker_module: worker_module,
+      worker_start_fun: worker_start_fun,
       worker_args: worker_args,
       idle_workers_count: workers_count,
       idle_workers_pids: worker_pids,
@@ -55,16 +65,9 @@ defmodule Poolex do
     {:ok, state}
   end
 
-  @spec start_workers(non_neg_integer(), module(), list(any()), list(pid)) :: list(pid())
-  defp start_workers(workers_count, worker_module, worker_args, worker_pids \\ [])
-
-  defp start_workers(0, _worker_module, _worker_args, worker_pids) do
-    worker_pids
-  end
-
-  defp start_workers(workers_count, worker_module, worker_args, workers_pids) do
-    {:ok, pid} = apply(worker_module, :start, worker_args)
-    start_workers(workers_count - 1, worker_module, worker_args, [pid | workers_pids])
+  @spec start_worker(module(), atom(), list(any())) :: {:ok, pid()}
+  defp start_worker(worker_module, worker_start_fun, worker_args) do
+    apply(worker_module, worker_start_fun, worker_args)
   end
 
   def handle_call(:get_idle_worker, _from, %State{idle_workers_count: 0} = state) do
@@ -125,12 +128,13 @@ defmodule Poolex do
           idle_workers_pids: idle_workers_pids,
           busy_workers_pids: busy_workers_pids,
           worker_module: worker_module,
+          worker_start_fun: worker_start_fun,
           worker_args: worker_args
         } = state
       ) do
     Monitoring.remove(monitor_id, monitoring_reference)
 
-    {:ok, new_worker} = apply(worker_module, :start, worker_args)
+    {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args)
     Monitoring.add(monitor_id, new_worker)
 
     idle_workers_pids = [new_worker | List.delete(idle_workers_pids, dead_worker_pid)]
