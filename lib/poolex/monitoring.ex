@@ -1,4 +1,7 @@
 defmodule Poolex.Monitoring do
+  @moduledoc """
+  Interfaces to hide monitoring implementation.
+  """
   @type monitor_id() :: atom() | reference()
 
   @spec init(Poolex.pool_id()) :: {:ok, monitor_id()}

@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  MIX_ENV: test
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        otp: ['23.3', '24.3', '25.2']
+        elixir: ['1.13.4', '1.14.2']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - name: Fetch dependencies
+        run: mix do deps.get, compile
+      - name: Launch tests
+        run: mix test
+      - name: Code format check
+        run: mix format --check-formatted
+      - name: Credo check
+        run: mix credo
