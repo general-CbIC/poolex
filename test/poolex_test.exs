@@ -207,4 +207,47 @@ defmodule PoolexTest do
              end)
     end
   end
+
+  describe "timeouts" do
+    test "when caller waits too long" do
+      Poolex.start_link(
+        @pool_name,
+        worker_module: SomeWorker,
+        worker_args: [],
+        workers_count: 1
+      )
+
+      spawn(fn ->
+        Poolex.run(@pool_name, fn pid ->
+          GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
+        end)
+      end)
+
+      :timer.sleep(10)
+
+      waiting_caller =
+        spawn(fn ->
+          Poolex.run(
+            @pool_name,
+            fn pid ->
+              GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
+            end,
+            timeout: 100
+          )
+        end)
+
+      :timer.sleep(10)
+
+      state = Poolex.get_state(@pool_name)
+      assert :queue.len(state.waiting_callers) == 1
+
+      assert Enum.find(:queue.to_list(state.waiting_callers), fn {pid, _} ->
+               pid == waiting_caller
+             end)
+
+      :timer.sleep(100)
+      state = Poolex.get_state(@pool_name)
+      assert :queue.len(state.waiting_callers) == 0
+    end
+  end
 end
