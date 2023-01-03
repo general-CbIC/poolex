@@ -23,7 +23,7 @@ defmodule Poolex do
 
   @type run_option() :: {:timeout, timeout()}
   @spec run(pool_id(), (worker :: pid() -> any()), list(poolex_option())) :: any()
-  def run(pool_id, fun, options) do
+  def run(pool_id, fun, options \\ []) do
     timeout = Keyword.get(options, :timeout, @default_wait_timeout)
 
     case GenServer.call(pool_id, :get_idle_worker, timeout) do
