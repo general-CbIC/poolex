@@ -81,9 +81,8 @@ defmodule PoolexTest do
         workers_count: 2
       )
 
-      Poolex.run(@pool_name, fn pid ->
-        assert :some_result == GenServer.call(pid, :do_some_work)
-      end)
+      result = Poolex.run(@pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
+      assert result == :some_result
     end
   end
 
