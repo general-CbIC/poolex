@@ -12,9 +12,9 @@ defmodule Poolex.Monitoring do
   end
 
   @spec add(monitor_id(), pid()) :: :ok
-  def add(monitor_id, worker_pid) do
-    reference = Process.monitor(worker_pid)
-    :ets.insert_new(monitor_id, {reference, worker_pid})
+  def add(monitor_id, process_pid) do
+    reference = Process.monitor(process_pid)
+    :ets.insert_new(monitor_id, {reference, process_pid})
 
     :ok
   end
@@ -27,9 +27,9 @@ defmodule Poolex.Monitoring do
     :ok
   end
 
-  @spec get_worker(monitor_id(), reference()) :: pid()
-  def get_worker(monitor_id, reference) do
-    [{_reference, worker_pid}] = :ets.lookup(monitor_id, reference)
-    worker_pid
+  @spec get_process(monitor_id(), reference()) :: pid()
+  def get_process(monitor_id, reference) do
+    [{_reference, process_pid}] = :ets.lookup(monitor_id, reference)
+    process_pid
   end
 end

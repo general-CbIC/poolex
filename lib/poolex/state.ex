@@ -7,6 +7,7 @@ defmodule Poolex.State do
             worker_module: nil,
             worker_start_fun: nil,
             worker_args: [],
+            waiting_callers: :queue.new(),
             monitor_id: nil
 
   @type t() :: %__MODULE__{
@@ -17,6 +18,7 @@ defmodule Poolex.State do
           worker_module: module(),
           worker_start_fun: atom(),
           worker_args: list(any()),
+          waiting_callers: :queue.queue(),
           monitor_id: atom() | reference()
         }
 end

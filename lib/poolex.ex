@@ -76,8 +76,15 @@ defmodule Poolex do
     apply(worker_module, worker_start_fun, worker_args)
   end
 
-  def handle_call(:get_idle_worker, _from, %State{idle_workers_count: 0} = state) do
-    {:reply, {:error, :all_workers_are_busy}, state}
+  def handle_call(
+        :get_idle_worker,
+        {from_pid, _} = caller,
+        %State{idle_workers_count: 0, waiting_callers: waiting_callers, monitor_id: monitor_id} =
+          state
+      ) do
+    Monitoring.add(monitor_id, from_pid)
+
+    {:noreply, %{state | waiting_callers: :queue.in(caller, waiting_callers)}}
   end
 
   def handle_call(
@@ -113,7 +120,8 @@ defmodule Poolex do
           busy_workers_pids: busy_workers_pids,
           busy_workers_count: busy_workers_count,
           idle_workers_pids: idle_workers_pids,
-          idle_workers_count: idle_workers_count
+          idle_workers_count: idle_workers_count,
+          waiting_callers: {[], []}
         } = state
       ) do
     state = %State{
@@ -125,6 +133,17 @@ defmodule Poolex do
     }
 
     {:noreply, state}
+  end
+
+  def handle_cast(
+        {:release_busy_worker, worker_pid},
+        %State{waiting_callers: waiting_callers} = state
+      ) do
+    {{:value, caller}, left_waiting_callers} = :queue.out(waiting_callers)
+
+    GenServer.reply(caller, {:ok, worker_pid})
+
+    {:noreply, %{state | waiting_callers: left_waiting_callers}}
   end
 
   def handle_info(
