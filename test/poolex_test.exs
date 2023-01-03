@@ -84,6 +84,29 @@ defmodule PoolexTest do
       result = Poolex.run(@pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
       assert result == :some_result
     end
+
+    test "test waiting queue" do
+      Poolex.start_link(
+        @pool_name,
+        worker_module: SomeWorker,
+        worker_args: [],
+        workers_count: 5
+      )
+
+      result =
+        1..20
+        |> Enum.map(fn _ ->
+          Task.async(fn ->
+            Poolex.run(@pool_name, fn pid ->
+              GenServer.call(pid, {:do_some_work_with_delay, 100})
+            end)
+          end)
+        end)
+        |> Enum.map(&Task.await/1)
+
+      assert length(result) == 20
+      assert Enum.all?(result, &(&1 == :some_result))
+    end
   end
 
   describe "restarting terminated processes" do
