@@ -7,6 +7,8 @@ defmodule Poolex do
   alias Poolex.State
   alias Poolex.Monitoring
 
+  @default_wait_timeout :timer.seconds(5)
+
   @type pool_id() :: atom()
   @type poolex_option() ::
           {:worker_module, module()}
@@ -19,12 +21,16 @@ defmodule Poolex do
     GenServer.start_link(__MODULE__, {pool_id, opts}, name: pool_id)
   end
 
-  @spec run(pool_id(), (worker :: pid() -> any())) :: :ok | {:error, :all_workers_are_busy}
-  def run(pool_id, fun) do
-    case GenServer.call(pool_id, :get_idle_worker) do
+  @type run_option() :: {:timeout, timeout()}
+  @spec run(pool_id(), (worker :: pid() -> any()), list(poolex_option())) :: any()
+  def run(pool_id, fun, options) do
+    timeout = Keyword.get(options, :timeout, @default_wait_timeout)
+
+    case GenServer.call(pool_id, :get_idle_worker, timeout) do
       {:ok, pid} ->
-        fun.(pid)
+        result = fun.(pid)
         GenServer.cast(pool_id, {:release_busy_worker, pid})
+        result
 
       error ->
         error
