@@ -54,7 +54,7 @@ defmodule Poolex do
     worker_pids =
       Enum.map(1..workers_count, fn _ ->
         {:ok, worker_pid} = start_worker(worker_module, worker_start_fun, worker_args)
-        Monitoring.add(monitor_id, worker_pid)
+        Monitoring.add(monitor_id, worker_pid, :worker)
 
         worker_pid
       end)
@@ -76,8 +76,15 @@ defmodule Poolex do
     apply(worker_module, worker_start_fun, worker_args)
   end
 
-  def handle_call(:get_idle_worker, _from, %State{idle_workers_count: 0} = state) do
-    {:reply, {:error, :all_workers_are_busy}, state}
+  def handle_call(
+        :get_idle_worker,
+        {from_pid, _} = caller,
+        %State{idle_workers_count: 0, waiting_callers: waiting_callers, monitor_id: monitor_id} =
+          state
+      ) do
+    Monitoring.add(monitor_id, from_pid, :caller)
+
+    {:noreply, %{state | waiting_callers: :queue.in(caller, waiting_callers)}}
   end
 
   def handle_call(
@@ -113,7 +120,8 @@ defmodule Poolex do
           busy_workers_pids: busy_workers_pids,
           busy_workers_count: busy_workers_count,
           idle_workers_pids: idle_workers_pids,
-          idle_workers_count: idle_workers_count
+          idle_workers_count: idle_workers_count,
+          waiting_callers: {[], []}
         } = state
       ) do
     state = %State{
@@ -127,33 +135,52 @@ defmodule Poolex do
     {:noreply, state}
   end
 
+  def handle_cast(
+        {:release_busy_worker, worker_pid},
+        %State{waiting_callers: waiting_callers} = state
+      ) do
+    {{:value, caller}, left_waiting_callers} = :queue.out(waiting_callers)
+
+    GenServer.reply(caller, {:ok, worker_pid})
+
+    {:noreply, %{state | waiting_callers: left_waiting_callers}}
+  end
+
   def handle_info(
-        {:DOWN, monitoring_reference, _process, dead_worker_pid, _reason},
+        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
         %State{
           monitor_id: monitor_id,
           idle_workers_pids: idle_workers_pids,
           busy_workers_pids: busy_workers_pids,
           worker_module: worker_module,
           worker_start_fun: worker_start_fun,
-          worker_args: worker_args
+          worker_args: worker_args,
+          waiting_callers: waiting_callers
         } = state
       ) do
-    Monitoring.remove(monitor_id, monitoring_reference)
+    case Monitoring.remove(monitor_id, monitoring_reference) do
+      :worker ->
+        {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args)
+        Monitoring.add(monitor_id, new_worker, :worker)
 
-    {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args)
-    Monitoring.add(monitor_id, new_worker)
+        idle_workers_pids = [new_worker | List.delete(idle_workers_pids, dead_process_pid)]
+        busy_workers_pids = List.delete(busy_workers_pids, dead_process_pid)
 
-    idle_workers_pids = [new_worker | List.delete(idle_workers_pids, dead_worker_pid)]
-    busy_workers_pids = List.delete(busy_workers_pids, dead_worker_pid)
+        state = %State{
+          state
+          | idle_workers_pids: idle_workers_pids,
+            idle_workers_count: Enum.count(idle_workers_pids),
+            busy_workers_pids: busy_workers_pids,
+            busy_workers_count: Enum.count(busy_workers_pids)
+        }
 
-    state = %State{
-      state
-      | idle_workers_pids: idle_workers_pids,
-        idle_workers_count: Enum.count(idle_workers_pids),
-        busy_workers_pids: busy_workers_pids,
-        busy_workers_count: Enum.count(busy_workers_pids)
-    }
+        {:noreply, state}
 
-    {:noreply, state}
+      :caller ->
+        left_waiting_queue =
+          :queue.filter(fn {caller_pid, _} -> caller_pid != dead_process_pid end, waiting_callers)
+
+        {:noreply, %{state | waiting_callers: left_waiting_queue}}
+    end
   end
 end

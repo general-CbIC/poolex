@@ -3,6 +3,7 @@ defmodule Poolex.Monitoring do
   Interfaces to hide monitoring implementation.
   """
   @type monitor_id() :: atom() | reference()
+  @type kind_of_process() :: :worker | :caller
 
   @spec init(Poolex.pool_id()) :: {:ok, monitor_id()}
   def init(pool_id) do
@@ -11,25 +12,20 @@ defmodule Poolex.Monitoring do
     {:ok, monitor_id}
   end
 
-  @spec add(monitor_id(), pid()) :: :ok
-  def add(monitor_id, worker_pid) do
-    reference = Process.monitor(worker_pid)
-    :ets.insert_new(monitor_id, {reference, worker_pid})
+  @spec add(monitor_id(), pid(), kind_of_process()) :: :ok
+  def add(monitor_id, process_pid, kind_of_process) do
+    reference = Process.monitor(process_pid)
+    :ets.insert_new(monitor_id, {reference, process_pid, kind_of_process})
 
     :ok
   end
 
-  @spec remove(monitor_id(), reference()) :: :ok
+  @spec remove(monitor_id(), reference()) :: kind_of_process()
   def remove(monitor_id, monitoring_reference) do
     true = Process.demonitor(monitoring_reference)
+    [{_reference, _pid, kind_of_process}] = :ets.lookup(monitor_id, monitoring_reference)
     true = :ets.delete(monitor_id, monitoring_reference)
 
-    :ok
-  end
-
-  @spec get_worker(monitor_id(), reference()) :: pid()
-  def get_worker(monitor_id, reference) do
-    [{_reference, worker_pid}] = :ets.lookup(monitor_id, reference)
-    worker_pid
+    kind_of_process
   end
 end
