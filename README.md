@@ -1,5 +1,7 @@
 # Poolex
 
+![Build and tests workflow](https://github.com/general-CbIC/poolex/actions/workflows/ci-tests.yml/badge.svg)
+
 <!-- @moduledoc -->
 
 Poolex is a library for managing a pool of processes. Inspired by [poolboy](https://github.com/devinus/poolboy).
