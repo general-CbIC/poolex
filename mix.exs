@@ -8,15 +8,16 @@ defmodule Poolex.MixProject do
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      description: "The library for managing a pool of processes.",
+      package: package(),
+      deps: deps(),
+      source_url: "https://github.com/general-CbIC/poolex"
     ]
   end
 
   # Run "mix help compile.app" to learn about applications.
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    []
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -26,6 +27,13 @@ defmodule Poolex.MixProject do
   defp deps do
     [
       {:credo, "~> 1.6.7", runtime: false, optional: true}
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/general-CbIC/poolex"}
     ]
   end
 end
