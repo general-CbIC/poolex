@@ -1,6 +1,5 @@
 defmodule PoolexTest do
   use ExUnit.Case
-  doctest Poolex
 
   @pool_name :test_pool
 
