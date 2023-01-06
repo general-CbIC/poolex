@@ -1,7 +1,7 @@
 defmodule Poolex do
-  @moduledoc """
-  Poolex is a simple process pool manager.
-  """
+  @external_resource "README.md"
+  @moduledoc "README.md" |> File.read!() |> String.split("<!-- @moduledoc -->") |> Enum.at(1)
+
   use GenServer
 
   alias Poolex.State
