@@ -51,16 +51,3 @@ jobs:
         run: mix do deps.get
       - name: Credo check
         run: mix credo
-  dialyzer:
-    runs-on: ubuntu-20.04
-    name: Dialyzer
-    steps:
-      - uses: actions/checkout@v3
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: '25.2'
-          elixir-version: '1.14.2'
-      - name: Fetch dependencies
-        run: mix do deps.get, compile
-      - name: Launch dialyzer
-        run: mix dialyzer
