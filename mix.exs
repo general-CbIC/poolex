@@ -28,7 +28,8 @@ defmodule Poolex.MixProject do
   defp deps do
     [
       {:credo, "~> 1.6.7", runtime: false, optional: true, only: [:dev, :test]},
-      {:ex_doc, "~> 0.29.0", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.29.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false}
     ]
   end
 

@@ -22,7 +22,7 @@ defmodule Poolex do
   end
 
   @type run_option() :: {:timeout, timeout()}
-  @spec run(pool_id(), (worker :: pid() -> any()), list(poolex_option())) :: any()
+  @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
   def run(pool_id, fun, options \\ []) do
     timeout = Keyword.get(options, :timeout, @default_wait_timeout)
 
