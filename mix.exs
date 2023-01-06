@@ -26,7 +26,7 @@ defmodule Poolex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:credo, "~> 1.6.7", runtime: false, optional: true}
+      {:credo, "~> 1.6.7", runtime: false, optional: true, only: [:dev, :test]}
     ]
   end
 
