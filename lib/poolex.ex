@@ -26,15 +26,11 @@ defmodule Poolex do
   def run(pool_id, fun, options \\ []) do
     timeout = Keyword.get(options, :timeout, @default_wait_timeout)
 
-    case GenServer.call(pool_id, :get_idle_worker, timeout) do
-      {:ok, pid} ->
-        result = fun.(pid)
-        GenServer.cast(pool_id, {:release_busy_worker, pid})
-        result
+    {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, timeout)
+    result = fun.(pid)
 
-      error ->
-        error
-    end
+    GenServer.cast(pool_id, {:release_busy_worker, pid})
+    result
   end
 
   @spec get_state(pool_id()) :: State.t()
