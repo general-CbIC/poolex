@@ -248,5 +248,58 @@ defmodule PoolexTest do
       state = Poolex.get_state(@pool_name)
       assert :queue.len(state.waiting_callers) == 0
     end
+
+    test "run/3 returns error tuple on timeout" do
+      Poolex.start_link(
+        @pool_name,
+        worker_module: SomeWorker,
+        worker_args: [],
+        workers_count: 1
+      )
+
+      spawn(fn ->
+        Poolex.run(
+          @pool_name,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
+        )
+      end)
+
+      :timer.sleep(10)
+
+      result =
+        Poolex.run(
+          @pool_name,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
+          timeout: 100
+        )
+
+      assert result == {:error, :all_workers_are_busy}
+    end
+
+    test "run!/3 exits" do
+      Poolex.start_link(
+        @pool_name,
+        worker_module: SomeWorker,
+        worker_args: [],
+        workers_count: 1
+      )
+
+      spawn(fn ->
+        Poolex.run(
+          @pool_name,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
+        )
+      end)
+
+      :timer.sleep(10)
+
+      assert catch_exit(
+               Poolex.run!(
+                 @pool_name,
+                 fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
+                 timeout: 100
+               )
+             ) == {:timeout, {GenServer, :call, [@pool_name, :get_idle_worker, 100]}}
+    end
   end
 end
