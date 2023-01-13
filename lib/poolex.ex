@@ -22,8 +22,17 @@ defmodule Poolex do
   end
 
   @type run_option() :: {:timeout, timeout()}
-  @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
+  @type run_error() :: :all_workers_are_busy
+  @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
+          {:ok, any()} | {:error, run_error()}
   def run(pool_id, fun, options \\ []) do
+    run!(pool_id, fun, options)
+  catch
+    {:exit, {:timeout, _meta}} -> {:error, :all_workers_are_busy}
+  end
+
+  @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
+  def run!(pool_id, fun, options \\ []) do
     timeout = Keyword.get(options, :timeout, @default_wait_timeout)
 
     {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, timeout)
