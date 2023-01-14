@@ -26,11 +26,11 @@ defmodule Poolex do
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
           {:ok, any()} | {:error, run_error()}
   def run(pool_id, fun, options \\ []) do
-    try do
-      run!(pool_id, fun, options)
-    catch
-      :exit, {:timeout, _meta} -> {:error, :all_workers_are_busy}
-    end
+    # TODO: надо ли хендлить и заворачивать ошибки?
+
+    run!(pool_id, fun, options)
+  catch
+    :exit, {:timeout, _meta} -> {:error, :all_workers_are_busy}
   end
 
   @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
