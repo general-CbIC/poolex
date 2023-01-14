@@ -16,6 +16,11 @@ defmodule Poolex do
           | {:worker_args, list(any())}
           | {:workers_count, pos_integer()}
 
+  @spec start(pool_id(), list(poolex_option())) :: GenServer.on_start()
+  def start(pool_id, opts) do
+    GenServer.start(__MODULE__, {pool_id, opts}, name: pool_id)
+  end
+
   @spec start_link(pool_id(), list(poolex_option())) :: GenServer.on_start()
   def start_link(pool_id, opts) do
     GenServer.start_link(__MODULE__, {pool_id, opts}, name: pool_id)
@@ -26,11 +31,10 @@ defmodule Poolex do
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
           {:ok, any()} | {:error, run_error()}
   def run(pool_id, fun, options \\ []) do
-    # TODO: надо ли хендлить и заворачивать ошибки?
-
     run!(pool_id, fun, options)
   catch
     :exit, {:timeout, _meta} -> {:error, :all_workers_are_busy}
+    :exit, reason -> {:error, reason}
   end
 
   @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()

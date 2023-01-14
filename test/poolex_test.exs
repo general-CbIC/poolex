@@ -76,23 +76,14 @@ defmodule PoolexTest do
     end
 
     test "get result from custom worker" do
-      Poolex.start_link(@pool_name,
-        worker_module: SomeWorker,
-        worker_args: [],
-        workers_count: 2
-      )
+      Poolex.start_link(@pool_name, worker_module: SomeWorker, workers_count: 2)
 
       result = Poolex.run(@pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
       assert result == :some_result
     end
 
     test "test waiting queue" do
-      Poolex.start_link(
-        @pool_name,
-        worker_module: SomeWorker,
-        worker_args: [],
-        workers_count: 5
-      )
+      Poolex.start_link(@pool_name, worker_module: SomeWorker, workers_count: 5)
 
       result =
         1..20
@@ -163,12 +154,7 @@ defmodule PoolexTest do
     end
 
     test "works on callers" do
-      Poolex.start_link(
-        @pool_name,
-        worker_module: SomeWorker,
-        worker_args: [],
-        workers_count: 1
-      )
+      Poolex.start_link(@pool_name, worker_module: SomeWorker, workers_count: 1)
 
       1..10
       |> Enum.each(fn _ ->
@@ -205,16 +191,24 @@ defmodule PoolexTest do
                pid == waiting_caller
              end)
     end
+
+    test "runtime errors" do
+      Poolex.start(@pool_name, worker_module: SomeWorker, workers_count: 1)
+      Poolex.run(@pool_name, fn pid -> GenServer.call(pid, :do_raise) end)
+
+      :timer.sleep(10)
+
+      state = Poolex.get_state(@pool_name)
+
+      assert state.busy_workers_count == 0
+      assert state.idle_workers_count == 1
+      assert state.idle_workers_pids |> hd() |> Process.alive?()
+    end
   end
 
   describe "timeouts" do
     test "when caller waits too long" do
-      Poolex.start_link(
-        @pool_name,
-        worker_module: SomeWorker,
-        worker_args: [],
-        workers_count: 1
-      )
+      Poolex.start_link(@pool_name, worker_module: SomeWorker, workers_count: 1)
 
       spawn(fn ->
         Poolex.run(@pool_name, fn pid ->
@@ -250,12 +244,7 @@ defmodule PoolexTest do
     end
 
     test "run/3 returns error tuple on timeout" do
-      Poolex.start_link(
-        @pool_name,
-        worker_module: SomeWorker,
-        worker_args: [],
-        workers_count: 1
-      )
+      Poolex.start_link(@pool_name, worker_module: SomeWorker, workers_count: 1)
 
       spawn(fn ->
         Poolex.run(
@@ -276,13 +265,8 @@ defmodule PoolexTest do
       assert result == {:error, :all_workers_are_busy}
     end
 
-    test "run!/3 exits" do
-      Poolex.start_link(
-        @pool_name,
-        worker_module: SomeWorker,
-        worker_args: [],
-        workers_count: 1
-      )
+    test "run!/3 exits on timeout" do
+      Poolex.start_link(@pool_name, worker_module: SomeWorker, workers_count: 1)
 
       spawn(fn ->
         Poolex.run(
