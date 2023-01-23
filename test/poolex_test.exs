@@ -81,6 +81,9 @@ defmodule PoolexTest do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 2)
 
       result = Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
+      assert result == {:ok, :some_result}
+
+      result = Poolex.run!(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
       assert result == :some_result
     end
 
@@ -91,7 +94,7 @@ defmodule PoolexTest do
         1..20
         |> Enum.map(fn _ ->
           Task.async(fn ->
-            Poolex.run(pool_name, fn pid ->
+            Poolex.run!(pool_name, fn pid ->
               GenServer.call(pid, {:do_some_work_with_delay, 100})
             end)
           end)

@@ -30,7 +30,7 @@ defmodule Poolex do
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
           {:ok, any()} | :all_workers_are_busy | {:runtime_error, any()}
   def run(pool_id, fun, options \\ []) do
-    run!(pool_id, fun, options)
+    {:ok, run!(pool_id, fun, options)}
   catch
     :exit, {:timeout, _meta} -> :all_workers_are_busy
     :exit, reason -> {:runtime_error, reason}
