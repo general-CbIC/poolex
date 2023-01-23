@@ -142,15 +142,18 @@ defmodule Poolex do
           waiting_callers: {[], []}
         } = state
       ) do
-    state = %State{
-      state
-      | busy_workers_count: busy_workers_count - 1,
-        busy_workers_pids: List.delete(busy_workers_pids, worker_pid),
-        idle_workers_count: idle_workers_count + 1,
-        idle_workers_pids: [worker_pid | idle_workers_pids]
-    }
-
-    {:noreply, state}
+    if Enum.member?(busy_workers_pids, worker_pid) do
+      {:noreply,
+       %State{
+         state
+         | busy_workers_count: busy_workers_count - 1,
+           busy_workers_pids: List.delete(busy_workers_pids, worker_pid),
+           idle_workers_count: idle_workers_count + 1,
+           idle_workers_pids: [worker_pid | idle_workers_pids]
+       }}
+    else
+      {:noreply, state}
+    end
   end
 
   def handle_cast(
