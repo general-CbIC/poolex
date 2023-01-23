@@ -152,11 +152,11 @@ process #PID<0.223.0> calculating square root of 1
 process #PID<0.225.0> calculating square root of 3
 process #PID<0.224.0> calculating square root of 2
 process #PID<0.226.0> calculating square root of 4
-1.0
-1.4142135623730951
-1.7320508075688772
-2.0
-2.23606797749979
-2.449489742783178
+{:ok, 1.0}
+{:ok, 1.4142135623730951}
+{:ok, 1.7320508075688772}
+{:ok, 2.0}
+{:ok, 2.23606797749979}
+{:ok, 2.449489742783178}
 ...
 ```
