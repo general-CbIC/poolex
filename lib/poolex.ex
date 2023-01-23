@@ -63,10 +63,11 @@ defmodule Poolex do
     worker_args = Keyword.get(opts, :worker_args, [])
 
     {:ok, monitor_id} = Monitoring.init(pool_id)
+    {:ok, supervisor} = Poolex.Supervisor.start_link()
 
     worker_pids =
       Enum.map(1..workers_count, fn _ ->
-        {:ok, worker_pid} = start_worker(worker_module, worker_start_fun, worker_args)
+        {:ok, worker_pid} = start_worker(worker_module, worker_start_fun, worker_args, supervisor)
         Monitoring.add(monitor_id, worker_pid, :worker)
 
         worker_pid
@@ -78,15 +79,19 @@ defmodule Poolex do
       worker_args: worker_args,
       idle_workers_count: workers_count,
       idle_workers_pids: worker_pids,
-      monitor_id: monitor_id
+      monitor_id: monitor_id,
+      supervisor: supervisor
     }
 
     {:ok, state}
   end
 
-  @spec start_worker(module(), atom(), list(any())) :: {:ok, pid()}
-  defp start_worker(worker_module, worker_start_fun, worker_args) do
-    apply(worker_module, worker_start_fun, worker_args)
+  @spec start_worker(module(), atom(), list(any()), pid()) :: {:ok, pid()}
+  defp start_worker(worker_module, worker_start_fun, worker_args, supervisor) do
+    DynamicSupervisor.start_child(supervisor, %{
+      id: make_ref(),
+      start: {worker_module, worker_start_fun, worker_args}
+    })
   end
 
   def handle_call(
@@ -168,12 +173,13 @@ defmodule Poolex do
           worker_module: worker_module,
           worker_start_fun: worker_start_fun,
           worker_args: worker_args,
-          waiting_callers: waiting_callers
+          waiting_callers: waiting_callers,
+          supervisor: supervisor
         } = state
       ) do
     case Monitoring.remove(monitor_id, monitoring_reference) do
       :worker ->
-        {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args)
+        {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args, supervisor)
         Monitoring.add(monitor_id, new_worker, :worker)
 
         idle_workers_pids = [new_worker | List.delete(idle_workers_pids, dead_process_pid)]
