@@ -245,7 +245,7 @@ defmodule PoolexTest do
       assert :queue.len(state.waiting_callers) == 0
     end
 
-    test "run/3 returns error tuple on timeout", %{pool_name: pool_name} do
+    test "run/3 returns :all_workers_are_busy on timeout", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
 
       spawn(fn ->
@@ -264,7 +264,7 @@ defmodule PoolexTest do
           timeout: 100
         )
 
-      assert result == {:error, :all_workers_are_busy}
+      assert result == :all_workers_are_busy
     end
 
     test "run!/3 exits on timeout", %{pool_name: pool_name} do

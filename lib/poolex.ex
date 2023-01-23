@@ -27,14 +27,13 @@ defmodule Poolex do
   end
 
   @type run_option() :: {:timeout, timeout()}
-  @type run_error() :: :all_workers_are_busy
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
-          {:ok, any()} | {:error, run_error()}
+          {:ok, any()} | :all_workers_are_busy | {:runtime_error, any()}
   def run(pool_id, fun, options \\ []) do
     run!(pool_id, fun, options)
   catch
-    :exit, {:timeout, _meta} -> {:error, :all_workers_are_busy}
-    :exit, reason -> {:error, reason}
+    :exit, {:timeout, _meta} -> :all_workers_are_busy
+    :exit, reason -> {:runtime_error, reason}
   end
 
   @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
