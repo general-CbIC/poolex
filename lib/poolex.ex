@@ -16,24 +16,36 @@ defmodule Poolex do
           | {:worker_args, list(any())}
           | {:workers_count, pos_integer()}
 
+  @spec start(pool_id(), list(poolex_option())) :: GenServer.on_start()
+  def start(pool_id, opts) do
+    GenServer.start(__MODULE__, {pool_id, opts}, name: pool_id)
+  end
+
   @spec start_link(pool_id(), list(poolex_option())) :: GenServer.on_start()
   def start_link(pool_id, opts) do
     GenServer.start_link(__MODULE__, {pool_id, opts}, name: pool_id)
   end
 
   @type run_option() :: {:timeout, timeout()}
-  @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
+  @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
+          {:ok, any()} | :all_workers_are_busy | {:runtime_error, any()}
   def run(pool_id, fun, options \\ []) do
+    {:ok, run!(pool_id, fun, options)}
+  catch
+    :exit, {:timeout, _meta} -> :all_workers_are_busy
+    :exit, reason -> {:runtime_error, reason}
+  end
+
+  @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
+  def run!(pool_id, fun, options \\ []) do
     timeout = Keyword.get(options, :timeout, @default_wait_timeout)
 
-    case GenServer.call(pool_id, :get_idle_worker, timeout) do
-      {:ok, pid} ->
-        result = fun.(pid)
-        GenServer.cast(pool_id, {:release_busy_worker, pid})
-        result
+    {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, timeout)
 
-      error ->
-        error
+    try do
+      fun.(pid)
+    after
+      GenServer.cast(pool_id, {:release_busy_worker, pid})
     end
   end
 
@@ -50,10 +62,11 @@ defmodule Poolex do
     worker_args = Keyword.get(opts, :worker_args, [])
 
     {:ok, monitor_id} = Monitoring.init(pool_id)
+    {:ok, supervisor} = Poolex.Supervisor.start_link()
 
     worker_pids =
       Enum.map(1..workers_count, fn _ ->
-        {:ok, worker_pid} = start_worker(worker_module, worker_start_fun, worker_args)
+        {:ok, worker_pid} = start_worker(worker_module, worker_start_fun, worker_args, supervisor)
         Monitoring.add(monitor_id, worker_pid, :worker)
 
         worker_pid
@@ -65,15 +78,19 @@ defmodule Poolex do
       worker_args: worker_args,
       idle_workers_count: workers_count,
       idle_workers_pids: worker_pids,
-      monitor_id: monitor_id
+      monitor_id: monitor_id,
+      supervisor: supervisor
     }
 
     {:ok, state}
   end
 
-  @spec start_worker(module(), atom(), list(any())) :: {:ok, pid()}
-  defp start_worker(worker_module, worker_start_fun, worker_args) do
-    apply(worker_module, worker_start_fun, worker_args)
+  @spec start_worker(module(), atom(), list(any()), pid()) :: {:ok, pid()}
+  defp start_worker(worker_module, worker_start_fun, worker_args, supervisor) do
+    DynamicSupervisor.start_child(supervisor, %{
+      id: make_ref(),
+      start: {worker_module, worker_start_fun, worker_args}
+    })
   end
 
   def handle_call(
@@ -124,15 +141,18 @@ defmodule Poolex do
           waiting_callers: {[], []}
         } = state
       ) do
-    state = %State{
-      state
-      | busy_workers_count: busy_workers_count - 1,
-        busy_workers_pids: List.delete(busy_workers_pids, worker_pid),
-        idle_workers_count: idle_workers_count + 1,
-        idle_workers_pids: [worker_pid | idle_workers_pids]
-    }
-
-    {:noreply, state}
+    if Enum.member?(busy_workers_pids, worker_pid) do
+      {:noreply,
+       %State{
+         state
+         | busy_workers_count: busy_workers_count - 1,
+           busy_workers_pids: List.delete(busy_workers_pids, worker_pid),
+           idle_workers_count: idle_workers_count + 1,
+           idle_workers_pids: [worker_pid | idle_workers_pids]
+       }}
+    else
+      {:noreply, state}
+    end
   end
 
   def handle_cast(
@@ -155,12 +175,13 @@ defmodule Poolex do
           worker_module: worker_module,
           worker_start_fun: worker_start_fun,
           worker_args: worker_args,
-          waiting_callers: waiting_callers
+          waiting_callers: waiting_callers,
+          supervisor: supervisor
         } = state
       ) do
     case Monitoring.remove(monitor_id, monitoring_reference) do
       :worker ->
-        {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args)
+        {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args, supervisor)
         Monitoring.add(monitor_id, new_worker, :worker)
 
         idle_workers_pids = [new_worker | List.delete(idle_workers_pids, dead_process_pid)]

@@ -19,4 +19,10 @@ defmodule SomeWorker do
 
     {:reply, :some_result, state}
   end
+
+  def handle_call(:do_raise, _from, state) do
+    raise RuntimeError
+
+    {:reply, nil, state}
+  end
 end
