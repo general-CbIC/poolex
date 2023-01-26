@@ -14,8 +14,8 @@ Poolex is a library for managing a pool of processes. Inspired by [poolboy](http
 
 | Requirement | Version |
 |-------------|---------|
-| Erlang/OTP  | >= 23   |
-| Elixir      | >= 1.13 |
+| Erlang/OTP  | >= 22   |
+| Elixir      | >= 1.7  |
 
 ## Installation
 
