@@ -24,7 +24,7 @@ Add `:poolex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:poolex, "~> 0.1.0"}
+    {:poolex, "~> 0.2.0"}
   ]
 end
 ```
