@@ -2,7 +2,10 @@ name: Build and tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: 
+      - main
+      - develop
+      - feature/*
   pull_request:
     branches: [ develop ]
 
@@ -15,8 +18,25 @@ jobs:
     name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
-        otp: ['23.3', '24.3', '25.2']
-        elixir: ['1.13.4', '1.14.3']
+        include:
+          - elixir: '1.6'
+            otp: '21.3'
+          - elixir: '1.7'
+            otp: '22.3'
+          - elixir: '1.8'
+            otp: '22.3'
+          - elixir: '1.9'
+            otp: '22.3'
+          - elixir: '1.10'
+            otp: '23.3'
+          - elixir: '1.11'
+            otp: '24.3'
+          - elixir: '1.12'
+            otp: '24.3'
+          - elixir: '1.13'
+            otp: '25.2'
+          - elixir: '1.14'
+            otp: '25.2'
     steps:
       - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1

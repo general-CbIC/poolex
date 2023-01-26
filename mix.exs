@@ -5,7 +5,7 @@ defmodule Poolex.MixProject do
     [
       app: :poolex,
       version: "0.2.0",
-      elixir: "~> 1.13",
+      elixir: "~> 1.6",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       description: "The library for managing a pool of processes.",
