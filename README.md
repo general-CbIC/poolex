@@ -14,8 +14,8 @@ Poolex is a library for managing a pool of processes. Inspired by [poolboy](http
 
 | Requirement | Version |
 |-------------|---------|
-| Erlang/OTP  | >= 23   |
-| Elixir      | >= 1.13 |
+| Erlang/OTP  | >= 22   |
+| Elixir      | >= 1.7  |
 
 ## Installation
 
@@ -24,7 +24,7 @@ Add `:poolex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:poolex, "~> 0.1.0"}
+    {:poolex, "~> 0.2.0"}
   ]
 end
 ```
