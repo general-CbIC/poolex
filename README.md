@@ -139,14 +139,9 @@ defmodule PoolexExample.Test do
 end
 ```
 
-Run the test function and see the result.
+Run the test function `PoolexExample.Test.start()` and see the result:
 
-```shell
-iex -S mix
-```
-
-```iex
-iex> PoolexExample.Test.start
+```text
 process #PID<0.227.0> calculating square root of 5
 process #PID<0.223.0> calculating square root of 1
 process #PID<0.225.0> calculating square root of 3

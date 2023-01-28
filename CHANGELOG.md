@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Docs for functions with examples of use.
+
+## Changed
+
+- Use [ex_check](https://github.com/karolsluszniak/ex_check) for static analysis.
+
 ## [0.2.1] - 2023-01-27
 
 ### Changed
