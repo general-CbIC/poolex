@@ -2,9 +2,9 @@
 
 Poolex is written in [Elixir](https://elixir-lang.org/).
 
-For branching management, this project uses [git-flow](https://github.com/petervanderdoes/gitflow-avh). The `main` branch is reserved for releases: the development process occurs on `develop` and `feature` branches. Please never commit to main.
+For branching management, this project uses [git-flow](https://github.com/petervanderdoes/gitflow-avh). The `main` branch is reserved for releases: the development process occurs on `develop` and `feature` branches. Please never commit to `main`.
 
-You can use [asdf](https://asdf-vm.com/) to set up required Elixir and OTP. Current versions are listed in the file `.tool-versions`.
+You can use [asdf](https://asdf-vm.com/) to set up required Elixir and OTP. Current versions are listed in the `.tool-versions` file.
 
 ## Setup
 
