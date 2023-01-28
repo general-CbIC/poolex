@@ -116,17 +116,17 @@ defmodule PoolexExample.Test do
 
   defp async_call_square_root(i) do
     Task.async(fn ->
-      Poolex.run(
+      Poolex.run!(
         :worker_pool,
         fn pid ->
           # Let's wrap the genserver call in a try - catch block. This allows us to trap any exceptions
-          # that might be thrown and return the worker back to poolboy in a clean manner. It also allows
+          # that might be thrown and return the worker back to Poolex in a clean manner. It also allows
           # the programmer to retrieve the error and potentially fix it.
           try do
             GenServer.call(pid, {:square_root, i})
           catch
             e, r ->
-              IO.inspect("poolboy transaction caught error: #{inspect(e)}, #{inspect(r)}")
+              IO.inspect("Poolex transaction caught error: #{inspect(e)}, #{inspect(r)}")
               :ok
           end
         end,
