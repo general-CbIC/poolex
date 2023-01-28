@@ -1,5 +1,6 @@
 defmodule PoolexTest do
   use ExUnit.Case
+  doctest Poolex
 
   setup do
     [pool_name: pool_name()]
