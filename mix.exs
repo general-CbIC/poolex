@@ -38,7 +38,10 @@ defmodule Poolex.MixProject do
   defp package do
     [
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/general-CbIC/poolex"}
+      links: %{
+        "GitHub" => "https://github.com/general-CbIC/poolex",
+        "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md"
+      }
     ]
   end
 
