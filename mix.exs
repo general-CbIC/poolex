@@ -45,7 +45,7 @@ defmodule Poolex.MixProject do
   defp docs do
     [
       main: "Poolex",
-      extras: ["README.md"]
+      extras: ["README.md", "docs/CONTRIBUTING.md"]
     ]
   end
 end
