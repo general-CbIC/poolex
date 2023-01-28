@@ -9,9 +9,6 @@ on:
   pull_request:
     branches: [ develop ]
 
-env:
-  MIX_ENV: test
-
 jobs:
   test:
     runs-on: ubuntu-20.04
@@ -46,20 +43,9 @@ jobs:
         run: mix do deps.get, compile
       - name: Launch tests
         run: mix test
-  format-check:
+  static-analysis:
     runs-on: ubuntu-20.04
-    name: Check code format
-    steps:
-      - uses: actions/checkout@v3
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: '25.2'
-          elixir-version: '1.14.3'
-      - name: Check code format
-        run: mix format --check-formatted
-  credo:
-    runs-on: ubuntu-20.04
-    name: Check code format
+    name: Static analysis
     steps:
       - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
@@ -67,6 +53,6 @@ jobs:
           otp-version: '25.2'
           elixir-version: '1.14.3'
       - name: Fetch dependencies
-        run: mix do deps.get
-      - name: Credo check
-        run: mix credo
+        run: mix do deps.get, compile
+      - name: Run
+        run: mix check
