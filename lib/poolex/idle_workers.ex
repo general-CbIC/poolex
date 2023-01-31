@@ -1,4 +1,4 @@
-defmodule Poolex.BusyWorkers do
+defmodule Poolex.IdleWorkers do
   @moduledoc false
   @behaviour Poolex.Workers.Behaviour
 
@@ -21,5 +21,5 @@ defmodule Poolex.BusyWorkers do
   @impl true
   def pop(state), do: impl().pop(state)
 
-  defp impl, do: Poolex.Workers.Settings.busy_workers_impl()
+  defp impl, do: Poolex.Workers.Settings.idle_workers_impl()
 end

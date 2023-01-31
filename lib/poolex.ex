@@ -6,6 +6,7 @@ defmodule Poolex do
 
   alias Poolex.BusyWorkers
   alias Poolex.DebugInfo
+  alias Poolex.IdleWorkers
   alias Poolex.Monitoring
   alias Poolex.State
 
@@ -26,9 +27,9 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.State{idle_workers_count: idle_workers_count} = Poolex.get_state(:my_pool)
-      iex> idle_workers_count
-      5
+      iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
+      iex> worker_module
+      Agent
   """
   @spec start(pool_id(), list(poolex_option())) :: GenServer.on_start()
   def start(pool_id, opts) do
@@ -54,9 +55,9 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start_link(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.State{idle_workers_count: idle_workers_count} = Poolex.get_state(:my_pool)
-      iex> idle_workers_count
-      5
+      iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
+      iex> worker_module
+      Agent
   """
   @spec start_link(pool_id(), list(poolex_option())) :: GenServer.on_start()
   def start_link(pool_id, opts) do
@@ -189,8 +190,7 @@ defmodule Poolex do
       worker_start_fun: worker_start_fun,
       worker_args: worker_args,
       busy_workers_state: BusyWorkers.init(),
-      idle_workers_count: workers_count,
-      idle_workers_pids: worker_pids,
+      idle_workers_state: IdleWorkers.init(worker_pids),
       monitor_id: monitor_id,
       supervisor: supervisor
     }
@@ -207,36 +207,23 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_call(
-        :get_idle_worker,
-        {from_pid, _} = caller,
-        %State{idle_workers_count: 0, waiting_callers: waiting_callers, monitor_id: monitor_id} =
-          state
-      ) do
-    Monitoring.add(monitor_id, from_pid, :caller)
+  def handle_call(:get_idle_worker, {from_pid, _} = caller, %State{} = state) do
+    if IdleWorkers.empty?(state.idle_workers_state) do
+      Monitoring.add(state.monitor_id, from_pid, :caller)
 
-    {:noreply, %{state | waiting_callers: :queue.in(caller, waiting_callers)}}
-  end
+      {:noreply, %{state | waiting_callers: :queue.in(caller, state.waiting_callers)}}
+    else
+      {idle_worker_pid, new_idle_workers_state} = IdleWorkers.pop(state.idle_workers_state)
+      new_busy_workers_state = BusyWorkers.add(state.busy_workers_state, idle_worker_pid)
 
-  def handle_call(
-        :get_idle_worker,
-        _from,
-        %State{
-          idle_workers_count: idle_workers_count,
-          idle_workers_pids: idle_workers_pids,
-          busy_workers_state: busy_workers_state
-        } = state
-      ) do
-    [idle_worker_pid | rest_idle_workers_pids] = idle_workers_pids
+      new_state = %State{
+        state
+        | idle_workers_state: new_idle_workers_state,
+          busy_workers_state: new_busy_workers_state
+      }
 
-    state = %State{
-      state
-      | idle_workers_count: idle_workers_count - 1,
-        idle_workers_pids: rest_idle_workers_pids,
-        busy_workers_state: BusyWorkers.add(busy_workers_state, idle_worker_pid)
-    }
-
-    {:reply, {:ok, idle_worker_pid}, state}
+      {:reply, {:ok, idle_worker_pid}, new_state}
+    end
   end
 
   def handle_call(:get_state, _from, state) do
@@ -247,8 +234,8 @@ defmodule Poolex do
     debug_info = %DebugInfo{
       busy_workers_count: BusyWorkers.count(state.busy_workers_state),
       busy_workers_pids: BusyWorkers.to_list(state.busy_workers_state),
-      idle_workers_count: state.idle_workers_count,
-      idle_workers_pids: state.idle_workers_pids,
+      idle_workers_count: IdleWorkers.count(state.idle_workers_state),
+      idle_workers_pids: IdleWorkers.to_list(state.idle_workers_state),
       worker_module: state.worker_module,
       worker_args: state.worker_args,
       worker_start_fun: state.worker_start_fun,
@@ -263,8 +250,7 @@ defmodule Poolex do
         {:release_busy_worker, worker_pid},
         %State{
           busy_workers_state: busy_workers_state,
-          idle_workers_pids: idle_workers_pids,
-          idle_workers_count: idle_workers_count,
+          idle_workers_state: idle_workers_state,
           waiting_callers: {[], []}
         } = state
       ) do
@@ -273,8 +259,7 @@ defmodule Poolex do
        %State{
          state
          | busy_workers_state: BusyWorkers.remove(busy_workers_state, worker_pid),
-           idle_workers_count: idle_workers_count + 1,
-           idle_workers_pids: [worker_pid | idle_workers_pids]
+           idle_workers_state: IdleWorkers.add(idle_workers_state, worker_pid)
        }}
     else
       {:noreply, state}
@@ -297,7 +282,7 @@ defmodule Poolex do
         {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
         %State{
           monitor_id: monitor_id,
-          idle_workers_pids: idle_workers_pids,
+          idle_workers_state: idle_workers_state,
           busy_workers_state: busy_workers_state,
           worker_module: worker_module,
           worker_start_fun: worker_start_fun,
@@ -311,12 +296,14 @@ defmodule Poolex do
         {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args, supervisor)
         Monitoring.add(monitor_id, new_worker, :worker)
 
-        idle_workers_pids = [new_worker | List.delete(idle_workers_pids, dead_process_pid)]
+        new_idle_workers_state =
+          idle_workers_state
+          |> IdleWorkers.remove(dead_process_pid)
+          |> IdleWorkers.add(new_worker)
 
         state = %State{
           state
-          | idle_workers_pids: idle_workers_pids,
-            idle_workers_count: Enum.count(idle_workers_pids),
+          | idle_workers_state: new_idle_workers_state,
             busy_workers_state: BusyWorkers.remove(busy_workers_state, dead_process_pid)
         }
 

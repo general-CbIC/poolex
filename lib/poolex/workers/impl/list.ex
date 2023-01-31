@@ -8,6 +8,11 @@ defmodule Poolex.Workers.Impl.List do
   end
 
   @impl true
+  def init(workers) do
+    workers
+  end
+
+  @impl true
   def add(state, worker) do
     [worker | state]
   end
@@ -31,4 +36,14 @@ defmodule Poolex.Workers.Impl.List do
   def to_list(state) do
     state
   end
+
+  @impl true
+  def empty?(state) do
+    Enum.empty?(state)
+  end
+
+  @impl true
+  def pop([]), do: :empty
+  def pop([worker]), do: {worker, []}
+  def pop([worker | rest]), do: {worker, rest}
 end
