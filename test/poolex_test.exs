@@ -246,7 +246,7 @@ defmodule PoolexTest do
 
       :timer.sleep(100)
       debug_info = Poolex.get_debug_info(pool_name)
-      assert length(debug_info.waiting_callers) == 0
+      assert Enum.empty?(debug_info.waiting_callers)
     end
 
     test "run/3 returns :all_workers_are_busy on timeout", %{pool_name: pool_name} do

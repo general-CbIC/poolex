@@ -1,9 +1,8 @@
 defmodule Poolex.State do
   @moduledoc false
-  defstruct busy_workers_count: 0,
-            busy_workers_pids: [],
-            idle_workers_count: 0,
+  defstruct idle_workers_count: 0,
             idle_workers_pids: [],
+            busy_workers_state: nil,
             worker_module: nil,
             worker_start_fun: nil,
             worker_args: [],
@@ -12,8 +11,7 @@ defmodule Poolex.State do
             supervisor: nil
 
   @type t() :: %__MODULE__{
-          busy_workers_count: non_neg_integer(),
-          busy_workers_pids: list(pid()),
+          busy_workers_state: nil,
           idle_workers_count: non_neg_integer(),
           idle_workers_pids: list(pid()),
           worker_module: module(),
