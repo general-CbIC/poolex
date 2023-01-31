@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Behaviours for `workers` and `callers` data structure implementations.
+
 ## [0.2.2] - 2023-01-28
 
-## Added
+### Added
 
 - Docs for functions with examples of use.
 
-## Changed
+### Changed
 
 - Use [ex_check](https://github.com/karolsluszniak/ex_check) for static analysis.
 
