@@ -5,6 +5,7 @@ defmodule Poolex do
   use GenServer
 
   alias Poolex.State
+  alias Poolex.DebugInfo
   alias Poolex.Monitoring
 
   @default_wait_timeout :timer.seconds(5)
@@ -124,16 +125,43 @@ defmodule Poolex do
 
       iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
       iex> state = %Poolex.State{} = Poolex.get_state(:my_pool)
-      iex> state.busy_workers_count
-      0
-      iex> state.idle_workers_count
-      5
       iex> state.worker_module
       Agent
+      iex> is_pid(state.supervisor)
+      true
   """
   @spec get_state(pool_id()) :: State.t()
   def get_state(pool_id) do
     GenServer.call(pool_id, :get_state)
+  end
+
+  @doc """
+  Returns detailed information about started pool.
+
+  Primarily needed to help with debugging.
+
+  ## Fields
+
+      * `busy_workers_count` - how many workers are busy right now.
+      * `busy_workers_pids` - list of busy workers.
+      * `idle_workers_count` - how many workers are ready to work.
+      * `idle_workers_pids` - list of idle workers.
+      * `worker_module` - name of a module that describes a worker.
+      * `worker_args` - what parameters are used to start the worker.
+      * `worker_start_fun` - what function is used to start the worker.
+      * `waiting_caller_pids` - list of callers processes.
+
+  ## Examples
+
+      iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> debug_info = %Poolex.DebugInfo{} = Poolex.get_debug_info(:my_pool)
+      iex> debug_info.busy_workers_count
+      0
+      iex> debug_info.idle_workers_count
+      5
+  """
+  def get_debug_info(pool_id) do
+    GenServer.call(pool_id, :get_debug_info)
   end
 
   @impl GenServer
@@ -213,6 +241,21 @@ defmodule Poolex do
 
   def handle_call(:get_state, _from, state) do
     {:reply, state, state}
+  end
+
+  def handle_call(:get_debug_info, _form, %Poolex.State{} = state) do
+    debug_info = %DebugInfo{
+      busy_workers_count: BusyWorkers.count(state.busy_workers_state),
+      busy_workers_pids: BusyWorkers.to_list(state.busy_workers_state),
+      idle_workers_count: state.idle_workers_count,
+      idle_workers_pids: state.idle_workers_pids,
+      worker_module: state.worker_module,
+      worker_args: state.worker_args,
+      worker_start_fun: state.worker_start_fun,
+      waiting_callers: :queue.to_list(state.waiting_callers)
+    }
+
+    {:reply, debug_info, state}
   end
 
   @impl GenServer
