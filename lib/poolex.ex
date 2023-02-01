@@ -55,8 +55,8 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start_link(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
+      iex> Poolex.start_link(:other_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:other_pool)
       iex> worker_module
       Agent
   """
