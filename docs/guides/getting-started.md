@@ -35,7 +35,7 @@ The second argument should contain a set of options for starting the pool. List 
 | `worker_args`      | List of arguments passed to the start function | `[:gg, "wp"]`  | `[]`                   |
 | `workers_count`    | How many workers should be running in the pool | `5`            | **option is required** |
 
-## Using Poolex
+## Working with the pool
 
 After the pool is initialized, you can get a free worker and perform any operations on it. This is done through the main interfaces `run/3` and `run!/3`. The functions work the same and the only difference between them is that `run/3` takes care of the runtime error handling.
 

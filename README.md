@@ -17,6 +17,13 @@ Poolex is a library for managing a pool of processes. Inspired by [poolboy](http
 | Erlang/OTP  | >= 22   |
 | Elixir      | >= 1.7  |
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Getting Started](docs/guides/getting-started.md)
+  - [Starting pool of workers](docs/guides/getting-started.md#starting-pool-of-workers)
+  - [Working with the pool](docs/guides/getting-started.md#working-with-the-pool)
+
 ## Installation
 
 Add `:poolex` to your list of dependencies in `mix.exs`:
