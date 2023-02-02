@@ -26,7 +26,9 @@ children = [
 Supervisor.start_link(children, strategy: :one_for_one)
 ```
 
-The second argument should contain a set of options for starting the pool. List of possible configuration options:
+The second argument should contain a set of options for starting the pool.
+
+### Poolex configuration options
 
 | Option             | Description                                    | Example        | Default value          |
 |--------------------|------------------------------------------------|----------------|------------------------|
@@ -39,6 +41,12 @@ The second argument should contain a set of options for starting the pool. List 
 
 After the pool is initialized, you can get a free worker and perform any operations on it. This is done through the main interfaces `run/3` and `run!/3`. The functions work the same and the only difference between them is that `run/3` takes care of the runtime error handling.
 
+The first argument is the name of the pool mentioned above.
+
+The second argument is the function that takes the pid of the worker as the only parameter and performs the necessary actions.
+
+The third argument contains run options. Currently there is only one `timeout` option that tells to Poolex how long we can to wait for a worker on the call side.
+
 ```elixir
 iex> Poolex.start_link(:my_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
 iex> Poolex.run(:my_pool, fn pid -> Agent.get(pid, &(&1)) end)
@@ -46,3 +54,5 @@ iex> Poolex.run(:my_pool, fn pid -> Agent.get(pid, &(&1)) end)
 iex> Poolex.run!(:my_pool, fn pid -> Agent.get(pid, &(&1)) end)
 5
 ```
+
+If you would like to see examples of using Poolex, then check out [Example of Use](example-of-use.md).
