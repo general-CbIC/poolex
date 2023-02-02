@@ -6,8 +6,6 @@
 [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
 <!--[![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)-->
 
-<!-- @moduledoc -->
-
 Poolex is a library for managing a pool of processes. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
 ## Requirements
@@ -66,7 +64,7 @@ Then you can execute any code on the workers with `run/3`:
 
 ```elixir
 iex> Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
-true
+{:ok, true}
 ```
 
 A detailed description of the available configuration or examples of use can be found in [documentation](docs/guides/).

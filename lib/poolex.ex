@@ -1,6 +1,7 @@
 defmodule Poolex do
-  @external_resource "README.md"
-  @moduledoc "README.md" |> File.read!() |> String.split("<!-- @moduledoc -->") |> Enum.at(1)
+  @moduledoc """
+  ...
+  """
 
   use GenServer
 
