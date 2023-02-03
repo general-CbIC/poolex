@@ -52,7 +52,8 @@ defmodule Poolex.MixProject do
         "README.md",
         "docs/CONTRIBUTING.md",
         "docs/guides/getting-started.md",
-        "docs/guides/example-of-use.md"
+        "docs/guides/example-of-use.md",
+        "docs/guides/custom-implementations.md"
       ]
     ]
   end

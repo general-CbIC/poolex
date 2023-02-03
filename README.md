@@ -26,6 +26,10 @@ Poolex is a library for managing a pool of processes. Inspired by [poolboy](http
   - [Defining the worker](docs/guides/example-of-use.md#defining-the-worker)
   - [Configuring Poolex](docs/guides/example-of-use.md#configuring-poolex)
   - [Using Poolex](docs/guides/example-of-use.md#using-poolex)
+- [Custom implementations](docs/guides/custom-implementations.md)
+  - [Callers](docs/guides/custom-implementations.md#callers)
+  - [Workers](docs/guides/custom-implementations.md#workers)
+  - [Writing custom implementations](docs/guides/custom-implementations.md#writing-custom-implementations)
 - [Contributions](#contributions)
 
 ## Installation
