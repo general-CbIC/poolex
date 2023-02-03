@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
 <!--[![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)-->
 
-Poolex is a library for managing a pool of processes. Inspired by [poolboy](https://github.com/devinus/poolboy).
+Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
 ## Requirements
 
