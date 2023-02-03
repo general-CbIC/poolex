@@ -50,7 +50,7 @@ defmodule Poolex.MixProject do
 
   defp docs do
     [
-      main: "Poolex",
+      main: "README",
       extras: [
         "docs/CONTRIBUTING.md",
         "docs/guides/custom-implementations.md",
