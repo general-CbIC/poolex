@@ -122,7 +122,7 @@ defmodule Poolex do
   @doc """
   Returns current state of started pool.
 
-  Primarily needed to help with debugging.
+  Primarily needed to help with debugging. **Avoid using this function in production.**
 
   ## Examples
 
@@ -141,7 +141,7 @@ defmodule Poolex do
   @doc """
   Returns detailed information about started pool.
 
-  Primarily needed to help with debugging.
+  Primarily needed to help with debugging. **Avoid using this function in production.**
 
   ## Fields
 
