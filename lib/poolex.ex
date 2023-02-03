@@ -1,11 +1,15 @@
 defmodule Poolex do
-  @external_resource "README.md"
-  @moduledoc "README.md" |> File.read!() |> String.split("<!-- @moduledoc -->") |> Enum.at(1)
+  @external_resource "docs/guides/getting-started.md"
+  @moduledoc "docs/guides/getting-started.md" |> File.read!()
 
   use GenServer
 
-  alias Poolex.State
+  alias Poolex.BusyWorkers
+  alias Poolex.DebugInfo
+  alias Poolex.IdleWorkers
   alias Poolex.Monitoring
+  alias Poolex.State
+  alias Poolex.WaitingCallers
 
   @default_wait_timeout :timer.seconds(5)
 
@@ -24,9 +28,9 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.State{idle_workers_count: idle_workers_count} = Poolex.get_state(:my_pool)
-      iex> idle_workers_count
-      5
+      iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
+      iex> worker_module
+      Agent
   """
   @spec start(pool_id(), list(poolex_option())) :: GenServer.on_start()
   def start(pool_id, opts) do
@@ -51,10 +55,10 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start_link(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.State{idle_workers_count: idle_workers_count} = Poolex.get_state(:my_pool)
-      iex> idle_workers_count
-      5
+      iex> Poolex.start_link(:other_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:other_pool)
+      iex> worker_module
+      Agent
   """
   @spec start_link(pool_id(), list(poolex_option())) :: GenServer.on_start()
   def start_link(pool_id, opts) do
@@ -118,22 +122,49 @@ defmodule Poolex do
   @doc """
   Returns current state of started pool.
 
-  Primarily needed to help with debugging.
+  Primarily needed to help with debugging. **Avoid using this function in production.**
 
   ## Examples
 
       iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
       iex> state = %Poolex.State{} = Poolex.get_state(:my_pool)
-      iex> state.busy_workers_count
-      0
-      iex> state.idle_workers_count
-      5
       iex> state.worker_module
       Agent
+      iex> is_pid(state.supervisor)
+      true
   """
   @spec get_state(pool_id()) :: State.t()
   def get_state(pool_id) do
     GenServer.call(pool_id, :get_state)
+  end
+
+  @doc """
+  Returns detailed information about started pool.
+
+  Primarily needed to help with debugging. **Avoid using this function in production.**
+
+  ## Fields
+
+      * `busy_workers_count` - how many workers are busy right now.
+      * `busy_workers_pids` - list of busy workers.
+      * `idle_workers_count` - how many workers are ready to work.
+      * `idle_workers_pids` - list of idle workers.
+      * `worker_module` - name of a module that describes a worker.
+      * `worker_args` - what parameters are used to start the worker.
+      * `worker_start_fun` - what function is used to start the worker.
+      * `waiting_caller_pids` - list of callers processes.
+
+  ## Examples
+
+      iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> debug_info = %Poolex.DebugInfo{} = Poolex.get_debug_info(:my_pool)
+      iex> debug_info.busy_workers_count
+      0
+      iex> debug_info.idle_workers_count
+      5
+  """
+  def get_debug_info(pool_id) do
+    GenServer.call(pool_id, :get_debug_info)
   end
 
   @impl GenServer
@@ -159,8 +190,9 @@ defmodule Poolex do
       worker_module: worker_module,
       worker_start_fun: worker_start_fun,
       worker_args: worker_args,
-      idle_workers_count: workers_count,
-      idle_workers_pids: worker_pids,
+      busy_workers_state: BusyWorkers.init(),
+      idle_workers_state: IdleWorkers.init(worker_pids),
+      waiting_callers_state: WaitingCallers.init(),
       monitor_id: monitor_id,
       supervisor: supervisor
     }
@@ -177,117 +209,100 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_call(
-        :get_idle_worker,
-        {from_pid, _} = caller,
-        %State{idle_workers_count: 0, waiting_callers: waiting_callers, monitor_id: monitor_id} =
-          state
-      ) do
-    Monitoring.add(monitor_id, from_pid, :caller)
+  def handle_call(:get_idle_worker, {from_pid, _} = caller, %State{} = state) do
+    if IdleWorkers.empty?(state.idle_workers_state) do
+      Monitoring.add(state.monitor_id, from_pid, :caller)
+      new_callers_state = WaitingCallers.add(state.waiting_callers_state, caller)
 
-    {:noreply, %{state | waiting_callers: :queue.in(caller, waiting_callers)}}
-  end
+      {:noreply, %{state | waiting_callers_state: new_callers_state}}
+    else
+      {idle_worker_pid, new_idle_workers_state} = IdleWorkers.pop(state.idle_workers_state)
+      new_busy_workers_state = BusyWorkers.add(state.busy_workers_state, idle_worker_pid)
 
-  def handle_call(
-        :get_idle_worker,
-        _from,
-        %State{
-          idle_workers_count: idle_workers_count,
-          idle_workers_pids: idle_workers_pids,
-          busy_workers_count: busy_workers_count,
-          busy_workers_pids: busy_workers_pids
-        } = state
-      ) do
-    [idle_worker_pid | rest_idle_workers_pids] = idle_workers_pids
+      new_state = %State{
+        state
+        | idle_workers_state: new_idle_workers_state,
+          busy_workers_state: new_busy_workers_state
+      }
 
-    state = %State{
-      state
-      | idle_workers_count: idle_workers_count - 1,
-        idle_workers_pids: rest_idle_workers_pids,
-        busy_workers_count: busy_workers_count + 1,
-        busy_workers_pids: [idle_worker_pid | busy_workers_pids]
-    }
-
-    {:reply, {:ok, idle_worker_pid}, state}
+      {:reply, {:ok, idle_worker_pid}, new_state}
+    end
   end
 
   def handle_call(:get_state, _from, state) do
     {:reply, state, state}
   end
 
+  def handle_call(:get_debug_info, _form, %Poolex.State{} = state) do
+    debug_info = %DebugInfo{
+      busy_workers_count: BusyWorkers.count(state.busy_workers_state),
+      busy_workers_pids: BusyWorkers.to_list(state.busy_workers_state),
+      idle_workers_count: IdleWorkers.count(state.idle_workers_state),
+      idle_workers_pids: IdleWorkers.to_list(state.idle_workers_state),
+      worker_module: state.worker_module,
+      worker_args: state.worker_args,
+      worker_start_fun: state.worker_start_fun,
+      waiting_callers: WaitingCallers.to_list(state.waiting_callers_state)
+    }
+
+    {:reply, debug_info, state}
+  end
+
   @impl GenServer
-  def handle_cast(
-        {:release_busy_worker, worker_pid},
-        %State{
-          busy_workers_pids: busy_workers_pids,
-          busy_workers_count: busy_workers_count,
-          idle_workers_pids: idle_workers_pids,
-          idle_workers_count: idle_workers_count,
-          waiting_callers: {[], []}
-        } = state
-      ) do
-    if Enum.member?(busy_workers_pids, worker_pid) do
-      {:noreply,
-       %State{
-         state
-         | busy_workers_count: busy_workers_count - 1,
-           busy_workers_pids: List.delete(busy_workers_pids, worker_pid),
-           idle_workers_count: idle_workers_count + 1,
-           idle_workers_pids: [worker_pid | idle_workers_pids]
-       }}
+  def handle_cast({:release_busy_worker, worker_pid}, state) do
+    if WaitingCallers.empty?(state.waiting_callers_state) do
+      if BusyWorkers.member?(state.busy_workers_state, worker_pid) do
+        {:noreply,
+         %State{
+           state
+           | busy_workers_state: BusyWorkers.remove(state.busy_workers_state, worker_pid),
+             idle_workers_state: IdleWorkers.add(state.idle_workers_state, worker_pid)
+         }}
+      else
+        {:noreply, state}
+      end
     else
-      {:noreply, state}
+      {caller, new_waiting_callers_state} = WaitingCallers.pop(state.waiting_callers_state)
+
+      GenServer.reply(caller, {:ok, worker_pid})
+
+      {:noreply, %{state | waiting_callers_state: new_waiting_callers_state}}
     end
   end
 
-  def handle_cast(
-        {:release_busy_worker, worker_pid},
-        %State{waiting_callers: waiting_callers} = state
-      ) do
-    {{:value, caller}, left_waiting_callers} = :queue.out(waiting_callers)
-
-    GenServer.reply(caller, {:ok, worker_pid})
-
-    {:noreply, %{state | waiting_callers: left_waiting_callers}}
-  end
-
   @impl GenServer
-  def handle_info(
-        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
-        %State{
-          monitor_id: monitor_id,
-          idle_workers_pids: idle_workers_pids,
-          busy_workers_pids: busy_workers_pids,
-          worker_module: worker_module,
-          worker_start_fun: worker_start_fun,
-          worker_args: worker_args,
-          waiting_callers: waiting_callers,
-          supervisor: supervisor
-        } = state
-      ) do
-    case Monitoring.remove(monitor_id, monitoring_reference) do
-      :worker ->
-        {:ok, new_worker} = start_worker(worker_module, worker_start_fun, worker_args, supervisor)
-        Monitoring.add(monitor_id, new_worker, :worker)
 
-        idle_workers_pids = [new_worker | List.delete(idle_workers_pids, dead_process_pid)]
-        busy_workers_pids = List.delete(busy_workers_pids, dead_process_pid)
+  def handle_info({:DOWN, monitoring_reference, _process, dead_process_pid, _reason}, state) do
+    case Monitoring.remove(state.monitor_id, monitoring_reference) do
+      :worker ->
+        {:ok, new_worker} =
+          start_worker(
+            state.worker_module,
+            state.worker_start_fun,
+            state.worker_args,
+            state.supervisor
+          )
+
+        Monitoring.add(state.monitor_id, new_worker, :worker)
+
+        new_idle_workers_state =
+          state.idle_workers_state
+          |> IdleWorkers.remove(dead_process_pid)
+          |> IdleWorkers.add(new_worker)
 
         state = %State{
           state
-          | idle_workers_pids: idle_workers_pids,
-            idle_workers_count: Enum.count(idle_workers_pids),
-            busy_workers_pids: busy_workers_pids,
-            busy_workers_count: Enum.count(busy_workers_pids)
+          | idle_workers_state: new_idle_workers_state,
+            busy_workers_state: BusyWorkers.remove(state.busy_workers_state, dead_process_pid)
         }
 
         {:noreply, state}
 
       :caller ->
-        left_waiting_queue =
-          :queue.filter(fn {caller_pid, _} -> caller_pid != dead_process_pid end, waiting_callers)
+        new_waiting_callers_state =
+          WaitingCallers.remove_by_pid(state.waiting_callers_state, dead_process_pid)
 
-        {:noreply, %{state | waiting_callers: left_waiting_queue}}
+        {:noreply, %{state | waiting_callers_state: new_waiting_callers_state}}
     end
   end
 end
