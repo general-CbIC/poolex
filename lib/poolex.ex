@@ -1,7 +1,6 @@
 defmodule Poolex do
-  @moduledoc """
-  ...
-  """
+  @external_resource "docs/guides/getting-started.md"
+  @moduledoc "docs/guides/getting-started.md" |> File.read!()
 
   use GenServer
 

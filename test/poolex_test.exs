@@ -1,5 +1,5 @@
 defmodule PoolexTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
   doctest Poolex
 
   setup do

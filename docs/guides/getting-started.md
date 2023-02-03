@@ -48,10 +48,10 @@ The second argument is the function that takes the pid of the worker as the only
 The third argument contains run options. Currently there is only one `timeout` option that tells to Poolex how long we can to wait for a worker on the call side.
 
 ```elixir
-iex> Poolex.start_link(:my_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
-iex> Poolex.run(:my_pool, fn pid -> Agent.get(pid, &(&1)) end)
+iex> Poolex.start_link(:agent_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
+iex> Poolex.run(:agent_pool, fn pid -> Agent.get(pid, &(&1)) end)
 {:ok, 5}
-iex> Poolex.run!(:my_pool, fn pid -> Agent.get(pid, &(&1)) end)
+iex> Poolex.run!(:agent_pool, fn pid -> Agent.get(pid, &(&1)) end)
 5
 ```
 
