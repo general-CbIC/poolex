@@ -7,13 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The ability to set your own implementations for `workers` and `callers`. [Read more about it](docs/guides/custom-implementations.md)
+- New interface `Poolex.debug_info/1`.
+
+### Changed
+
+- All documentation is divided into separate guides. A table of contents with links has been added to the [Readme](README.md).
+- Several changes have been made to the `Poolex.State` structure:
+  - Fields `busy_workers_count` and `busy_workers_pids` removed in favor of `busy_workers_state`.
+  - Fields `idle_workers_count` and `idle_workers_pids` removed in favor of `idle_workers_state`.
+  - Field `waiting_callers` changed to `waiting_callers_state`.
+
 ## [0.2.2] - 2023-01-28
 
-## Added
+### Added
 
 - Docs for functions with examples of use.
 
-## Changed
+### Changed
 
 - Use [ex_check](https://github.com/karolsluszniak/ex_check) for static analysis.
 
