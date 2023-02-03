@@ -65,6 +65,8 @@ defmodule MyApp.MyAmazingCallersImpl do
 end
 ```
 
+If you have any ideas what implementations can be added to the library or how to improve existing ones, then please [create an issue](https://github.com/general-CbIC/poolex/issues/new)!
+
 ### Configuring custom implementations
 
 After that, you need to add the following to the configuration (for example, `runtime.exs`):
