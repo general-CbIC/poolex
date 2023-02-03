@@ -300,7 +300,7 @@ defmodule Poolex do
 
       :caller ->
         new_waiting_callers_state =
-          WaitingCallers.remove(state.waiting_callers_state, dead_process_pid)
+          WaitingCallers.remove_by_pid(state.waiting_callers_state, dead_process_pid)
 
         {:noreply, %{state | waiting_callers_state: new_waiting_callers_state}}
     end

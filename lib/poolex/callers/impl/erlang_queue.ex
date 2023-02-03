@@ -26,8 +26,8 @@ defmodule Poolex.Callers.Impl.ErlangQueue do
   end
 
   @impl true
-  def remove(state, caller) do
-    :queue.filter(fn {caller_pid, _} -> caller_pid != caller end, state)
+  def remove_by_pid(state, caller_pid) do
+    :queue.filter(fn {pid, _} -> pid != caller_pid end, state)
   end
 
   @impl true

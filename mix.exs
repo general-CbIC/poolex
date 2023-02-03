@@ -4,15 +4,18 @@ defmodule Poolex.MixProject do
   def project do
     [
       app: :poolex,
-      version: "0.2.2",
-      elixir: "~> 1.7",
-      elixirc_paths: elixirc_paths(Mix.env()),
-      start_permanent: Mix.env() == :prod,
-      description: "The library for managing a pool of processes.",
-      package: package(),
       deps: deps(),
+      description: "The library for managing a pool of processes.",
+      docs: docs(),
+      elixir: "~> 1.7",
+      elixirc_options: [
+        warnings_as_errors: true
+      ],
+      elixirc_paths: elixirc_paths(Mix.env()),
+      package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
-      docs: docs()
+      start_permanent: Mix.env() == :prod,
+      version: "0.2.2"
     ]
   end
 
@@ -27,10 +30,10 @@ defmodule Poolex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_check, "~> 0.15.0", only: [:dev], runtime: false},
       {:credo, ">= 0.0.0", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
       {:doctor, ">= 0.0.0", only: [:dev], runtime: false},
+      {:ex_check, "~> 0.15.0", only: [:dev], runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false}
     ]
   end
@@ -49,11 +52,11 @@ defmodule Poolex.MixProject do
     [
       main: "Poolex",
       extras: [
-        "README.md",
         "docs/CONTRIBUTING.md",
-        "docs/guides/getting-started.md",
+        "docs/guides/custom-implementations.md",
         "docs/guides/example-of-use.md",
-        "docs/guides/custom-implementations.md"
+        "docs/guides/getting-started.md",
+        "README.md"
       ]
     ]
   end

@@ -6,6 +6,8 @@
 
 **Callers** are processes that have made a request to get a worker (used `run/3` or `run!/3`). Each pool keeps information about **callers** in order to distribute workers to them when they are free.
 
+:warning: **Caller's typespec is `GenServer.from()` not a `pid()`** :warning:
+
 The implementation of the caller storage structure should be conceptually similar to a queue, since by default we want to give workers in the order they are requested. But this logic can be easily changed by writing your own implementation.
 
 Behaviour of callers collection described [here](../../lib/poolex/callers/behaviour.ex).
@@ -14,14 +16,14 @@ Default implementation based on erlang `:queue` you can see [here](../../lib/poo
 
 ### Behaviour callbacks
 
-| Callback    | Description                                                                                                  |
-|-------------|--------------------------------------------------------------------------------------------------------------|
-| `init/0`    | Returns `state` (any data structure) which will be passed as the first argument to all other functions.      |
-| `add/2`     | Adds caller's pid to `state` and returns new state.                                                          |
-| `empty?/1`  | Returns `true` if the `state` is empty, `false` otherwise.                                                   |
-| `pop/1`     | Removes one of callers from `state` and returns it as `{caller, state}`. Returns `:empty` if state is empty. |
-| `remove/2`  | Removes given caller from `state` and returns new state.                                                     |
-| `to_list/1` | Returns list of callers pids.
+| Callback          | Description                                                                                                  |
+|-------------------|--------------------------------------------------------------------------------------------------------------|
+| `init/0`          | Returns `state` (any data structure) which will be passed as the first argument to all other functions.      |
+| `add/2`           | Adds caller to `state` and returns new state.                                                                |
+| `empty?/1`        | Returns `true` if the `state` is empty, `false` otherwise.                                                   |
+| `pop/1`           | Removes one of callers from `state` and returns it as `{caller, state}`. Returns `:empty` if state is empty. |
+| `remove_by_pid/2` | Removes given caller by caller's pid from `state` and returns new state.                                     |
+| `to_list/1`       | Returns list of callers.                                                                                     |
 
 ## Workers
 

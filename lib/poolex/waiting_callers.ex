@@ -15,7 +15,7 @@ defmodule Poolex.WaitingCallers do
   def pop(state), do: impl().pop(state)
 
   @impl true
-  def remove(state, caller), do: impl().remove(state, caller)
+  def remove_by_pid(state, caller_pid), do: impl().remove_by_pid(state, caller_pid)
 
   @impl true
   def to_list(state), do: impl().to_list(state)
