@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
 <!--[![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)-->
 
-Poolex is a library for managing a pool of processes. Inspired by [poolboy](https://github.com/devinus/poolboy).
+Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
 ## Requirements
 
@@ -39,7 +39,7 @@ Add `:poolex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:poolex, "~> 0.2.0"}
+    {:poolex, "~> 0.3.0"}
   ]
 end
 ```
@@ -71,7 +71,7 @@ iex> Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
 {:ok, true}
 ```
 
-A detailed description of the available configuration or examples of use can be found in [documentation](docs/guides/).
+A detailed description of the available configuration or examples of use can be found in [documentation](docs/guides.md).
 
 ## Contributions
 

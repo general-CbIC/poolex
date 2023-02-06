@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "0.3.0"
+      version: "0.3.1"
     ]
   end
 
@@ -50,9 +50,10 @@ defmodule Poolex.MixProject do
 
   defp docs do
     [
-      main: "README",
+      main: "readme",
       extras: [
         "docs/CONTRIBUTING.md",
+        "docs/guides.md",
         "docs/guides/custom-implementations.md",
         "docs/guides/example-of-use.md",
         "docs/guides/getting-started.md",
