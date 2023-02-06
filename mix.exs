@@ -50,9 +50,10 @@ defmodule Poolex.MixProject do
 
   defp docs do
     [
-      main: "README",
+      main: "readme",
       extras: [
         "docs/CONTRIBUTING.md",
+        "docs/guides.md",
         "docs/guides/custom-implementations.md",
         "docs/guides/example-of-use.md",
         "docs/guides/getting-started.md",
