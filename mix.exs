@@ -5,7 +5,7 @@ defmodule Poolex.MixProject do
     [
       app: :poolex,
       deps: deps(),
-      description: "The library for managing a pool of processes.",
+      description: "The library for managing pools of workers.",
       docs: docs(),
       elixir: "~> 1.7",
       elixirc_options: [
