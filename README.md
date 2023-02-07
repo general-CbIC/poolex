@@ -8,6 +8,11 @@
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
+## Why `poolex` instead of `poolboy`?
+
+1. `poolex` is written in Elixir. Such a library is much more convenient to use in Elixir projects.
+2. `poolboy` is a great library, but not actively maintained at the moment :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
+
 ## Requirements
 
 | Requirement | Version |
