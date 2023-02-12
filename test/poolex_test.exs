@@ -293,6 +293,11 @@ defmodule PoolexTest do
     end
   end
 
+  describe "overflow" do
+    test "create new workers when possible"
+    test "return error when max count of workers reached"
+  end
+
   defp pool_name do
     1..10
     |> Enum.map(fn _ -> Enum.random(?a..?z) end)

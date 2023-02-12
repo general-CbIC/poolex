@@ -19,6 +19,7 @@ defmodule Poolex do
           | {:worker_start_fun, atom()}
           | {:worker_args, list(any())}
           | {:workers_count, pos_integer()}
+          | {:max_overflow, non_neg_integer()}
 
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
@@ -52,6 +53,7 @@ defmodule Poolex do
   | `worker_start_fun` | Name of the function that starts the worker    | `:run`         | `:start`               |
   | `worker_args`      | List of arguments passed to the start function | `[:gg, "wp"]`  | `[]`                   |
   | `workers_count`    | How many workers should be running in the pool | `5`            | **option is required** |
+  | `max_overflow`     | How many workers can be created over the limit | `2`            | `0`                    |
 
   ## Examples
 
@@ -174,6 +176,7 @@ defmodule Poolex do
 
     worker_start_fun = Keyword.get(opts, :worker_start_fun, :start)
     worker_args = Keyword.get(opts, :worker_args, [])
+    max_overflow = Keyword.get(opts, :max_overflow, 0)
 
     {:ok, monitor_id} = Monitoring.init(pool_id)
     {:ok, supervisor} = Poolex.Supervisor.start_link()
@@ -187,14 +190,15 @@ defmodule Poolex do
       end)
 
     state = %State{
-      worker_module: worker_module,
-      worker_start_fun: worker_start_fun,
-      worker_args: worker_args,
       busy_workers_state: BusyWorkers.init(),
       idle_workers_state: IdleWorkers.init(worker_pids),
-      waiting_callers_state: WaitingCallers.init(),
+      max_overflow: max_overflow,
       monitor_id: monitor_id,
-      supervisor: supervisor
+      supervisor: supervisor,
+      waiting_callers_state: WaitingCallers.init(),
+      worker_args: worker_args,
+      worker_module: worker_module,
+      worker_start_fun: worker_start_fun
     }
 
     {:ok, state}
@@ -271,7 +275,6 @@ defmodule Poolex do
   end
 
   @impl GenServer
-
   def handle_info({:DOWN, monitoring_reference, _process, dead_process_pid, _reason}, state) do
     case Monitoring.remove(state.monitor_id, monitoring_reference) do
       :worker ->
