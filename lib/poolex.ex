@@ -151,10 +151,12 @@ defmodule Poolex do
       * `busy_workers_pids` - list of busy workers.
       * `idle_workers_count` - how many workers are ready to work.
       * `idle_workers_pids` - list of idle workers.
-      * `worker_module` - name of a module that describes a worker.
-      * `worker_args` - what parameters are used to start the worker.
-      * `worker_start_fun` - what function is used to start the worker.
+      * `max_overflow` - how many workers can be created over the limit.
+      * `overflow` - current count of workers launched over limit.
       * `waiting_caller_pids` - list of callers processes.
+      * `worker_args` - what parameters are used to start the worker.
+      * `worker_module` - name of a module that describes a worker.
+      * `worker_start_fun` - what function is used to start the worker.
 
   ## Examples
 
@@ -245,6 +247,7 @@ defmodule Poolex do
       idle_workers_count: IdleWorkers.count(state.idle_workers_state),
       idle_workers_pids: IdleWorkers.to_list(state.idle_workers_state),
       max_overflow: state.max_overflow,
+      overflow: state.overflow,
       waiting_callers: WaitingCallers.to_list(state.waiting_callers_state),
       worker_args: state.worker_args,
       worker_module: state.worker_module,
