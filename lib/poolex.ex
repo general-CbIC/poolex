@@ -207,7 +207,7 @@ defmodule Poolex do
     {:ok, state}
   end
 
-  @spec start_worker(module(), atom(), list(any()), pid()) :: {:ok, pid()}
+  @spec start_worker(module(), atom(), list(any()), Supervisor.supervisor()) :: {:ok, pid()}
   defp start_worker(worker_module, worker_start_fun, worker_args, supervisor) do
     DynamicSupervisor.start_child(supervisor, %{
       id: make_ref(),
@@ -215,13 +215,38 @@ defmodule Poolex do
     })
   end
 
+  @spec stop_worker(Supervisor.supervisor(), pid()) :: :ok | {:error, :not_found}
+  defp stop_worker(supervisor, worker_pid) do
+    DynamicSupervisor.terminate_child(supervisor, worker_pid)
+  end
+
   @impl GenServer
   def handle_call(:get_idle_worker, {from_pid, _} = caller, %State{} = state) do
     if IdleWorkers.empty?(state.idle_workers_state) do
-      Monitoring.add(state.monitor_id, from_pid, :caller)
-      new_callers_state = WaitingCallers.add(state.waiting_callers_state, caller)
+      if state.overflow < state.max_overflow do
+        {:ok, new_worker} =
+          start_worker(
+            state.worker_module,
+            state.worker_start_fun,
+            state.worker_args,
+            state.supervisor
+          )
 
-      {:noreply, %{state | waiting_callers_state: new_callers_state}}
+        Monitoring.add(state.monitor_id, new_worker, :worker)
+
+        new_state = %State{
+          state
+          | busy_workers_state: BusyWorkers.add(state.busy_workers_state, new_worker),
+            overflow: state.overflow + 1
+        }
+
+        {:reply, {:ok, new_worker}, new_state}
+      else
+        Monitoring.add(state.monitor_id, from_pid, :caller)
+        new_callers_state = WaitingCallers.add(state.waiting_callers_state, caller)
+
+        {:noreply, %{state | waiting_callers_state: new_callers_state}}
+      end
     else
       {idle_worker_pid, new_idle_workers_state} = IdleWorkers.pop(state.idle_workers_state)
       new_busy_workers_state = BusyWorkers.add(state.busy_workers_state, idle_worker_pid)
@@ -258,15 +283,24 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_cast({:release_busy_worker, worker_pid}, state) do
+  def handle_cast({:release_busy_worker, worker_pid}, %State{} = state) do
     if WaitingCallers.empty?(state.waiting_callers_state) do
       if BusyWorkers.member?(state.busy_workers_state, worker_pid) do
-        {:noreply,
-         %State{
-           state
-           | busy_workers_state: BusyWorkers.remove(state.busy_workers_state, worker_pid),
-             idle_workers_state: IdleWorkers.add(state.idle_workers_state, worker_pid)
-         }}
+        busy_workers_state = BusyWorkers.remove(state.busy_workers_state, worker_pid)
+
+        if state.overflow > 0 do
+          stop_worker(state.supervisor, worker_pid)
+
+          {:noreply,
+           %State{state | busy_workers_state: busy_workers_state, overflow: state.overflow - 1}}
+        else
+          {:noreply,
+           %State{
+             state
+             | busy_workers_state: busy_workers_state,
+               idle_workers_state: IdleWorkers.add(state.idle_workers_state, worker_pid)
+           }}
+        end
       else
         {:noreply, state}
       end
