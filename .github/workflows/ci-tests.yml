@@ -52,7 +52,7 @@ jobs:
           mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
           echo "mix_hash=$mix_hash" >> $GITHUB_OUTPUT
       - name: Cache PLT files
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             _build/dev/*.plt
