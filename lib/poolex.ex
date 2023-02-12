@@ -184,17 +184,8 @@ defmodule Poolex do
     {:ok, monitor_id} = Monitoring.init(pool_id)
     {:ok, supervisor} = Poolex.Supervisor.start_link()
 
-    worker_pids =
-      Enum.map(1..workers_count, fn _ ->
-        {:ok, worker_pid} = start_worker(worker_module, worker_start_fun, worker_args, supervisor)
-        Monitoring.add(monitor_id, worker_pid, :worker)
-
-        worker_pid
-      end)
-
     state = %State{
       busy_workers_state: BusyWorkers.init(),
-      idle_workers_state: IdleWorkers.init(worker_pids),
       max_overflow: max_overflow,
       monitor_id: monitor_id,
       supervisor: supervisor,
@@ -204,14 +195,22 @@ defmodule Poolex do
       worker_start_fun: worker_start_fun
     }
 
-    {:ok, state}
+    worker_pids =
+      Enum.map(1..workers_count, fn _ ->
+        {:ok, worker_pid} = start_worker(state)
+        Monitoring.add(monitor_id, worker_pid, :worker)
+
+        worker_pid
+      end)
+
+    {:ok, %State{state | idle_workers_state: IdleWorkers.init(worker_pids)}}
   end
 
-  @spec start_worker(module(), atom(), list(any()), Supervisor.supervisor()) :: {:ok, pid()}
-  defp start_worker(worker_module, worker_start_fun, worker_args, supervisor) do
-    DynamicSupervisor.start_child(supervisor, %{
+  @spec start_worker(State.t()) :: {:ok, pid()}
+  defp start_worker(%State{} = state) do
+    DynamicSupervisor.start_child(state.supervisor, %{
       id: make_ref(),
-      start: {worker_module, worker_start_fun, worker_args}
+      start: {state.worker_module, state.worker_start_fun, state.worker_args}
     })
   end
 
@@ -224,13 +223,7 @@ defmodule Poolex do
   def handle_call(:get_idle_worker, {from_pid, _} = caller, %State{} = state) do
     if IdleWorkers.empty?(state.idle_workers_state) do
       if state.overflow < state.max_overflow do
-        {:ok, new_worker} =
-          start_worker(
-            state.worker_module,
-            state.worker_start_fun,
-            state.worker_args,
-            state.supervisor
-          )
+        {:ok, new_worker} = start_worker(state)
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 
@@ -317,13 +310,7 @@ defmodule Poolex do
   def handle_info({:DOWN, monitoring_reference, _process, dead_process_pid, _reason}, state) do
     case Monitoring.remove(state.monitor_id, monitoring_reference) do
       :worker ->
-        {:ok, new_worker} =
-          start_worker(
-            state.worker_module,
-            state.worker_start_fun,
-            state.worker_args,
-            state.supervisor
-          )
+        {:ok, new_worker} = start_worker(state)
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 
