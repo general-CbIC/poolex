@@ -225,7 +225,7 @@ defmodule Poolex do
       if state.overflow < state.max_overflow do
         {:ok, new_worker} = start_worker(state)
 
-        Monitoring.add(state.monitor_id, new_worker, :worker)
+        Monitoring.add(state.monitor_id, new_worker, :temporary_worker)
 
         new_state = %State{
           state
@@ -284,8 +284,7 @@ defmodule Poolex do
         if state.overflow > 0 do
           stop_worker(state.supervisor, worker_pid)
 
-          {:noreply,
-           %State{state | busy_workers_state: busy_workers_state, overflow: state.overflow - 1}}
+          {:noreply, %State{state | busy_workers_state: busy_workers_state}}
         else
           {:noreply,
            %State{
@@ -307,8 +306,19 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, monitoring_reference, _process, dead_process_pid, _reason}, state) do
+  def handle_info(
+        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
+        %State{} = state
+      ) do
     case Monitoring.remove(state.monitor_id, monitoring_reference) do
+      :temporary_worker ->
+        {:noreply,
+         %State{
+           state
+           | overflow: state.overflow - 1,
+             idle_workers_state: IdleWorkers.remove(state.idle_workers_state, dead_process_pid)
+         }}
+
       :worker ->
         {:ok, new_worker} = start_worker(state)
 

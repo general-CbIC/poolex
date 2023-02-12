@@ -306,6 +306,23 @@ defmodule PoolexTest do
       assert debug_info.max_overflow == 0
       assert debug_info.overflow == 0
     end
+
+    test "all workers running over the limit are turned off after use", %{pool_name: pool_name} do
+      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1, max_overflow: 2)
+
+      launch_long_task(pool_name)
+
+      spawn(fn -> Poolex.run(pool_name, &is_pid/1) end)
+      spawn(fn -> Poolex.run(pool_name, &is_pid/1) end)
+
+      :timer.sleep(50)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.idle_workers_count == 0
+      assert debug_info.overflow == 0
+    end
   end
 
   defp pool_name do
@@ -319,7 +336,7 @@ defmodule PoolexTest do
     launch_long_tasks(pool_id, 1, delay)
   end
 
-  defp launch_long_tasks(pool_id, count \\ 1, delay \\ :timer.seconds(4)) do
+  defp launch_long_tasks(pool_id, count, delay \\ :timer.seconds(4)) do
     for _i <- 1..count do
       spawn(fn ->
         Poolex.run(
