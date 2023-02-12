@@ -48,18 +48,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Set mix.lock file hash
-        id: set-vars
         run: |
           mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
-          echo "::set-output name=mix_hash::$mix_hash"
+          echo "mix_hash=$mix_hash" >> $GITHUB_OUTPUT
       - name: Cache PLT files
-        id: cache-plt
         uses: actions/cache@v2
         with:
           path: |
             _build/dev/*.plt
             _build/dev/*.plt.hash
-          key: plt-cache-${{ steps.set-vars.outputs.mix_hash }}
+          key: plt-cache-${{ env.mix_hash }}
           restore-keys: |
             plt-cache-
       - name: Run dialyzer
