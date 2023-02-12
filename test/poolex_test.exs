@@ -295,8 +295,53 @@ defmodule PoolexTest do
   end
 
   describe "overflow" do
-    test "create new workers when possible"
-    test "return error when max count of workers reached"
+    test "create new workers when possible", %{pool_name: pool_name} do
+      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1, max_overflow: 5)
+
+      for _i <- 1..5 do
+        spawn(fn ->
+          Poolex.run(
+            pool_name,
+            fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
+          )
+        end)
+      end
+
+      :timer.sleep(10)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.max_overflow == 5
+      assert debug_info.busy_workers_count == 5
+      assert debug_info.overflow == 4
+    end
+
+    test "return error when max count of workers reached", %{pool_name: pool_name} do
+      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
+
+      spawn(fn ->
+        Poolex.run(
+          pool_name,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
+        )
+      end)
+
+      :timer.sleep(10)
+
+      result =
+        Poolex.run(
+          pool_name,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
+          timeout: 100
+        )
+
+      assert result == :all_workers_are_busy
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.max_overflow == 0
+      assert debug_info.overflow == 0
+    end
   end
 
   defp pool_name do
