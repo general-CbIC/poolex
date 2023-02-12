@@ -43,15 +43,29 @@ jobs:
       - name: Launch tests
         run: mix test
   static-analysis:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     name: Static analysis
     steps:
       - uses: actions/checkout@v3
-      - uses: erlef/setup-beam@v1
+      - name: Set mix.lock file hash
+        id: set-vars
+        run: |
+          mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
+          echo "::set-output name=mix_hash::$mix_hash"
+      - name: Cache PLT files
+        id: cache-plt
+        uses: actions/cache@v2
+        with:
+          path: |
+            _build/dev/*.plt
+            _build/dev/*.plt.hash
+          key: plt-cache-${{ steps.set-vars.outputs.mix_hash }}
+          restore-keys: |
+            plt-cache-
+      - name: Run dialyzer
+        uses: erlef/setup-beam@v1
         with:
           otp-version: '25.2'
           elixir-version: '1.14.3'
-      - name: Fetch dependencies
-        run: mix do deps.get, compile
-      - name: Run
-        run: mix check
+      - run: mix do deps.get, compile
+      - run: mix check
