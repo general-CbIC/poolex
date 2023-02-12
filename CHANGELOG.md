@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Speeding up CI by adding dialyzer PLT files caches.
+
+### Fixed
+
+- Fix links in hex documentation.
+
 ## [0.3.0] - 2023-02-03
 
 ### Added
