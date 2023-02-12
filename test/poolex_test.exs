@@ -22,6 +22,7 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_count == 0
       assert debug_info.busy_workers_pids == []
       assert debug_info.idle_workers_count == 5
+      assert debug_info.max_overflow == 0
       assert Enum.count(debug_info.idle_workers_pids) == 5
       assert debug_info.worker_module == Agent
       assert debug_info.worker_args == [initial_fun]

@@ -165,6 +165,7 @@ defmodule Poolex do
       iex> debug_info.idle_workers_count
       5
   """
+  @spec get_debug_info(pool_id()) :: DebugInfo.t()
   def get_debug_info(pool_id) do
     GenServer.call(pool_id, :get_debug_info)
   end
@@ -243,10 +244,11 @@ defmodule Poolex do
       busy_workers_pids: BusyWorkers.to_list(state.busy_workers_state),
       idle_workers_count: IdleWorkers.count(state.idle_workers_state),
       idle_workers_pids: IdleWorkers.to_list(state.idle_workers_state),
-      worker_module: state.worker_module,
+      max_overflow: state.max_overflow,
+      waiting_callers: WaitingCallers.to_list(state.waiting_callers_state),
       worker_args: state.worker_args,
-      worker_start_fun: state.worker_start_fun,
-      waiting_callers: WaitingCallers.to_list(state.waiting_callers_state)
+      worker_module: state.worker_module,
+      worker_start_fun: state.worker_start_fun
     }
 
     {:reply, debug_info, state}
