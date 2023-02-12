@@ -217,13 +217,7 @@ defmodule PoolexTest do
     test "when caller waits too long", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
 
-      spawn(fn ->
-        Poolex.run(pool_name, fn pid ->
-          GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
-        end)
-      end)
-
-      :timer.sleep(10)
+      launch_long_task(pool_name)
 
       waiting_caller =
         spawn(fn ->
@@ -253,14 +247,7 @@ defmodule PoolexTest do
     test "run/3 returns :all_workers_are_busy on timeout", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
 
-      spawn(fn ->
-        Poolex.run(
-          pool_name,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
-        )
-      end)
-
-      :timer.sleep(10)
+      launch_long_task(pool_name)
 
       result =
         Poolex.run(
@@ -275,14 +262,7 @@ defmodule PoolexTest do
     test "run!/3 exits on timeout", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
 
-      spawn(fn ->
-        Poolex.run(
-          pool_name,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
-        )
-      end)
-
-      :timer.sleep(10)
+      launch_long_task(pool_name)
 
       assert catch_exit(
                Poolex.run!(
@@ -298,16 +278,7 @@ defmodule PoolexTest do
     test "create new workers when possible", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1, max_overflow: 5)
 
-      for _i <- 1..5 do
-        spawn(fn ->
-          Poolex.run(
-            pool_name,
-            fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
-          )
-        end)
-      end
-
-      :timer.sleep(10)
+      launch_long_tasks(pool_name, 5)
 
       debug_info = Poolex.get_debug_info(pool_name)
       assert debug_info.max_overflow == 5
@@ -318,14 +289,7 @@ defmodule PoolexTest do
     test "return error when max count of workers reached", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
 
-      spawn(fn ->
-        Poolex.run(
-          pool_name,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
-        )
-      end)
-
-      :timer.sleep(10)
+      launch_long_task(pool_name)
 
       result =
         Poolex.run(
@@ -349,5 +313,23 @@ defmodule PoolexTest do
     |> Enum.map(fn _ -> Enum.random(?a..?z) end)
     |> to_string()
     |> String.to_atom()
+  end
+
+  defp launch_long_task(pool_id, delay \\ :timer.seconds(4)) do
+    launch_long_tasks(pool_id, 1, delay)
+  end
+
+  defp launch_long_tasks(pool_id, count \\ 1, delay \\ :timer.seconds(4)) do
+    for _i <- 1..count do
+      spawn(fn ->
+        Poolex.run(
+          pool_id,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, delay}) end,
+          timeout: 100
+        )
+      end)
+    end
+
+    :timer.sleep(10)
   end
 end
