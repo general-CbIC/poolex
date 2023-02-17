@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Overflow feature. [Example of use](docs/guides/example-of-use.md)
 - Speeding up CI by adding dialyzer PLT files caches.
 
 ### Fixed
