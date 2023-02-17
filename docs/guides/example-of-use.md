@@ -38,7 +38,8 @@ defmodule PoolexExample.Application do
   defp pool_config do
     [
       worker_module: PoolexExample.Worker,
-      workers_count: 5
+      workers_count: 5,
+      max_overflow: 2
     ]
   end
 
@@ -54,6 +55,8 @@ defmodule PoolexExample.Application do
   end
 end
 ```
+
+Please note that 7 workers started at once. 5 of them were launched at initialization and 2 workers were started over the limit based on the `max_overflow` setting.
 
 All supported configuration options are presented in [Getting Started guide](getting-started.md#poolex-configuration-options).
 
@@ -99,16 +102,18 @@ end
 Run the test function `PoolexExample.Test.start()` and see the result:
 
 ```text
-process #PID<0.227.0> calculating square root of 5
-process #PID<0.223.0> calculating square root of 1
-process #PID<0.225.0> calculating square root of 3
-process #PID<0.224.0> calculating square root of 2
-process #PID<0.226.0> calculating square root of 4
+process #PID<0.351.0> calculating square root of 3
+process #PID<0.350.0> calculating square root of 2
+process #PID<0.349.0> calculating square root of 1
+process #PID<0.352.0> calculating square root of 4
+process #PID<0.353.0> calculating square root of 5
+process #PID<0.349.0> calculating square root of 9
+process #PID<0.353.0> calculating square root of 7
 {:ok, 1.0}
+process #PID<0.351.0> calculating square root of 8
+process #PID<0.352.0> calculating square root of 6
+process #PID<0.350.0> calculating square root of 10
 {:ok, 1.4142135623730951}
 {:ok, 1.7320508075688772}
-{:ok, 2.0}
-{:ok, 2.23606797749979}
-{:ok, 2.449489742783178}
 ...
 ```

@@ -1,6 +1,34 @@
 defmodule Poolex do
-  @external_resource "docs/guides/getting-started.md"
-  @moduledoc "docs/guides/getting-started.md" |> File.read!()
+  @moduledoc """
+  ## Usage
+
+  In the most typical use of Poolex, you only need to start pool of workers as a child of your application.
+
+  ```elixir
+  pool_config = [
+    worker_module: SomeWorker,
+    workers_count: 5
+  ]
+
+  children = [
+    %{
+      id: :worker_pool,
+      start: {Poolex, :start_link, [:worker_pool, pool_config]}
+    }
+  ]
+
+  Supervisor.start_link(children, strategy: :one_for_one)
+  ```
+
+  Then you can execute any code on the workers with `run/3`:
+
+  ```elixir
+  Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
+  {:ok, true}
+  ```
+
+  Fore more information see [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
+  """
 
   use GenServer
 
@@ -19,6 +47,7 @@ defmodule Poolex do
           | {:worker_start_fun, atom()}
           | {:worker_args, list(any())}
           | {:workers_count, pos_integer()}
+          | {:max_overflow, non_neg_integer()}
 
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
@@ -52,6 +81,7 @@ defmodule Poolex do
   | `worker_start_fun` | Name of the function that starts the worker    | `:run`         | `:start`               |
   | `worker_args`      | List of arguments passed to the start function | `[:gg, "wp"]`  | `[]`                   |
   | `workers_count`    | How many workers should be running in the pool | `5`            | **option is required** |
+  | `max_overflow`     | How many workers can be created over the limit | `2`            | `0`                    |
 
   ## Examples
 
@@ -149,10 +179,12 @@ defmodule Poolex do
       * `busy_workers_pids` - list of busy workers.
       * `idle_workers_count` - how many workers are ready to work.
       * `idle_workers_pids` - list of idle workers.
-      * `worker_module` - name of a module that describes a worker.
-      * `worker_args` - what parameters are used to start the worker.
-      * `worker_start_fun` - what function is used to start the worker.
+      * `max_overflow` - how many workers can be created over the limit.
+      * `overflow` - current count of workers launched over limit.
       * `waiting_caller_pids` - list of callers processes.
+      * `worker_args` - what parameters are used to start the worker.
+      * `worker_module` - name of a module that describes a worker.
+      * `worker_start_fun` - what function is used to start the worker.
 
   ## Examples
 
@@ -163,6 +195,7 @@ defmodule Poolex do
       iex> debug_info.idle_workers_count
       5
   """
+  @spec get_debug_info(pool_id()) :: DebugInfo.t()
   def get_debug_info(pool_id) do
     GenServer.call(pool_id, :get_debug_info)
   end
@@ -174,47 +207,67 @@ defmodule Poolex do
 
     worker_start_fun = Keyword.get(opts, :worker_start_fun, :start)
     worker_args = Keyword.get(opts, :worker_args, [])
+    max_overflow = Keyword.get(opts, :max_overflow, 0)
 
     {:ok, monitor_id} = Monitoring.init(pool_id)
     {:ok, supervisor} = Poolex.Supervisor.start_link()
 
+    state = %State{
+      busy_workers_state: BusyWorkers.init(),
+      max_overflow: max_overflow,
+      monitor_id: monitor_id,
+      supervisor: supervisor,
+      waiting_callers_state: WaitingCallers.init(),
+      worker_args: worker_args,
+      worker_module: worker_module,
+      worker_start_fun: worker_start_fun
+    }
+
     worker_pids =
       Enum.map(1..workers_count, fn _ ->
-        {:ok, worker_pid} = start_worker(worker_module, worker_start_fun, worker_args, supervisor)
+        {:ok, worker_pid} = start_worker(state)
         Monitoring.add(monitor_id, worker_pid, :worker)
 
         worker_pid
       end)
 
-    state = %State{
-      worker_module: worker_module,
-      worker_start_fun: worker_start_fun,
-      worker_args: worker_args,
-      busy_workers_state: BusyWorkers.init(),
-      idle_workers_state: IdleWorkers.init(worker_pids),
-      waiting_callers_state: WaitingCallers.init(),
-      monitor_id: monitor_id,
-      supervisor: supervisor
-    }
-
-    {:ok, state}
+    {:ok, %State{state | idle_workers_state: IdleWorkers.init(worker_pids)}}
   end
 
-  @spec start_worker(module(), atom(), list(any()), pid()) :: {:ok, pid()}
-  defp start_worker(worker_module, worker_start_fun, worker_args, supervisor) do
-    DynamicSupervisor.start_child(supervisor, %{
+  @spec start_worker(State.t()) :: {:ok, pid()}
+  defp start_worker(%State{} = state) do
+    DynamicSupervisor.start_child(state.supervisor, %{
       id: make_ref(),
-      start: {worker_module, worker_start_fun, worker_args}
+      start: {state.worker_module, state.worker_start_fun, state.worker_args}
     })
+  end
+
+  @spec stop_worker(Supervisor.supervisor(), pid()) :: :ok | {:error, :not_found}
+  defp stop_worker(supervisor, worker_pid) do
+    DynamicSupervisor.terminate_child(supervisor, worker_pid)
   end
 
   @impl GenServer
   def handle_call(:get_idle_worker, {from_pid, _} = caller, %State{} = state) do
     if IdleWorkers.empty?(state.idle_workers_state) do
-      Monitoring.add(state.monitor_id, from_pid, :caller)
-      new_callers_state = WaitingCallers.add(state.waiting_callers_state, caller)
+      if state.overflow < state.max_overflow do
+        {:ok, new_worker} = start_worker(state)
 
-      {:noreply, %{state | waiting_callers_state: new_callers_state}}
+        Monitoring.add(state.monitor_id, new_worker, :temporary_worker)
+
+        new_state = %State{
+          state
+          | busy_workers_state: BusyWorkers.add(state.busy_workers_state, new_worker),
+            overflow: state.overflow + 1
+        }
+
+        {:reply, {:ok, new_worker}, new_state}
+      else
+        Monitoring.add(state.monitor_id, from_pid, :caller)
+        new_callers_state = WaitingCallers.add(state.waiting_callers_state, caller)
+
+        {:noreply, %{state | waiting_callers_state: new_callers_state}}
+      end
     else
       {idle_worker_pid, new_idle_workers_state} = IdleWorkers.pop(state.idle_workers_state)
       new_busy_workers_state = BusyWorkers.add(state.busy_workers_state, idle_worker_pid)
@@ -239,25 +292,35 @@ defmodule Poolex do
       busy_workers_pids: BusyWorkers.to_list(state.busy_workers_state),
       idle_workers_count: IdleWorkers.count(state.idle_workers_state),
       idle_workers_pids: IdleWorkers.to_list(state.idle_workers_state),
-      worker_module: state.worker_module,
+      max_overflow: state.max_overflow,
+      overflow: state.overflow,
+      waiting_callers: WaitingCallers.to_list(state.waiting_callers_state),
       worker_args: state.worker_args,
-      worker_start_fun: state.worker_start_fun,
-      waiting_callers: WaitingCallers.to_list(state.waiting_callers_state)
+      worker_module: state.worker_module,
+      worker_start_fun: state.worker_start_fun
     }
 
     {:reply, debug_info, state}
   end
 
   @impl GenServer
-  def handle_cast({:release_busy_worker, worker_pid}, state) do
+  def handle_cast({:release_busy_worker, worker_pid}, %State{} = state) do
     if WaitingCallers.empty?(state.waiting_callers_state) do
       if BusyWorkers.member?(state.busy_workers_state, worker_pid) do
-        {:noreply,
-         %State{
-           state
-           | busy_workers_state: BusyWorkers.remove(state.busy_workers_state, worker_pid),
-             idle_workers_state: IdleWorkers.add(state.idle_workers_state, worker_pid)
-         }}
+        busy_workers_state = BusyWorkers.remove(state.busy_workers_state, worker_pid)
+
+        if state.overflow > 0 do
+          stop_worker(state.supervisor, worker_pid)
+
+          {:noreply, %State{state | busy_workers_state: busy_workers_state}}
+        else
+          {:noreply,
+           %State{
+             state
+             | busy_workers_state: busy_workers_state,
+               idle_workers_state: IdleWorkers.add(state.idle_workers_state, worker_pid)
+           }}
+        end
       else
         {:noreply, state}
       end
@@ -271,17 +334,21 @@ defmodule Poolex do
   end
 
   @impl GenServer
-
-  def handle_info({:DOWN, monitoring_reference, _process, dead_process_pid, _reason}, state) do
+  def handle_info(
+        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
+        %State{} = state
+      ) do
     case Monitoring.remove(state.monitor_id, monitoring_reference) do
+      :temporary_worker ->
+        {:noreply,
+         %State{
+           state
+           | overflow: state.overflow - 1,
+             idle_workers_state: IdleWorkers.remove(state.idle_workers_state, dead_process_pid)
+         }}
+
       :worker ->
-        {:ok, new_worker} =
-          start_worker(
-            state.worker_module,
-            state.worker_start_fun,
-            state.worker_args,
-            state.supervisor
-          )
+        {:ok, new_worker} = start_worker(state)
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 

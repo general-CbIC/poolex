@@ -5,7 +5,7 @@ defmodule Poolex.MixProject do
     [
       app: :poolex,
       deps: deps(),
-      description: "The library for managing a pool of processes.",
+      description: "The library for managing pools of workers.",
       docs: docs(),
       elixir: "~> 1.7",
       elixirc_options: [
@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "0.3.1"
+      version: "0.4.0"
     ]
   end
 
