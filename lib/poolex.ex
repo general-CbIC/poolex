@@ -23,7 +23,7 @@ defmodule Poolex do
   Then you can execute any code on the workers with `run/3`:
 
   ```elixir
-  iex> Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
+  Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
   {:ok, true}
   ```
 
