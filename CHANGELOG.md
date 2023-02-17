@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix links in hex documentation.
+- Added missing spec for `get_debug_info/1`.
 
 ## [0.3.0] - 2023-02-03
 
