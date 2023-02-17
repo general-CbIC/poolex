@@ -50,7 +50,7 @@ jobs:
       - name: Set mix.lock file hash
         run: |
           mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
-          echo "mix_hash=$mix_hash" >> $GITHUB_OUTPUT
+          echo "mix_hash={mix_hash}" >> $GITHUB_ENV
       - name: Cache PLT files
         uses: actions/cache@v3
         with:
