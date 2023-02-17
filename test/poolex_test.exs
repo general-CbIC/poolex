@@ -22,6 +22,7 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_count == 0
       assert debug_info.busy_workers_pids == []
       assert debug_info.idle_workers_count == 5
+      assert debug_info.max_overflow == 0
       assert Enum.count(debug_info.idle_workers_pids) == 5
       assert debug_info.worker_module == Agent
       assert debug_info.worker_args == [initial_fun]
@@ -216,13 +217,7 @@ defmodule PoolexTest do
     test "when caller waits too long", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
 
-      spawn(fn ->
-        Poolex.run(pool_name, fn pid ->
-          GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
-        end)
-      end)
-
-      :timer.sleep(10)
+      launch_long_task(pool_name)
 
       waiting_caller =
         spawn(fn ->
@@ -252,14 +247,7 @@ defmodule PoolexTest do
     test "run/3 returns :all_workers_are_busy on timeout", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
 
-      spawn(fn ->
-        Poolex.run(
-          pool_name,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
-        )
-      end)
-
-      :timer.sleep(10)
+      launch_long_task(pool_name)
 
       result =
         Poolex.run(
@@ -274,14 +262,7 @@ defmodule PoolexTest do
     test "run!/3 exits on timeout", %{pool_name: pool_name} do
       Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
 
-      spawn(fn ->
-        Poolex.run(
-          pool_name,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end
-        )
-      end)
-
-      :timer.sleep(10)
+      launch_long_task(pool_name)
 
       assert catch_exit(
                Poolex.run!(
@@ -293,10 +274,79 @@ defmodule PoolexTest do
     end
   end
 
+  describe "overflow" do
+    test "create new workers when possible", %{pool_name: pool_name} do
+      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1, max_overflow: 5)
+
+      launch_long_tasks(pool_name, 5)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.max_overflow == 5
+      assert debug_info.busy_workers_count == 5
+      assert debug_info.overflow == 4
+    end
+
+    test "return error when max count of workers reached", %{pool_name: pool_name} do
+      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
+
+      launch_long_task(pool_name)
+
+      result =
+        Poolex.run(
+          pool_name,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
+          timeout: 100
+        )
+
+      assert result == :all_workers_are_busy
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.max_overflow == 0
+      assert debug_info.overflow == 0
+    end
+
+    test "all workers running over the limit are turned off after use", %{pool_name: pool_name} do
+      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1, max_overflow: 2)
+
+      launch_long_task(pool_name)
+
+      spawn(fn -> Poolex.run(pool_name, &is_pid/1) end)
+      spawn(fn -> Poolex.run(pool_name, &is_pid/1) end)
+
+      :timer.sleep(50)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.idle_workers_count == 0
+      assert debug_info.overflow == 0
+    end
+  end
+
   defp pool_name do
     1..10
     |> Enum.map(fn _ -> Enum.random(?a..?z) end)
     |> to_string()
     |> String.to_atom()
+  end
+
+  defp launch_long_task(pool_id, delay \\ :timer.seconds(4)) do
+    launch_long_tasks(pool_id, 1, delay)
+  end
+
+  defp launch_long_tasks(pool_id, count, delay \\ :timer.seconds(4)) do
+    for _i <- 1..count do
+      spawn(fn ->
+        Poolex.run(
+          pool_id,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, delay}) end,
+          timeout: 100
+        )
+      end)
+    end
+
+    :timer.sleep(10)
   end
 end
