@@ -1,7 +1,7 @@
 # Example of use
 
 This example is based on the [Elixir School's poolboy guide](https://elixirschool.com/en/lessons/misc/poolboy).  
-You can find the source of the below example here: [poolex_example](https://github.com/general-CbIC/poolex_example).
+You can find the source of the below example here: [poolex_example](https://github.com/general-CbIC/poolex/tree/develop/examples/poolex_example).
 
 ## Defining the worker
 
