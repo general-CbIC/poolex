@@ -4,14 +4,22 @@
 [![hex.pm version](https://img.shields.io/hexpm/v/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/poolex/)
 [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
-<!--[![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)-->
+<!-- [![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex) -->
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
+## Features
+
+With `poolex` you can:
+
+- Launch multiple pools of workers and then access the free ones from anywhere in the application.
+- Configure the pool to run additional temporary workers if the load increases.
+- Use your own implementations to define workers and callers access logic.
+
 ## Why `poolex` instead of `poolboy`?
 
-1. `poolex` is written in Elixir. Such a library is much more convenient to use in Elixir projects.
-2. `poolboy` is a great library, but not actively maintained at the moment :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
+- `poolex` is written in Elixir. Such a library is much more convenient to use in Elixir projects.
+- `poolboy` is a great library, but not actively maintained at the moment :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
 
 ## Requirements
 
