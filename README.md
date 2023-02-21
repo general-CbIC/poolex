@@ -16,10 +16,13 @@ With `poolex` you can:
 - Configure the pool to run additional temporary workers if the load increases.
 - Use your own implementations to define workers and callers access logic.
 
-## Why `poolex` instead of `poolboy`?
-
+<details>
+  <summary>Why `poolex` instead of `poolboy`?</summary>
+  
 - `poolex` is written in Elixir. Such a library is much more convenient to use in Elixir projects.
 - `poolboy` is a great library, but not actively maintained at the moment :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
+  
+</details>
 
 ## Requirements
 
