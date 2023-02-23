@@ -1,8 +1,8 @@
 defmodule PoolexExample.Worker do
   use GenServer
 
-  def start do
-    GenServer.start(__MODULE__, nil)
+  def start_link do
+    GenServer.start_link(__MODULE__, nil)
   end
 
   def init(_args) do
