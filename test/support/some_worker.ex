@@ -2,8 +2,8 @@ defmodule SomeWorker do
   @moduledoc false
   use GenServer
 
-  def start do
-    GenServer.start(__MODULE__, [])
+  def start_link do
+    GenServer.start_link(__MODULE__, [])
   end
 
   def init(_options) do
