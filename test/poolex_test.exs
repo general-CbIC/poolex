@@ -10,7 +10,8 @@ defmodule PoolexTest do
     test "valid after initialization", %{pool_name: pool_name} do
       initial_fun = fn -> 0 end
 
-      Poolex.start_link(pool_name,
+      Poolex.start_link(
+        pool_id: pool_name,
         worker_module: Agent,
         worker_args: [initial_fun],
         workers_count: 5
@@ -32,7 +33,8 @@ defmodule PoolexTest do
     test "valid after holding some workers", %{pool_name: pool_name} do
       initial_fun = fn -> 0 end
 
-      Poolex.start_link(pool_name,
+      Poolex.start_link(
+        pool_id: pool_name,
         worker_module: Agent,
         worker_args: [initial_fun],
         workers_count: 5
@@ -66,7 +68,8 @@ defmodule PoolexTest do
 
   describe "run/2" do
     test "updates agent's state", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name,
+      Poolex.start_link(
+        pool_id: pool_name,
         worker_module: Agent,
         worker_args: [fn -> 0 end],
         workers_count: 1
@@ -80,7 +83,7 @@ defmodule PoolexTest do
     end
 
     test "get result from custom worker", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 2)
+      Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 2)
 
       result = Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
       assert result == {:ok, :some_result}
@@ -90,7 +93,7 @@ defmodule PoolexTest do
     end
 
     test "test waiting queue", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 5)
+      Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 5)
 
       result =
         1..20
@@ -110,7 +113,8 @@ defmodule PoolexTest do
 
   describe "restarting terminated processes" do
     test "works on idle workers", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name,
+      Poolex.start_link(
+        pool_id: pool_name,
         worker_module: Agent,
         worker_args: [fn -> 0 end],
         workers_count: 1
@@ -129,7 +133,8 @@ defmodule PoolexTest do
     end
 
     test "works on busy workers", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name,
+      Poolex.start_link(
+        pool_id: pool_name,
         worker_module: Agent,
         worker_args: [fn -> 0 end],
         workers_count: 1
@@ -161,7 +166,7 @@ defmodule PoolexTest do
     end
 
     test "works on callers", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
+      Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
 
       1..10
       |> Enum.each(fn _ ->
@@ -200,7 +205,7 @@ defmodule PoolexTest do
     end
 
     test "runtime errors", %{pool_name: pool_name} do
-      Poolex.start(pool_name, worker_module: SomeWorker, workers_count: 1)
+      Poolex.start(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
       Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_raise) end)
 
       :timer.sleep(10)
@@ -215,7 +220,7 @@ defmodule PoolexTest do
 
   describe "timeouts" do
     test "when caller waits too long", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
+      Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
 
       launch_long_task(pool_name)
 
@@ -245,7 +250,7 @@ defmodule PoolexTest do
     end
 
     test "run/3 returns :all_workers_are_busy on timeout", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
+      Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
 
       launch_long_task(pool_name)
 
@@ -260,7 +265,7 @@ defmodule PoolexTest do
     end
 
     test "run!/3 exits on timeout", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
+      Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
 
       launch_long_task(pool_name)
 
@@ -276,7 +281,12 @@ defmodule PoolexTest do
 
   describe "overflow" do
     test "create new workers when possible", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1, max_overflow: 5)
+      Poolex.start_link(
+        pool_id: pool_name,
+        worker_module: SomeWorker,
+        workers_count: 1,
+        max_overflow: 5
+      )
 
       launch_long_tasks(pool_name, 5)
 
@@ -287,7 +297,7 @@ defmodule PoolexTest do
     end
 
     test "return error when max count of workers reached", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1)
+      Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
 
       launch_long_task(pool_name)
 
@@ -308,7 +318,12 @@ defmodule PoolexTest do
     end
 
     test "all workers running over the limit are turned off after use", %{pool_name: pool_name} do
-      Poolex.start_link(pool_name, worker_module: SomeWorker, workers_count: 1, max_overflow: 2)
+      Poolex.start_link(
+        pool_id: pool_name,
+        worker_module: SomeWorker,
+        workers_count: 1,
+        max_overflow: 2
+      )
 
       launch_long_task(pool_name)
 

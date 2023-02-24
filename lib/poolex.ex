@@ -43,16 +43,18 @@ defmodule Poolex do
   @poolex_options_table """
   | Option             | Description                                    | Example        | Default value          |
   |--------------------|------------------------------------------------|----------------|------------------------|
+  | `pool_id`          | Identifier by which you will access the pool   | `:my_pool`     | **option is required** |
   | `worker_module`    | Name of module that implements our worker      | `MyApp.Worker` | **option is required** |
-  | `worker_start_fun` | Name of the function that starts the worker    | `:run`         | `:start_link`          |
-  | `worker_args`      | List of arguments passed to the start function | `[:gg, "wp"]`  | `[]`                   |
   | `workers_count`    | How many workers should be running in the pool | `5`            | **option is required** |
   | `max_overflow`     | How many workers can be created over the limit | `2`            | `0`                    |
+  | `worker_args`      | List of arguments passed to the start function | `[:gg, "wp"]`  | `[]`                   |
+  | `worker_start_fun` | Name of the function that starts the worker    | `:run`         | `:start_link`          |
   """
 
   @type pool_id() :: atom()
   @type poolex_option() ::
-          {:worker_module, module()}
+          {:pool_id, pool_id()}
+          | {:worker_module, module()}
           | {:worker_start_fun, atom()}
           | {:worker_args, list(any())}
           | {:workers_count, pos_integer()}
@@ -61,18 +63,19 @@ defmodule Poolex do
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
 
-  See start_link/2 for more information.
+  See start_link/1 for more information.
 
   ## Examples
 
-      iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> Poolex.start(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
       iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
       iex> worker_module
       Agent
   """
-  @spec start(pool_id(), list(poolex_option())) :: GenServer.on_start()
-  def start(pool_id, opts) do
-    GenServer.start(__MODULE__, {pool_id, opts}, name: pool_id)
+  @spec start(list(poolex_option())) :: GenServer.on_start()
+  def start(opts) do
+    pool_id = Keyword.fetch!(opts, :pool_id)
+    GenServer.start(__MODULE__, opts, name: pool_id)
   end
 
   @doc """
@@ -88,14 +91,15 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start_link(:other_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> Poolex.start_link(pool_id: :other_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
       iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:other_pool)
       iex> worker_module
       Agent
   """
-  @spec start_link(pool_id(), list(poolex_option())) :: GenServer.on_start()
-  def start_link(pool_id, opts) do
-    GenServer.start_link(__MODULE__, {pool_id, opts}, name: pool_id)
+  @spec start_link(list(poolex_option())) :: GenServer.on_start()
+  def start_link(opts) do
+    pool_id = Keyword.fetch!(opts, :pool_id)
+    GenServer.start_link(__MODULE__, opts, name: pool_id)
   end
 
   @doc """
@@ -141,7 +145,7 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start_link(:some_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
+      iex> Poolex.start_link(pool_id: :some_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
       iex> Poolex.run(:some_pool, fn _pid -> raise RuntimeError end)
       {:runtime_error, %RuntimeError{message: "runtime error"}}
       iex> Poolex.run(:some_pool, fn pid -> Agent.get(pid, &(&1)) end)
@@ -167,7 +171,7 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start_link(:some_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
+      iex> Poolex.start_link(pool_id: :some_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
       iex> Poolex.run!(:some_pool, fn pid -> Agent.get(pid, &(&1)) end)
       5
   """
@@ -191,7 +195,7 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> Poolex.start(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
       iex> state = %Poolex.State{} = Poolex.get_state(:my_pool)
       iex> state.worker_module
       Agent
@@ -223,7 +227,7 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start(:my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> Poolex.start(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
       iex> debug_info = %Poolex.DebugInfo{} = Poolex.get_debug_info(:my_pool)
       iex> debug_info.busy_workers_count
       0
@@ -236,7 +240,8 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def init({pool_id, opts}) do
+  def init(opts) do
+    pool_id = Keyword.fetch!(opts, :pool_id)
     worker_module = Keyword.fetch!(opts, :worker_module)
     workers_count = Keyword.fetch!(opts, :workers_count)
 
