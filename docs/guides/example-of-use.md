@@ -1,7 +1,7 @@
 # Example of use
 
 This example is based on the [Elixir School's poolboy guide](https://elixirschool.com/en/lessons/misc/poolboy).  
-You can find the source of the below example here: [poolex_example](https://github.com/general-CbIC/poolex_example).
+You can find the source of the below example here: [poolex_example](https://github.com/general-CbIC/poolex/tree/develop/examples/poolex_example).
 
 ## Defining the worker
 
@@ -11,8 +11,8 @@ We describe an actor that can easily become a bottleneck in our application, sin
 defmodule PoolexExample.Worker do
   use GenServer
 
-  def start do
-    GenServer.start(__MODULE__, nil)
+  def start_link do
+    GenServer.start_link(__MODULE__, nil)
   end
 
   def init(_args) do
@@ -35,20 +35,13 @@ defmodule PoolexExample.Application do
 
   use Application
 
-  defp pool_config do
-    [
-      worker_module: PoolexExample.Worker,
-      workers_count: 5,
-      max_overflow: 2
-    ]
-  end
-
   def start(_type, _args) do
-    children = [
-      %{
-        id: :worker_pool,
-        start: {Poolex, :start_link, [:worker_pool, pool_config()]}
-      }
+      Poolex.child_spec(
+        pool_id: :worker_pool,
+        worker_module: PoolexExample.Worker,
+        workers_count: 5,
+        max_overflow: 2
+      )
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)

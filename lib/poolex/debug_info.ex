@@ -14,7 +14,7 @@ defmodule Poolex.DebugInfo do
             waiting_callers: [],
             worker_args: [],
             worker_module: nil,
-            worker_start_fun: :start
+            worker_start_fun: nil
 
   @type t() :: %__MODULE__{
           busy_workers_count: non_neg_integer(),

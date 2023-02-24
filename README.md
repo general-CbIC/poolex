@@ -4,9 +4,25 @@
 [![hex.pm version](https://img.shields.io/hexpm/v/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/poolex/)
 [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
-<!--[![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)-->
+<!-- [![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex) -->
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
+
+## Features
+
+With `poolex` you can:
+
+- Launch multiple pools of workers and then access the free ones from anywhere in the application.
+- Configure the pool to run additional temporary workers if the load increases.
+- Use your own implementations to define workers and callers access logic.
+
+<details>
+  <summary>Why `poolex` instead of `poolboy`?</summary>
+  
+- `poolex` is written in Elixir. This library is much more convenient to use in Elixir projects.
+- `poolboy` is a great library, but not actively maintained at the moment :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
+  
+</details>
 
 ## Requirements
 
@@ -39,7 +55,7 @@ Add `:poolex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:poolex, "~> 0.4.0"}
+    {:poolex, "~> 0.5.0"}
   ]
 end
 ```
@@ -49,16 +65,12 @@ end
 In the most typical use of Poolex, you only need to start pool of workers as a child of your application.
 
 ```elixir
-pool_config = [
-  worker_module: SomeWorker,
-  workers_count: 5
-]
-
 children = [
-  %{
-    id: :worker_pool,
-    start: {Poolex, :start_link, [:worker_pool, pool_config]}
-  }
+  Poolex.child_spec(
+    pool_id: :worker_pool,
+    worker_module: SomeWorker,
+    workers_count: 5
+  )
 ]
 
 Supervisor.start_link(children, strategy: :one_for_one)
