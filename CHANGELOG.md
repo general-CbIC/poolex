@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2023-02-24
+
 ### Changed
 
 - The default value of the parameter `:worker_start_fun` changed from `:start` to `:start_link`, since the second value is used more often.
@@ -105,7 +107,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/general-CbIC/poolex/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/general-CbIC/poolex/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/general-CbIC/poolex/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/general-CbIC/poolex/compare/v0.2.1...v0.2.2
