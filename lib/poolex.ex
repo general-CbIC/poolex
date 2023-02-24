@@ -99,6 +99,38 @@ defmodule Poolex do
   end
 
   @doc """
+  You need to use child_spec/2 to set the required pool_id parameter.
+  """
+  @spec child_spec(any()) :: no_return()
+  def child_spec(_args) do
+    raise "Use child_spec/2 to set required pool_id"
+  end
+
+  @doc """
+  Returns a specification to start this module under a supervisor.
+
+  This function can be used if you want to run multiple pools from the supervisor tree.
+  Just like the fun_name function takes a pool ID as the first parameter and options as the second.
+
+  ## Options
+
+  #{@poolex_options_table}
+
+  ## Examples
+
+      children = [
+        Poolex.child_spec(:worker_pool_1, worker_module: SomeWorker, workers_count: 5),
+        Poolex.child_spec(:worker_pool_2, worker_module: SomeOtherWorker, workers_count: 5)
+      ]
+
+      Supervisor.start_link(children, strategy: :one_for_one)
+  """
+  @spec child_spec(pool_id(), list(poolex_option())) :: Supervisor.child_spec()
+  def child_spec(pool_id, opts) do
+    %{id: pool_id, start: {Poolex, :start_link, [pool_id, opts]}}
+  end
+
+  @doc """
   Same as `run!/3` but handles runtime_errors.
 
   Returns:

@@ -325,6 +325,24 @@ defmodule PoolexTest do
     end
   end
 
+  describe "child_spec" do
+    test "child_spec/1" do
+      assert Poolex.child_spec(worker_module: SomeWorker, workers_count: 5) == %{
+               id: Poolex,
+               start:
+                 {Poolex, :start_link, [Poolex, [worker_module: SomeWorker, workers_count: 5]]}
+             }
+    end
+
+    test "child_spec/2", %{pool_name: pool_name} do
+      assert Poolex.child_spec(pool_name, worker_module: SomeWorker, workers_count: 5) == %{
+               id: pool_name,
+               start:
+                 {Poolex, :start_link, [pool_name, [worker_module: SomeWorker, workers_count: 5]]}
+             }
+    end
+  end
+
   defp pool_name do
     1..10
     |> Enum.map(fn _ -> Enum.random(?a..?z) end)
