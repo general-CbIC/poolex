@@ -65,16 +65,12 @@ end
 In the most typical use of Poolex, you only need to start pool of workers as a child of your application.
 
 ```elixir
-pool_config = [
-  worker_module: SomeWorker,
-  workers_count: 5
-]
-
 children = [
-  %{
-    id: :worker_pool,
-    start: {Poolex, :start_link, [:worker_pool, pool_config]}
-  }
+  Poolex.child_spec(
+    pool_id: :worker_pool,
+    worker_module: SomeWorker,
+    workers_count: 5
+  )
 ]
 
 Supervisor.start_link(children, strategy: :one_for_one)

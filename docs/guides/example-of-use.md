@@ -35,20 +35,13 @@ defmodule PoolexExample.Application do
 
   use Application
 
-  defp pool_config do
-    [
-      worker_module: PoolexExample.Worker,
-      workers_count: 5,
-      max_overflow: 2
-    ]
-  end
-
   def start(_type, _args) do
-    children = [
-      %{
-        id: :worker_pool,
-        start: {Poolex, :start_link, [:worker_pool, pool_config()]}
-      }
+      Poolex.child_spec(
+        pool_id: :worker_pool,
+        worker_module: PoolexExample.Worker,
+        workers_count: 5,
+        max_overflow: 2
+      )
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
