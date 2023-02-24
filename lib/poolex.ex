@@ -109,7 +109,7 @@ defmodule Poolex do
 
       children = [
         Poolex.child_spec(pool_id: :worker_pool_1, worker_module: SomeWorker, workers_count: 5),
-        # or another way
+        # or in another way
         {Poolex, [pool_id: :worker_pool_2, worker_module: SomeOtherWorker, workers_count: 5]}
       ]
 

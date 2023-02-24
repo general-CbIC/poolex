@@ -10,6 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The default value of the parameter `:worker_start_fun` changed from `:start` to `:start_link`, since the second value is used more often.
+- [INCOMPATIBLE] Reworked pool launch functions `start` and `start_link`
+  - First argument `pool_id` moved to `poolex_options` under required key `:pool_id`. So the arity of both functions has changed to `1`.
+
+    ```elixir
+    # Before
+    Poolex.start(:my_pool, worker_module: Agent, workers_count: 5)
+
+    # After
+    Poolex.start(pool_id: :my_pool, worker_module: Agent, workers_count: 5)
+    ```
+
+  - `child_spec/1` was redefined to support `:pool_id` key in `poolex_options`. Now the pool can be added to the supervisor tree in a more convenient way.
+
+    ```elixir
+    children = [
+        Poolex.child_spec(pool_id: :worker_pool_1, worker_module: SomeWorker, workers_count: 5),
+        # or in another way
+        {Poolex, [pool_id: :worker_pool_2, worker_module: SomeOtherWorker, workers_count: 5]}
+      ]
+
+      Supervisor.start_link(children, strategy: :one_for_one)
+    ```
 
 ## [0.4.0] - 2023-02-18
 
