@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [Docs] Simple [migration guide from `:poolboy`](docs/guides/migration-from-poolboy.md)
 
+## Fixed
+
+- [Docs] Fix missing `Poolex.State.t()` on docs generating ([issue](https://github.com/general-CbIC/poolex/issues/32))
+
 ## [0.5.0] - 2023-02-24
 
 ### Changed
