@@ -4,7 +4,7 @@ If you are using `:poolboy` and want to use `Poolex` instead, then you need to f
 
 ## I. Install `Poolex` dependency
 
-```elixir
+```diff
 # mix.exs
 defp deps do
   [
@@ -22,7 +22,7 @@ mix deps.clean --unlock --unused
 
 ## II. Update child specs
 
-```elixir
+```diff
 # Your Application or Supervisor file
 def init(_args) do
   children = [
@@ -46,7 +46,7 @@ end
 
 ## III. Update call site
 
-```elixir
+```diff
 # Use `run!/3` to leave the same behavior. 
 # If you want a safe interface with error handling, then use `run/3`.
 -  :poolboy.transaction(
