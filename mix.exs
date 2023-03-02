@@ -55,6 +55,7 @@ defmodule Poolex.MixProject do
         "docs/CONTRIBUTING.md",
         "docs/guides.md",
         "docs/guides/custom-implementations.md",
+        "docs/guides/migration-from-poolboy.md",
         "docs/guides/example-of-use.md",
         "docs/guides/getting-started.md",
         "README.md"
