@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- [Docs] Simple [migration guide from `:poolboy`](docs/guides/migration-from-poolboy.md)
+
 ## [0.5.0] - 2023-02-24
 
 ### Changed
