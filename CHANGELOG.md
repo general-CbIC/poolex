@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2023-03-04
+
 ## Added
 
 - [Docs] Simple [migration guide from `:poolboy`](docs/guides/migration-from-poolboy.md)
@@ -115,7 +117,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/general-CbIC/poolex/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/general-CbIC/poolex/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/general-CbIC/poolex/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/general-CbIC/poolex/compare/v0.2.2...v0.3.0
