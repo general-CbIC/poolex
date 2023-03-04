@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.1] - 2023-03-04
 
-## Added
+### Added
 
 - [Docs] Simple [migration guide from `:poolboy`](docs/guides/migration-from-poolboy.md)
 
-## Fixed
+### Fixed
 
 - [Docs] Fix missing `Poolex.State.t()` on docs generating ([issue](https://github.com/general-CbIC/poolex/issues/32))
 
