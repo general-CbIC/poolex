@@ -38,6 +38,7 @@ With `poolex` you can:
   - [Starting pool of workers](docs/guides/getting-started.md#starting-pool-of-workers)
     - [Poolex configuration options](docs/guides/getting-started.md#poolex-configuration-options)
   - [Working with the pool](docs/guides/getting-started.md#working-with-the-pool)
+- [Migration from `:poolboy`](docs/guides/migration-from-poolboy.md)
 - [Example of use](docs/guides/example-of-use.md)
   - [Defining the worker](docs/guides/example-of-use.md#defining-the-worker)
   - [Configuring Poolex](docs/guides/example-of-use.md#configuring-poolex)

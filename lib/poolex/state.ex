@@ -1,5 +1,10 @@
 defmodule Poolex.State do
-  @moduledoc false
+  @moduledoc """
+  Internal structure containing the state of the pool.
+
+  Can be used for debugging.
+  """
+
   defstruct busy_workers_state: nil,
             idle_workers_state: nil,
             max_overflow: 0,
