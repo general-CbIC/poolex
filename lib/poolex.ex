@@ -37,24 +37,30 @@ defmodule Poolex do
 
   @default_wait_timeout :timer.seconds(5)
   @poolex_options_table """
-  | Option             | Description                                    | Example        | Default value          |
-  |--------------------|------------------------------------------------|----------------|------------------------|
-  | `pool_id`          | Identifier by which you will access the pool   | `:my_pool`     | **option is required** |
-  | `worker_module`    | Name of module that implements our worker      | `MyApp.Worker` | **option is required** |
-  | `workers_count`    | How many workers should be running in the pool | `5`            | **option is required** |
-  | `max_overflow`     | How many workers can be created over the limit | `2`            | `0`                    |
-  | `worker_args`      | List of arguments passed to the start function | `[:gg, "wp"]`  | `[]`                   |
-  | `worker_start_fun` | Name of the function that starts the worker    | `:run`         | `:start_link`          |
+  | Option                 | Description                                          | Example               | Default value                     |
+  |------------------------|------------------------------------------------------|-----------------------|-----------------------------------|
+  | `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | **option is required**            |
+  | `worker_module`        | Name of module that implements our worker            | `MyApp.Worker`        | **option is required**            |
+  | `workers_count`        | How many workers should be running in the pool       | `5`                   | **option is required**            |
+  | `max_overflow`         | How many workers can be created over the limit       | `2`                   | `0`                               |
+  | `worker_args`          | List of arguments passed to the start function       | `[:gg, "wp"]`         | `[]`                              |
+  | `worker_start_fun`     | Name of the function that starts the worker          | `:run`                | `:start_link`                     |
+  | `busy_workers_impl`    | Module that describes how to work with busy workers  | `SomeBusyWorkersImpl` | `Poolex.Workers.Impl.List`        |
+  | `idle_workers_impl`    | Module that describes how to work with idle workers  | `SomeIdleWorkersImpl` | `Poolex.Workers.Impl.List`        |
+  | `waiting_callers_impl` | Module that describes how to work with callers queue | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
   """
 
   @type pool_id() :: atom()
   @type poolex_option() ::
           {:pool_id, pool_id()}
           | {:worker_module, module()}
-          | {:worker_start_fun, atom()}
-          | {:worker_args, list(any())}
           | {:workers_count, pos_integer()}
           | {:max_overflow, non_neg_integer()}
+          | {:worker_args, list(any())}
+          | {:worker_start_fun, atom()}
+          | {:busy_workers_impl, module()}
+          | {:idle_workers_impl, module()}
+          | {:waiting_callers_impl, module()}
 
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
@@ -232,18 +238,27 @@ defmodule Poolex do
     worker_module = Keyword.fetch!(opts, :worker_module)
     workers_count = Keyword.fetch!(opts, :workers_count)
 
-    worker_start_fun = Keyword.get(opts, :worker_start_fun, :start_link)
-    worker_args = Keyword.get(opts, :worker_args, [])
     max_overflow = Keyword.get(opts, :max_overflow, 0)
+    worker_args = Keyword.get(opts, :worker_args, [])
+    worker_start_fun = Keyword.get(opts, :worker_start_fun, :start_link)
+
+    busy_workers_impl = Keyword.get(opts, :busy_workers_impl, Poolex.Workers.Impl.List)
+    idle_workers_impl = Keyword.get(opts, :idle_workers_impl, Poolex.Workers.Impl.List)
+
+    waiting_callers_impl =
+      Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
     {:ok, monitor_id} = Monitoring.init(pool_id)
     {:ok, supervisor} = Poolex.Supervisor.start_link()
 
     state = %State{
+      busy_workers_impl: busy_workers_impl,
       busy_workers_state: BusyWorkers.init(),
+      idle_workers_impl: idle_workers_impl,
       max_overflow: max_overflow,
       monitor_id: monitor_id,
       supervisor: supervisor,
+      waiting_callers_impl: waiting_callers_impl,
       waiting_callers_state: WaitingCallers.init(),
       worker_args: worker_args,
       worker_module: worker_module,
@@ -316,12 +331,15 @@ defmodule Poolex do
   def handle_call(:get_debug_info, _form, %Poolex.State{} = state) do
     debug_info = %DebugInfo{
       busy_workers_count: BusyWorkers.count(state.busy_workers_state),
+      busy_workers_impl: state.busy_workers_impl,
       busy_workers_pids: BusyWorkers.to_list(state.busy_workers_state),
       idle_workers_count: IdleWorkers.count(state.idle_workers_state),
+      idle_workers_impl: state.idle_workers_impl,
       idle_workers_pids: IdleWorkers.to_list(state.idle_workers_state),
       max_overflow: state.max_overflow,
       overflow: state.overflow,
       waiting_callers: WaitingCallers.to_list(state.waiting_callers_state),
+      waiting_callers_impl: state.waiting_callers_impl,
       worker_args: state.worker_args,
       worker_module: state.worker_module,
       worker_start_fun: state.worker_start_fun

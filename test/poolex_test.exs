@@ -30,7 +30,7 @@ defmodule PoolexTest do
       assert debug_info.worker_module == Agent
       assert debug_info.worker_args == [initial_fun]
       assert debug_info.waiting_callers == []
-      assert debug_info.waiting_callers_impl == Poolex.Workers.Impl.List
+      assert debug_info.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
     end
 
     test "valid configured implementations", %{pool_name: pool_name} do
