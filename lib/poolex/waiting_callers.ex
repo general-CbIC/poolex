@@ -1,24 +1,22 @@
 defmodule Poolex.WaitingCallers do
   @moduledoc false
-  @behaviour Poolex.Callers.Behaviour
+  alias Poolex.Callers.Behaviour
 
-  @impl true
-  def init(), do: impl().init()
+  @spec init(module()) :: Behaviour.state()
+  def init(impl), do: impl.init()
 
-  @impl true
-  def add(state, caller), do: impl().add(state, caller)
+  @spec add(module(), Behaviour.state(), Behaviour.caller()) :: Behaviour.state()
+  def add(impl, state, caller), do: impl.add(state, caller)
 
-  @impl true
-  def empty?(state), do: impl().empty?(state)
+  @spec empty?(module(), Behaviour.state()) :: boolean()
+  def empty?(impl, state), do: impl.empty?(state)
 
-  @impl true
-  def pop(state), do: impl().pop(state)
+  @spec pop(module(), Behaviour.state()) :: {Behaviour.caller(), Behaviour.state()} | :empty
+  def pop(impl, state), do: impl.pop(state)
 
-  @impl true
-  def remove_by_pid(state, caller_pid), do: impl().remove_by_pid(state, caller_pid)
+  @spec remove_by_pid(module(), Behaviour.state(), pid()) :: Behaviour.state()
+  def remove_by_pid(impl, state, caller_pid), do: impl.remove_by_pid(state, caller_pid)
 
-  @impl true
-  def to_list(state), do: impl().to_list(state)
-
-  defp impl, do: Poolex.Callers.Settings.callers_impl()
+  @spec to_list(module(), Behaviour.state()) :: list(Behaviour.caller())
+  def to_list(impl, state), do: impl.to_list(state)
 end
