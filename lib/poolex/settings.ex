@@ -5,6 +5,7 @@ defmodule Poolex.Settings do
 
   @type impl_type() :: :idle_workers | :busy_workers | :waiting_callers
 
+  @doc false
   @spec init() :: :ok
   def init do
     case :ets.info(@table_name) do
@@ -15,6 +16,7 @@ defmodule Poolex.Settings do
     :ok
   end
 
+  @doc false
   @spec set_implementation(Poolex.pool_id(), impl_type(), module()) :: :ok
   def set_implementation(pool_id, impl_type, impl_module) when impl_type in @impl_types do
     :ets.insert(@table_name, {{pool_id, impl_type}, impl_module})
@@ -22,6 +24,7 @@ defmodule Poolex.Settings do
     :ok
   end
 
+  @doc false
   @spec get_implementation(Poolex.pool_id(), impl_type()) :: module()
   def get_implementation(pool_id, impl_type) when impl_type in @impl_types do
     [{{_pool_id, _impl_type}, impl_module}] = :ets.lookup(@table_name, {pool_id, impl_type})

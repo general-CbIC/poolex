@@ -6,7 +6,6 @@ defmodule Poolex.State do
   """
 
   defstruct busy_workers_state: nil,
-            idle_workers_impl: nil,
             idle_workers_state: nil,
             max_overflow: 0,
             monitor_id: nil,
@@ -21,7 +20,6 @@ defmodule Poolex.State do
 
   @type t() :: %__MODULE__{
           busy_workers_state: Poolex.Workers.Behaviour.state(),
-          idle_workers_impl: module(),
           idle_workers_state: Poolex.Workers.Behaviour.state(),
           max_overflow: non_neg_integer(),
           monitor_id: atom() | reference(),
