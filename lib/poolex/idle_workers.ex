@@ -1,25 +1,28 @@
 defmodule Poolex.IdleWorkers do
   @moduledoc false
-  @behaviour Poolex.Workers.Behaviour
+  alias Poolex.Workers.Behaviour
 
-  @impl true
-  def init(), do: impl().init()
-  @impl true
-  def init(workers), do: impl().init(workers)
-  @impl true
-  def add(state, worker), do: impl().add(state, worker)
-  @impl true
-  def member?(state, worker), do: impl().member?(state, worker)
-  @impl true
-  def remove(state, worker), do: impl().remove(state, worker)
-  @impl true
-  def count(state), do: impl().count(state)
-  @impl true
-  def to_list(state), do: impl().to_list(state)
-  @impl true
-  def empty?(state), do: impl().empty?(state)
-  @impl true
-  def pop(state), do: impl().pop(state)
+  @spec init(module()) :: Behaviour.state()
+  def init(impl), do: impl.init()
 
-  defp impl, do: Poolex.Workers.Settings.idle_workers_impl()
+  @spec init(module(), list(Behaviour.worker())) :: Behaviour.state()
+  def init(impl, workers), do: impl.init(workers)
+
+  @spec add(module(), Behaviour.state(), Behaviour.worker()) :: Behaviour.state()
+  def add(impl, state, worker), do: impl.add(state, worker)
+
+  @spec remove(module(), Behaviour.state(), Behaviour.worker()) :: Behaviour.state()
+  def remove(impl, state, worker), do: impl.remove(state, worker)
+
+  @spec count(module(), Behaviour.state()) :: non_neg_integer()
+  def count(impl, state), do: impl.count(state)
+
+  @spec to_list(module(), Behaviour.state()) :: list(Behaviour.worker())
+  def to_list(impl, state), do: impl.to_list(state)
+
+  @spec empty?(module(), Behaviour.state()) :: boolean()
+  def empty?(impl, state), do: impl.empty?(state)
+
+  @spec pop(module(), Behaviour.state()) :: {Behaviour.worker(), Behaviour.state()} | :empty
+  def pop(impl, state), do: impl.pop(state)
 end
