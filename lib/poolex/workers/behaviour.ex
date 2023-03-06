@@ -19,7 +19,7 @@ defmodule Poolex.Workers.Behaviour do
   @doc "Returns the number of workers in the state."
   @callback count(state()) :: non_neg_integer()
   @doc "Returns list of workers pids."
-  @callback to_list(state()) :: list(pid())
+  @callback to_list(state()) :: list(worker())
   @doc "Returns `true` if the `state` is empty, `false` otherwise."
   @callback empty?(state()) :: boolean()
   @doc "Removes one of workers from `state` and returns it as `{caller, state}`. Returns `:empty` if state is empty."

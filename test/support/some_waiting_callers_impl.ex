@@ -1,4 +1,5 @@
 defmodule SomeWaitingCallersImpl do
+  @moduledoc false
   @behaviour Poolex.Callers.Behaviour
 
   @impl true

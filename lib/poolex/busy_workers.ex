@@ -1,25 +1,29 @@
 defmodule Poolex.BusyWorkers do
   @moduledoc false
-  @behaviour Poolex.Workers.Behaviour
+  alias Poolex.Workers.Behaviour
+  alias Poolex.Settings
 
-  @impl true
-  def init(), do: impl().init()
-  @impl true
-  def init(workers), do: impl().init(workers)
-  @impl true
-  def add(state, worker), do: impl().add(state, worker)
-  @impl true
-  def member?(state, worker), do: impl().member?(state, worker)
-  @impl true
-  def remove(state, worker), do: impl().remove(state, worker)
-  @impl true
-  def count(state), do: impl().count(state)
-  @impl true
-  def to_list(state), do: impl().to_list(state)
-  @impl true
-  def empty?(state), do: impl().empty?(state)
-  @impl true
-  def pop(state), do: impl().pop(state)
+  @spec init(Poolex.pool_id(), module()) :: Behaviour.state()
+  def init(pool_id, impl) do
+    :ok = Settings.set_implementation(pool_id, :busy_workers, impl)
+    impl(pool_id).init()
+  end
 
-  defp impl, do: Poolex.Workers.Settings.busy_workers_impl()
+  @spec add(Poolex.pool_id(), Behaviour.state(), Behaviour.worker()) :: Behaviour.state()
+  def add(pool_id, state, worker), do: impl(pool_id).add(state, worker)
+
+  @spec member?(Poolex.pool_id(), Behaviour.state(), Behaviour.worker()) :: boolean()
+  def member?(pool_id, state, worker), do: impl(pool_id).member?(state, worker)
+
+  @spec remove(Poolex.pool_id(), Behaviour.state(), Behaviour.worker()) :: Behaviour.state()
+  def remove(pool_id, state, worker), do: impl(pool_id).remove(state, worker)
+
+  @spec count(Poolex.pool_id(), Behaviour.state()) :: non_neg_integer()
+  def count(pool_id, state), do: impl(pool_id).count(state)
+
+  @spec to_list(Poolex.pool_id(), Behaviour.state()) :: list(Behaviour.worker())
+  def to_list(pool_id, state), do: impl(pool_id).to_list(state)
+
+  @spec impl(Poolex.pool_id()) :: module()
+  def impl(pool_id), do: Settings.get_implementation(pool_id, :busy_workers)
 end

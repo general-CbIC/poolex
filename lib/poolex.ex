@@ -32,6 +32,7 @@ defmodule Poolex do
   alias Poolex.DebugInfo
   alias Poolex.IdleWorkers
   alias Poolex.Monitoring
+  alias Poolex.Settings
   alias Poolex.State
   alias Poolex.WaitingCallers
 
@@ -248,15 +249,16 @@ defmodule Poolex do
     waiting_callers_impl =
       Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
+    :ok = Settings.init()
     {:ok, monitor_id} = Monitoring.init(pool_id)
     {:ok, supervisor} = Poolex.Supervisor.start_link()
 
     state = %State{
-      busy_workers_impl: busy_workers_impl,
-      busy_workers_state: BusyWorkers.init(),
+      busy_workers_state: BusyWorkers.init(pool_id, busy_workers_impl),
       idle_workers_impl: idle_workers_impl,
       max_overflow: max_overflow,
       monitor_id: monitor_id,
+      pool_id: pool_id,
       supervisor: supervisor,
       waiting_callers_impl: waiting_callers_impl,
       waiting_callers_state: WaitingCallers.init(waiting_callers_impl),
@@ -300,7 +302,8 @@ defmodule Poolex do
 
         new_state = %State{
           state
-          | busy_workers_state: BusyWorkers.add(state.busy_workers_state, new_worker),
+          | busy_workers_state:
+              BusyWorkers.add(state.pool_id, state.busy_workers_state, new_worker),
             overflow: state.overflow + 1
         }
 
@@ -317,7 +320,8 @@ defmodule Poolex do
       {idle_worker_pid, new_idle_workers_state} =
         IdleWorkers.pop(state.idle_workers_impl, state.idle_workers_state)
 
-      new_busy_workers_state = BusyWorkers.add(state.busy_workers_state, idle_worker_pid)
+      new_busy_workers_state =
+        BusyWorkers.add(state.pool_id, state.busy_workers_state, idle_worker_pid)
 
       new_state = %State{
         state
@@ -335,9 +339,9 @@ defmodule Poolex do
 
   def handle_call(:get_debug_info, _form, %Poolex.State{} = state) do
     debug_info = %DebugInfo{
-      busy_workers_count: BusyWorkers.count(state.busy_workers_state),
-      busy_workers_impl: state.busy_workers_impl,
-      busy_workers_pids: BusyWorkers.to_list(state.busy_workers_state),
+      busy_workers_count: BusyWorkers.count(state.pool_id, state.busy_workers_state),
+      busy_workers_impl: BusyWorkers.impl(state.pool_id),
+      busy_workers_pids: BusyWorkers.to_list(state.pool_id, state.busy_workers_state),
       idle_workers_count: IdleWorkers.count(state.idle_workers_impl, state.idle_workers_state),
       idle_workers_impl: state.idle_workers_impl,
       idle_workers_pids: IdleWorkers.to_list(state.idle_workers_impl, state.idle_workers_state),
@@ -357,8 +361,9 @@ defmodule Poolex do
   @impl GenServer
   def handle_cast({:release_busy_worker, worker_pid}, %State{} = state) do
     if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
-      if BusyWorkers.member?(state.busy_workers_state, worker_pid) do
-        busy_workers_state = BusyWorkers.remove(state.busy_workers_state, worker_pid)
+      if BusyWorkers.member?(state.pool_id, state.busy_workers_state, worker_pid) do
+        busy_workers_state =
+          BusyWorkers.remove(state.pool_id, state.busy_workers_state, worker_pid)
 
         if state.overflow > 0 do
           stop_worker(state.supervisor, worker_pid)
@@ -419,7 +424,8 @@ defmodule Poolex do
         state = %State{
           state
           | idle_workers_state: new_idle_workers_state,
-            busy_workers_state: BusyWorkers.remove(state.busy_workers_state, dead_process_pid)
+            busy_workers_state:
+              BusyWorkers.remove(state.pool_id, state.busy_workers_state, dead_process_pid)
         }
 
         {:noreply, state}
