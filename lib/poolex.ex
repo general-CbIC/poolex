@@ -259,8 +259,7 @@ defmodule Poolex do
       monitor_id: monitor_id,
       pool_id: pool_id,
       supervisor: supervisor,
-      waiting_callers_impl: waiting_callers_impl,
-      waiting_callers_state: WaitingCallers.init(waiting_callers_impl),
+      waiting_callers_state: WaitingCallers.init(pool_id, waiting_callers_impl),
       worker_args: worker_args,
       worker_module: worker_module,
       worker_start_fun: worker_start_fun
@@ -310,8 +309,7 @@ defmodule Poolex do
       else
         Monitoring.add(state.monitor_id, from_pid, :caller)
 
-        new_callers_state =
-          WaitingCallers.add(state.waiting_callers_impl, state.waiting_callers_state, caller)
+        new_callers_state = WaitingCallers.add(state.pool_id, state.waiting_callers_state, caller)
 
         {:noreply, %{state | waiting_callers_state: new_callers_state}}
       end
@@ -346,9 +344,8 @@ defmodule Poolex do
       idle_workers_pids: IdleWorkers.to_list(state.pool_id, state.idle_workers_state),
       max_overflow: state.max_overflow,
       overflow: state.overflow,
-      waiting_callers:
-        WaitingCallers.to_list(state.waiting_callers_impl, state.waiting_callers_state),
-      waiting_callers_impl: state.waiting_callers_impl,
+      waiting_callers: WaitingCallers.to_list(state.pool_id, state.waiting_callers_state),
+      waiting_callers_impl: WaitingCallers.impl(state.pool_id),
       worker_args: state.worker_args,
       worker_module: state.worker_module,
       worker_start_fun: state.worker_start_fun
@@ -359,7 +356,7 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_cast({:release_busy_worker, worker_pid}, %State{} = state) do
-    if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
+    if WaitingCallers.empty?(state.pool_id, state.waiting_callers_state) do
       if BusyWorkers.member?(state.pool_id, state.busy_workers_state, worker_pid) do
         busy_workers_state =
           BusyWorkers.remove(state.pool_id, state.busy_workers_state, worker_pid)
@@ -382,7 +379,7 @@ defmodule Poolex do
       end
     else
       {caller, new_waiting_callers_state} =
-        WaitingCallers.pop(state.waiting_callers_impl, state.waiting_callers_state)
+        WaitingCallers.pop(state.pool_id, state.waiting_callers_state)
 
       GenServer.reply(caller, {:ok, worker_pid})
 
@@ -432,7 +429,7 @@ defmodule Poolex do
       :caller ->
         new_waiting_callers_state =
           WaitingCallers.remove_by_pid(
-            state.waiting_callers_impl,
+            state.pool_id,
             state.waiting_callers_state,
             dead_process_pid
           )
