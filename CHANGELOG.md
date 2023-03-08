@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- [INCOMPATIBLE] Changed approach to configuring custom implementations for queues of workers and callers.
+  - Reasons: [Avoid application configuration](https://hexdocs.pm/elixir/library-guidelines.html#avoid-application-configuration)
+  - Now for the configuration you need to use the initialization parameters instead of `Application` config.
+
+    ```elixir
+    # Before
+    import Config
+
+    config :poolex,
+      callers_impl: SomeCallersImpl,
+      busy_workers_impl: SomeBusyWorkersImpl,
+      idle_workers_impl: SomeIdleWorkersImpl
+
+    # After
+    Poolex.child_spec(
+      pool_id: :some_pool,
+      worker_module: SomeWorker,
+      workers_count: 10,
+      waiting_callers_impl: SomeCallersImpl,
+      busy_workers_impl: SomeBusyWorkersImpl,
+      idle_workers_impl: SomeIdleWorkersImpl
+    )
+    ```
+
 ## [0.5.1] - 2023-03-04
 
 ### Added

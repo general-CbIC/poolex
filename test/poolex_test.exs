@@ -21,13 +21,33 @@ defmodule PoolexTest do
 
       assert debug_info.__struct__ == Poolex.DebugInfo
       assert debug_info.busy_workers_count == 0
+      assert debug_info.busy_workers_impl == Poolex.Workers.Impl.List
       assert debug_info.busy_workers_pids == []
       assert debug_info.idle_workers_count == 5
+      assert debug_info.idle_workers_impl == Poolex.Workers.Impl.List
       assert debug_info.max_overflow == 0
       assert Enum.count(debug_info.idle_workers_pids) == 5
       assert debug_info.worker_module == Agent
       assert debug_info.worker_args == [initial_fun]
       assert debug_info.waiting_callers == []
+      assert debug_info.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
+    end
+
+    test "valid configured implementations", %{pool_name: pool_name} do
+      Poolex.start_link(
+        pool_id: pool_name,
+        worker_module: SomeWorker,
+        workers_count: 10,
+        busy_workers_impl: SomeBusyWorkersImpl,
+        idle_workers_impl: SomeIdleWorkersImpl,
+        waiting_callers_impl: SomeWaitingCallersImpl
+      )
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.busy_workers_impl == SomeBusyWorkersImpl
+      assert debug_info.idle_workers_impl == SomeIdleWorkersImpl
+      assert debug_info.waiting_callers_impl == SomeWaitingCallersImpl
     end
 
     test "valid after holding some workers", %{pool_name: pool_name} do

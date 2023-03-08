@@ -71,18 +71,27 @@ If you have any ideas about what implementations can be added to the library or 
 
 ### Configuring custom implementations
 
-After that, you need to add the following to the configuration (for example, `runtime.exs`):
+After that, you need to provide your module names to Poolex initialization:
 
 ```elixir
-config :poolex, callers_impl: MyApp.MyAmazingCallersImpl
+Poolex.child_spec(
+  pool_id: :some_pool,
+  worker_module: SomeWorker,
+  workers_count: 10,
+  waiting_callers_impl: MyApp.MyAmazingCallersImpl
+)
 ```
 
-That's it! Your implementation will be used in `Poolex`.
+That's it! Your implementation will be used in launched pool.
 
 The configuration for workers might look like this:
 
 ```elixir
-config :poolex,
+Poolex.child_spec(
+  pool_id: :some_pool,
+  worker_module: SomeWorker,
+  workers_count: 10,
   busy_workers_impl: MyApp.PerfectBusyWorkersImpl,
   idle_workers_impl: MyApp.FancyIdleWorkersImpl
+)
 ```
