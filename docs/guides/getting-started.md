@@ -2,13 +2,13 @@
 
 ## Starting pool of workers
 
-To start a cache you can use either `start/1` or `start_link/1`.
+To start a pool you can use either `start/1` or `start_link/1`.
 
 ```elixir
 Poolex.start_link(pool_id: :my_pool, worker_module: SomeWorker, workers_count: 10)
 ```
 
-In general you should place it into your Supervision tree for fault tolerance.
+In general, you should place it into your Supervision tree for fault tolerance.
 
 ```elixir
 children = [
@@ -44,7 +44,7 @@ The first argument is the name of the pool mentioned above.
 
 The second argument is the function that takes the pid of the worker as the only parameter and performs the necessary actions.
 
-The third argument contains run options. Currently there is only one `timeout` option that tells to Poolex how long we can to wait for a worker on the call side.
+The third argument contains run options. Currently, there is only one `timeout` option that tells Poolex how long we can wait for a worker on the call site.
 
 ```elixir
 iex> Poolex.start_link(pool_id: :agent_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)

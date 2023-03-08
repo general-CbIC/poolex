@@ -2,7 +2,7 @@
 
 If you are using `:poolboy` and want to use `Poolex` instead, then you need to follow three simple steps.
 
-## I. Install `Poolex` dependency
+## I. Install the `Poolex` dependency
 
 ```diff
 # mix.exs

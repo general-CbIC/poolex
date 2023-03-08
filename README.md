@@ -14,13 +14,13 @@ With `poolex` you can:
 
 - Launch multiple pools of workers and then access the free ones from anywhere in the application.
 - Configure the pool to run additional temporary workers if the load increases.
-- Use your own implementations to define workers and callers access logic.
+- Use your implementations to define worker and caller processes access logic.
 
 <details>
   <summary>Why `poolex` instead of `poolboy`?</summary>
   
 - `poolex` is written in Elixir. This library is much more convenient to use in Elixir projects.
-- `poolboy` is a great library, but not actively maintained at the moment :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
+- `poolboy` is a great library, but not actively maintained at the moment :crying_cat_face:![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
   
 </details>
 
@@ -63,7 +63,7 @@ end
 
 ## Usage
 
-In the most typical use of Poolex, you only need to start pool of workers as a child of your application.
+In the most typical use of Poolex, you only need to start a pool of workers as a child of your application.
 
 ```elixir
 children = [
@@ -88,6 +88,6 @@ A detailed description of the available configuration or examples of use can be 
 
 ## Contributions
 
-If you feel something can be improved, or have any questions about certain behaviours or pieces of implementation, please feel free to file an issue. Proposed changes should be taken to issues before any PRs to avoid wasting time on code which might not be merged upstream.
+If you feel something can be improved, or have any questions about certain behaviors or pieces of implementation, please feel free to file an issue. Proposed changes should be taken to issues before any PRs to avoid wasting time on code that might not be merged upstream.
 
 If you are ready to make changes to the project, then please read the [Contributing guide](docs/CONTRIBUTING.md) first.
