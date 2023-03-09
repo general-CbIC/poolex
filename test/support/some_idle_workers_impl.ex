@@ -1,7 +1,5 @@
-defmodule Poolex.Workers.Impl.List do
-  @moduledoc """
-  Simple workers stack (LIFO) implementation based on List.
-  """
+defmodule SomeIdleWorkersImpl do
+  @moduledoc false
   @behaviour Poolex.Workers.Behaviour
 
   @impl true

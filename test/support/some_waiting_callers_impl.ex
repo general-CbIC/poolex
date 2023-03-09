@@ -1,7 +1,5 @@
-defmodule Poolex.Callers.Impl.ErlangQueue do
-  @moduledoc """
-  Callers queue (FIFO) implementation based on `:erlang.queue`.
-  """
+defmodule SomeWaitingCallersImpl do
+  @moduledoc false
   @behaviour Poolex.Callers.Behaviour
 
   @impl true

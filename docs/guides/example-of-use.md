@@ -5,7 +5,7 @@ You can find the source of the below example here: [poolex_example](https://gith
 
 ## Defining the worker
 
-We describe an actor that can easily become a bottleneck in our application, since it has a rather long execution time on a blocking call.
+We describe an actor that can easily become a bottleneck in our application since it has a rather long execution time on a blocking call.
 
 ```elixir
 defmodule PoolexExample.Worker do
@@ -49,10 +49,6 @@ defmodule PoolexExample.Application do
 end
 ```
 
-Please note that 7 workers started at once. 5 of them were launched at initialization and 2 workers were started over the limit based on the `max_overflow` setting.
-
-All supported configuration options are presented in [Getting Started guide](getting-started.md#poolex-configuration-options).
-
 ## Using Poolex
 
 `Poolex.run/3` is the function that you can use to interface with the worker pool.
@@ -72,8 +68,8 @@ defmodule PoolexExample.Test do
       Poolex.run!(
         :worker_pool,
         fn pid ->
-          # Let's wrap the genserver call in a try - catch block. This allows us to trap any exceptions
-          # that might be thrown and return the worker back to Poolex in a clean manner. It also allows
+          # Let's wrap the genserver call in a try-catch block. This allows us to trap any exceptions
+          # that might be thrown and return the worker to Poolex in a clean manner. It also allows
           # the programmer to retrieve the error and potentially fix it.
           try do
             GenServer.call(pid, {:square_root, i})
@@ -92,7 +88,11 @@ defmodule PoolexExample.Test do
 end
 ```
 
-Run the test function `PoolexExample.Test.start()` and see the result:
+Run the test function `PoolexExample.Test.start()` and see the result.
+
+Note that 7 workers started at once. 5 of them were launched at initialization and 2 workers were started over the limit based on the `max_overflow` setting.
+
+All supported configuration options are presented in [Getting Started guide](getting-started.md#poolex-configuration-options).
 
 ```text
 process #PID<0.351.0> calculating square root of 3

@@ -2,9 +2,9 @@
 
 Poolex is written in [Elixir](https://elixir-lang.org/).
 
-For branching management, this project uses [git-flow](https://github.com/petervanderdoes/gitflow-avh). The `main` branch is reserved for releases: the development process occurs on `develop` and `feature` branches. Please never commit to `main`.
+For branching management, this project uses [git-flow](https://github.com/petervanderdoes/gitflow-avh). The `main` branch is reserved for releases: the development process occurs on the `develop` and `feature` branches. Please never commit to `main`.
 
-You can use [asdf](https://asdf-vm.com/) to set up required Elixir and OTP. Current versions are listed in the `.tool-versions` file.
+You can use [asdf](https://asdf-vm.com/) to set up the required Elixir and OTP. Current versions are listed in the `.tool-versions` file.
 
 ## Setup
 
@@ -47,11 +47,11 @@ Please see [installation instructions](https://elixir-lang.org/install.html).
 
 ### Git-flow
 
-If you want to use `git-flow` CLI, please check [installation instructions](https://github.com/petervanderdoes/gitflow-avh/wiki/Installation).
+If you want to use the `git-flow` CLI, please check [installation instructions](https://github.com/petervanderdoes/gitflow-avh/wiki/Installation).
 
 ### Building the project
 
-1. Fetch the project dependecies:
+1. Fetch the project dependencies:
 
     ```shell
     cd poolex
@@ -82,15 +82,15 @@ To make a change, please use this workflow:
     git checkout -b <my_branch>
     ```
 
-    Alternatively, if you are working on a feature which would need more work, you can create a feature branch with `git-flow`:
+    Alternatively, if you are working on a feature that would need more work, you can create a feature branch with `git-flow`:
 
     ```shell
     git flow feature start <my_feature>
     ```
 
-    *Note: always open an issue and ask before starting a big feature, to avoid it not beeing merged and your time lost.*
+    *Note: always open an issue and ask before starting a big feature, to avoid it not being merged and your time lost.*
 
-3. When your feature is ready, feel free to use [interactive rebase](https://help.github.com/articles/about-git-rebase/) so your history looks clean and is easy to follow. Then, apply the last upstream changes on `develop` to prepare integration:
+3. When your feature is ready, feel free to use [interactive rebase](https://help.github.com/articles/about-git-rebase/) so your history looks clean and easy to follow. Then, apply the last upstream changes on `develop` to prepare integration:
 
     ```shell
     git checkout develop

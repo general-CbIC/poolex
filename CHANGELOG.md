@@ -7,13 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2023-03-09
+
+### Changed
+
+- [INCOMPATIBLE] Changed approach to configuring custom implementations for queues of workers and callers.
+  - Reasons: [Avoid application configuration](https://hexdocs.pm/elixir/library-guidelines.html#avoid-application-configuration)
+  - Now for the configuration you need to use the initialization parameters instead of `Application` config.
+
+    ```elixir
+    # Before
+    import Config
+
+    config :poolex,
+      callers_impl: SomeCallersImpl,
+      busy_workers_impl: SomeBusyWorkersImpl,
+      idle_workers_impl: SomeIdleWorkersImpl
+
+    # After
+    Poolex.child_spec(
+      pool_id: :some_pool,
+      worker_module: SomeWorker,
+      workers_count: 10,
+      waiting_callers_impl: SomeCallersImpl,
+      busy_workers_impl: SomeBusyWorkersImpl,
+      idle_workers_impl: SomeIdleWorkersImpl
+    )
+    ```
+
 ## [0.5.1] - 2023-03-04
 
-## Added
+### Added
 
 - [Docs] Simple [migration guide from `:poolboy`](docs/guides/migration-from-poolboy.md)
 
-## Fixed
+### Fixed
 
 - [Docs] Fix missing `Poolex.State.t()` on docs generating ([issue](https://github.com/general-CbIC/poolex/issues/32))
 
@@ -117,7 +145,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.5.1...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/general-CbIC/poolex/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/general-CbIC/poolex/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/general-CbIC/poolex/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/general-CbIC/poolex/compare/v0.3.0...v0.4.0

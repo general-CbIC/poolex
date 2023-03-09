@@ -2,13 +2,13 @@
 
 ## Starting pool of workers
 
-To start a cache you can use either `start/1` or `start_link/1`.
+To start a pool you can use either `start/1` or `start_link/1`.
 
 ```elixir
 Poolex.start_link(pool_id: :my_pool, worker_module: SomeWorker, workers_count: 10)
 ```
 
-In general you should place it into your Supervision tree for fault tolerance.
+In general, you should place it into your Supervision tree for fault tolerance.
 
 ```elixir
 children = [
@@ -27,14 +27,17 @@ The second argument should contain a set of options for starting the pool.
 
 ### Poolex configuration options
 
-| Option             | Description                                    | Example        | Default value          |
-|--------------------|------------------------------------------------|----------------|------------------------|
-| `pool_id`          | Identifier by which you will access the pool   | `:my_pool`     | **option is required** |
-| `worker_module`    | Name of module that implements our worker      | `MyApp.Worker` | **option is required** |
-| `workers_count`    | How many workers should be running in the pool | `5`            | **option is required** |
-| `max_overflow`     | How many workers can be created over the limit | `2`            | `0`                    |
-| `worker_args`      | List of arguments passed to the start function | `[:gg, "wp"]`  | `[]`                   |
-| `worker_start_fun` | Name of the function that starts the worker    | `:run`         | `:start_link`          |
+| Option                 | Description                                          | Example               | Default value                     |
+|------------------------|------------------------------------------------------|-----------------------|-----------------------------------|
+| `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | **option is required**            |
+| `worker_module`        | Name of module that implements our worker            | `MyApp.Worker`        | **option is required**            |
+| `workers_count`        | How many workers should be running in the pool       | `5`                   | **option is required**            |
+| `max_overflow`         | How many workers can be created over the limit       | `2`                   | `0`                               |
+| `worker_args`          | List of arguments passed to the start function       | `[:gg, "wp"]`         | `[]`                              |
+| `worker_start_fun`     | Name of the function that starts the worker          | `:run`                | `:start_link`                     |
+| `busy_workers_impl`    | Module that describes how to work with busy workers  | `SomeBusyWorkersImpl` | `Poolex.Workers.Impl.List`        |
+| `idle_workers_impl`    | Module that describes how to work with idle workers  | `SomeIdleWorkersImpl` | `Poolex.Workers.Impl.List`        |
+| `waiting_callers_impl` | Module that describes how to work with callers queue | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
 
 ## Working with the pool
 
@@ -44,7 +47,7 @@ The first argument is the name of the pool mentioned above.
 
 The second argument is the function that takes the pid of the worker as the only parameter and performs the necessary actions.
 
-The third argument contains run options. Currently there is only one `timeout` option that tells to Poolex how long we can to wait for a worker on the call side.
+The third argument contains run options. Currently, there is only one `timeout` option that tells Poolex how long we can wait for a worker on the call site.
 
 ```elixir
 iex> Poolex.start_link(pool_id: :agent_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)

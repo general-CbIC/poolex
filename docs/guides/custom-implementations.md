@@ -4,11 +4,11 @@
 
 ## Callers
 
-**Callers** are processes that have made a request to get a worker (used `run/3` or `run!/3`). Each pool keeps information about **callers** in order to distribute workers to them when they are free.
+**Callers** are processes that have requested to get a worker (used `run/3` or `run!/3`). Each pool keeps the information about **callers** to distribute workers to them when they are free.
 
 :warning: **Caller's typespec is `GenServer.from()` not a `pid()`** :warning:
 
-The implementation of the caller storage structure should be conceptually similar to a queue, since by default we want to give workers in the order they are requested. But this logic can be easily changed by writing your own implementation.
+The implementation of the caller storage structure should be conceptually similar to a queue since by default we want to give workers in the order they are requested. But this logic can be easily changed by writing your implementation.
 
 Behaviour of callers collection described [here](../../lib/poolex/callers/behaviour.ex).
 
@@ -16,14 +16,14 @@ Default implementation based on erlang `:queue` you can see [here](../../lib/poo
 
 ### Behaviour callbacks
 
-| Callback          | Description                                                                                                  |
-|-------------------|--------------------------------------------------------------------------------------------------------------|
-| `init/0`          | Returns `state` (any data structure) which will be passed as the first argument to all other functions.      |
-| `add/2`           | Adds caller to `state` and returns new state.                                                                |
-| `empty?/1`        | Returns `true` if the `state` is empty, `false` otherwise.                                                   |
-| `pop/1`           | Removes one of callers from `state` and returns it as `{caller, state}`. Returns `:empty` if state is empty. |
-| `remove_by_pid/2` | Removes given caller by caller's pid from `state` and returns new state.                                     |
-| `to_list/1`       | Returns list of callers.                                                                                     |
+| Callback          | Description                                                                                                          |
+|-------------------|----------------------------------------------------------------------------------------------------------------------|
+| `init/0`          | Returns `state` (any data structure) which will be passed as the first argument to all other functions.              |
+| `add/2`           | Adds caller to `state` and returns a new state.                                                                      |
+| `empty?/1`        | Returns `true` if the `state` is empty, `false` otherwise.                                                           |
+| `pop/1`           | Removes one of the callers from `state` and returns it as `{caller, state}`. Returns `:empty` if the state is empty. |
+| `remove_by_pid/2` | Removes given caller by caller's pid from `state` and returns a new state.                                           |
+| `to_list/1`       | Returns list of callers.                                                                                             |
 
 ## Workers
 
@@ -36,21 +36,21 @@ For both cases, the default implementation is based on lists. But it is possible
 
 Behaviour of workers collection described [here](../../lib/poolex/workers/behaviour.ex).
 
-Default implementation for `idle` and `busy` workers is [here](../../lib/poolex/workers/impl/list.ex).
+The default implementation for `idle` and `busy` workers is [here](../../lib/poolex/workers/impl/list.ex).
 
 ### Behaviour callbacks
 
-| Callback    | Description                                                                                                  |
-|-------------|--------------------------------------------------------------------------------------------------------------|
-| `init/0`    | Returns `state` (any data structure) which will be passed as the first argument to all other functions.      |
-| `init/1`    | Same as `init/0` but returns `state` initialized with passed list of workers.                                |
-| `add/2`     | Adds worker's pid to `state` and returns new state.                                                          |
-| `member?/2` | Returns `true` if given worker contained in the `state`, `false` otherwise.                                  |
-| `remove/2`  | Removes given worker from `state` and returns new state.                                                     |
-| `count/1`   | Returns the number of workers in the state.                                                                  |
-| `to_list/1` | Returns list of workers pids.                                                                                |
-| `empty?/1`  | Returns `true` if the `state` is empty, `false` otherwise.                                                   |
-| `pop/1`     | Removes one of workers from `state` and returns it as `{caller, state}`. Returns `:empty` if state is empty. |
+| Callback    | Description                                                                                                      |
+|-------------|------------------------------------------------------------------------------------------------------------------|
+| `init/0`    | Returns `state` (any data structure) which will be passed as the first argument to all other functions.          |
+| `init/1`    | Same as `init/0` but returns `state` initialized with a passed list of workers.                                  |
+| `add/2`     | Adds worker's pid to `state` and returns a new state.                                                            |
+| `member?/2` | Returns `true` if given worker contained in the `state`, `false` otherwise.                                      |
+| `remove/2`  | Removes given worker from `state` and returns new state.                                                         |
+| `count/1`   | Returns the number of workers in the state.                                                                      |
+| `to_list/1` | Returns list of workers pids.                                                                                    |
+| `empty?/1`  | Returns `true` if the `state` is empty, `false` otherwise.                                                       |
+| `pop/1`     | Removes one of workers from `state` and returns it as `{caller, state}`. Returns `:empty` if the state is empty. |
 
 ## Writing custom implementations
 
@@ -67,22 +67,31 @@ defmodule MyApp.MyAmazingCallersImpl do
 end
 ```
 
-If you have any ideas what implementations can be added to the library or how to improve existing ones, then please [create an issue](https://github.com/general-CbIC/poolex/issues/new)!
+If you have any ideas about what implementations can be added to the library or how to improve existing ones, then please [create an issue](https://github.com/general-CbIC/poolex/issues/new)!
 
 ### Configuring custom implementations
 
-After that, you need to add the following to the configuration (for example, `runtime.exs`):
+After that, you need to provide your module names to Poolex initialization:
 
 ```elixir
-config :poolex, callers_impl: MyApp.MyAmazingCallersImpl
+Poolex.child_spec(
+  pool_id: :some_pool,
+  worker_module: SomeWorker,
+  workers_count: 10,
+  waiting_callers_impl: MyApp.MyAmazingCallersImpl
+)
 ```
 
-That's it! Your implementation will be used in `Poolex`.
+That's it! Your implementation will be used in launched pool.
 
 The configuration for workers might look like this:
 
 ```elixir
-config :poolex,
+Poolex.child_spec(
+  pool_id: :some_pool,
+  worker_module: SomeWorker,
+  workers_count: 10,
   busy_workers_impl: MyApp.PerfectBusyWorkersImpl,
   idle_workers_impl: MyApp.FancyIdleWorkersImpl
+)
 ```
