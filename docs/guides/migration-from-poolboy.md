@@ -9,7 +9,7 @@ If you are using `:poolboy` and want to use `Poolex` instead, then you need to f
 defp deps do
   [
 -    {:poolboy, "~> 1.5.0"}
-+    {:poolex, "~> 0.5.0"}
++    {:poolex, "~> 0.6.0"}
   ]
 end
 ```
