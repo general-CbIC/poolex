@@ -56,7 +56,7 @@ Add `:poolex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:poolex, "~> 0.5.0"}
+    {:poolex, "~> 0.6.0"}
   ]
 end
 ```
