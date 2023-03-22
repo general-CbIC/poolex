@@ -63,6 +63,8 @@ defmodule Poolex do
           | {:idle_workers_impl, module()}
           | {:waiting_callers_impl, module()}
 
+  @type worker() :: pid()
+
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
 
