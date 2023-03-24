@@ -64,6 +64,7 @@ defmodule Poolex do
           | {:waiting_callers_impl, module()}
 
   @type worker() :: pid()
+  @type caller() :: GenServer.from()
 
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
