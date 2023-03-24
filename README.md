@@ -67,11 +67,10 @@ In the most typical use of Poolex, you only need to start a pool of workers as a
 
 ```elixir
 children = [
-  Poolex.child_spec(
+  {Poolex, 
     pool_id: :worker_pool,
     worker_module: SomeWorker,
-    workers_count: 5
-  )
+    workers_count: 5}
 ]
 
 Supervisor.start_link(children, strategy: :one_for_one)
