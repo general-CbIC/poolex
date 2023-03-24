@@ -11,7 +11,7 @@ defmodule Poolex.WaitingCallers do
   end
 
   @doc false
-  @spec add(Poolex.pool_id(), Behaviour.state(), Behaviour.caller()) :: Behaviour.state()
+  @spec add(Poolex.pool_id(), Behaviour.state(), Poolex.caller()) :: Behaviour.state()
   def add(pool_id, state, caller), do: impl(pool_id).add(state, caller)
 
   @doc false
@@ -20,7 +20,7 @@ defmodule Poolex.WaitingCallers do
 
   @doc false
   @spec pop(Poolex.pool_id(), Behaviour.state()) ::
-          {Behaviour.caller(), Behaviour.state()} | :empty
+          {Poolex.caller(), Behaviour.state()} | :empty
   def pop(pool_id, state), do: impl(pool_id).pop(state)
 
   @doc false
@@ -30,7 +30,7 @@ defmodule Poolex.WaitingCallers do
   end
 
   @doc false
-  @spec to_list(Poolex.pool_id(), Behaviour.state()) :: list(Behaviour.caller())
+  @spec to_list(Poolex.pool_id(), Behaviour.state()) :: list(Poolex.caller())
   def to_list(pool_id, state), do: impl(pool_id).to_list(state)
 
   @doc false

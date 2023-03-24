@@ -51,7 +51,13 @@ defmodule Poolex do
   | `waiting_callers_impl` | Module that describes how to work with callers queue | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
   """
 
+  @typedoc """
+  Any atom naming your pool, e.g. `:my_pool`.
+  """
   @type pool_id() :: atom()
+  @typedoc """
+  #{@poolex_options_table}
+  """
   @type poolex_option() ::
           {:pool_id, pool_id()}
           | {:worker_module, module()}
@@ -63,7 +69,26 @@ defmodule Poolex do
           | {:idle_workers_impl, module()}
           | {:waiting_callers_impl, module()}
 
+  @typedoc """
+  Process id of `worker`.
+
+  **Workers** are processes launched in a pool.
+  """
   @type worker() :: pid()
+
+  @typedoc """
+  Tuple describing the `caller`.
+
+  **Callers** are processes that have requested to get a worker.
+  """
+  @type caller() :: GenServer.from()
+
+  @typedoc """
+  | Option  | Description                                        | Example  | Default value              |
+  |---------|----------------------------------------------------|----------|----------------------------|
+  | timeout | How long we can wait for a worker on the call site | `60_000` | `#{@default_wait_timeout}` |
+  """
+  @type run_option() :: {:timeout, timeout()}
 
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
@@ -147,7 +172,6 @@ defmodule Poolex do
       iex> Poolex.run(:some_pool, fn pid -> Agent.get(pid, &(&1)) end)
       {:ok, 5}
   """
-  @type run_option() :: {:timeout, timeout()}
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
           {:ok, any()} | :all_workers_are_busy | {:runtime_error, any()}
   def run(pool_id, fun, options \\ []) do
