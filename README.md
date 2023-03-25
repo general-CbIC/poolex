@@ -83,7 +83,7 @@ iex> Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
 {:ok, true}
 ```
 
-A detailed description of the available configuration or examples of use can be found in [documentation](docs/guides.md).
+A detailed description of the available configuration or examples of use can be found in [documentation](docs/guides/getting-started.md).
 
 ## Contributions
 
