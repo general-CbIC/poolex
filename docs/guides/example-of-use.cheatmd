@@ -36,12 +36,12 @@ defmodule PoolexExample.Application do
   use Application
 
   def start(_type, _args) do
-      Poolex.child_spec(
-        pool_id: :worker_pool,
-        worker_module: PoolexExample.Worker,
-        workers_count: 5,
-        max_overflow: 2
-      )
+    children = [
+      {Poolex,
+       pool_id: :worker_pool,
+       worker_module: PoolexExample.Worker,
+       workers_count: 5,
+       max_overflow: 2}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
@@ -92,7 +92,7 @@ Run the test function `PoolexExample.Test.start()` and see the result.
 
 Note that 7 workers started at once. 5 of them were launched at initialization and 2 workers were started over the limit based on the `max_overflow` setting.
 
-All supported configuration options are presented in [Getting Started guide](getting-started.md#poolex-configuration-options).
+All supported configuration options are presented in [Getting Started guide](https://hexdocs.pm/poolex/getting-started.html#poolex-configuration-options).
 
 ```text
 process #PID<0.351.0> calculating square root of 3

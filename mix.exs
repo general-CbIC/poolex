@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "0.6.0"
+      version: "0.6.1"
     ]
   end
 
@@ -34,7 +34,8 @@ defmodule Poolex.MixProject do
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
       {:doctor, ">= 0.0.0", only: [:dev], runtime: false},
       {:ex_check, "~> 0.15.0", only: [:dev], runtime: false},
-      {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false}
+      {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false},
+      {:makeup_diff, ">= 0.0.0", only: [:dev], runtime: false}
     ]
   end
 
@@ -53,12 +54,14 @@ defmodule Poolex.MixProject do
       main: "readme",
       extras: [
         "docs/CONTRIBUTING.md",
-        "docs/guides.md",
         "docs/guides/custom-implementations.md",
-        "docs/guides/migration-from-poolboy.md",
-        "docs/guides/example-of-use.md",
-        "docs/guides/getting-started.md",
+        "docs/guides/migration-from-poolboy.cheatmd",
+        "docs/guides/example-of-use.cheatmd",
+        "docs/guides/getting-started.cheatmd",
         "README.md"
+      ],
+      groups_for_extras: [
+        Guides: Path.wildcard("docs/guides/*md")
       ]
     ]
   end

@@ -34,19 +34,19 @@ With `poolex` you can:
 ## Table of Contents
 
 - [Installation](#installation)
-- [Getting Started](docs/guides/getting-started.md)
-  - [Starting pool of workers](docs/guides/getting-started.md#starting-pool-of-workers)
-    - [Poolex configuration options](docs/guides/getting-started.md#poolex-configuration-options)
-  - [Working with the pool](docs/guides/getting-started.md#working-with-the-pool)
-- [Migration from `:poolboy`](docs/guides/migration-from-poolboy.md)
-- [Example of use](docs/guides/example-of-use.md)
-  - [Defining the worker](docs/guides/example-of-use.md#defining-the-worker)
-  - [Configuring Poolex](docs/guides/example-of-use.md#configuring-poolex)
-  - [Using Poolex](docs/guides/example-of-use.md#using-poolex)
-- [Custom implementations](docs/guides/custom-implementations.md)
-  - [Callers](docs/guides/custom-implementations.md#callers)
-  - [Workers](docs/guides/custom-implementations.md#workers)
-  - [Writing custom implementations](docs/guides/custom-implementations.md#writing-custom-implementations)
+- [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
+  - [Starting pool of workers](https://hexdocs.pm/poolex/getting-started.html#starting-pool-of-workers)
+  - [Poolex configuration options](https://hexdocs.pm/poolex/getting-started.html#starting-pool-of-workers)
+  - [Working with the pool](https://hexdocs.pm/poolex/getting-started.html#working-with-the-pool)
+- [Migration from `:poolboy`](https://hexdocs.pm/poolex/migration-from-poolboy.html)
+- [Example of use](https://hexdocs.pm/poolex/example-of-use.html)
+  - [Defining the worker](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
+  - [Configuring Poolex](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
+  - [Using Poolex](https://hexdocs.pm/poolex/example-of-use.html#using-poolex)
+- [Custom implementations](https://hexdocs.pm/poolex/custom-implementations.html)
+  - [Callers](https://hexdocs.pm/poolex/custom-implementations.html#callers)
+  - [Workers](https://hexdocs.pm/poolex/custom-implementations.html#workers)
+  - [Writing custom implementations](https://hexdocs.pm/poolex/custom-implementations.html#writing-custom-implementations)
 - [Contributions](#contributions)
 
 ## Installation
@@ -67,11 +67,10 @@ In the most typical use of Poolex, you only need to start a pool of workers as a
 
 ```elixir
 children = [
-  Poolex.child_spec(
+  {Poolex, 
     pool_id: :worker_pool,
     worker_module: SomeWorker,
-    workers_count: 5
-  )
+    workers_count: 5}
 ]
 
 Supervisor.start_link(children, strategy: :one_for_one)
@@ -84,7 +83,7 @@ iex> Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
 {:ok, true}
 ```
 
-A detailed description of the available configuration or examples of use can be found in [documentation](docs/guides.md).
+A detailed description of the available configuration or examples of use can be found in [documentation](https://hexdocs.pm/poolex/getting-started.html).
 
 ## Contributions
 

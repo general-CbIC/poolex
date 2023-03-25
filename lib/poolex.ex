@@ -51,7 +51,13 @@ defmodule Poolex do
   | `waiting_callers_impl` | Module that describes how to work with callers queue | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
   """
 
+  @typedoc """
+  Any atom naming your pool, e.g. `:my_pool`.
+  """
   @type pool_id() :: atom()
+  @typedoc """
+  #{@poolex_options_table}
+  """
   @type poolex_option() ::
           {:pool_id, pool_id()}
           | {:worker_module, module()}
@@ -62,6 +68,27 @@ defmodule Poolex do
           | {:busy_workers_impl, module()}
           | {:idle_workers_impl, module()}
           | {:waiting_callers_impl, module()}
+
+  @typedoc """
+  Process id of `worker`.
+
+  **Workers** are processes launched in a pool.
+  """
+  @type worker() :: pid()
+
+  @typedoc """
+  Tuple describing the `caller`.
+
+  **Callers** are processes that have requested to get a worker.
+  """
+  @type caller() :: GenServer.from()
+
+  @typedoc """
+  | Option  | Description                                        | Example  | Default value              |
+  |---------|----------------------------------------------------|----------|----------------------------|
+  | timeout | How long we can wait for a worker on the call site | `60_000` | `#{@default_wait_timeout}` |
+  """
+  @type run_option() :: {:timeout, timeout()}
 
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
@@ -145,7 +172,6 @@ defmodule Poolex do
       iex> Poolex.run(:some_pool, fn pid -> Agent.get(pid, &(&1)) end)
       {:ok, 5}
   """
-  @type run_option() :: {:timeout, timeout()}
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
           {:ok, any()} | :all_workers_are_busy | {:runtime_error, any()}
   def run(pool_id, fun, options \\ []) do
@@ -355,36 +381,45 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_cast({:release_busy_worker, worker_pid}, %State{} = state) do
+  def handle_cast({:release_busy_worker, worker}, %State{} = state) do
     if WaitingCallers.empty?(state.pool_id, state.waiting_callers_state) do
-      if BusyWorkers.member?(state.pool_id, state.busy_workers_state, worker_pid) do
-        busy_workers_state =
-          BusyWorkers.remove(state.pool_id, state.busy_workers_state, worker_pid)
+      new_state = release_busy_worker(state, worker)
+      {:noreply, new_state}
+    else
+      new_state = provide_worker_to_waiting_caller(state, worker)
+      {:noreply, new_state}
+    end
+  end
 
-        if state.overflow > 0 do
-          stop_worker(state.supervisor, worker_pid)
+  @spec release_busy_worker(State.t(), worker()) :: State.t()
+  defp release_busy_worker(%State{} = state, worker) do
+    if BusyWorkers.member?(state.pool_id, state.busy_workers_state, worker) do
+      busy_workers_state = BusyWorkers.remove(state.pool_id, state.busy_workers_state, worker)
 
-          {:noreply, %State{state | busy_workers_state: busy_workers_state}}
-        else
-          {:noreply,
-           %State{
-             state
-             | busy_workers_state: busy_workers_state,
-               idle_workers_state:
-                 IdleWorkers.add(state.pool_id, state.idle_workers_state, worker_pid)
-           }}
-        end
+      if state.overflow > 0 do
+        stop_worker(state.supervisor, worker)
+
+        %State{state | busy_workers_state: busy_workers_state}
       else
-        {:noreply, state}
+        %State{
+          state
+          | busy_workers_state: busy_workers_state,
+            idle_workers_state: IdleWorkers.add(state.pool_id, state.idle_workers_state, worker)
+        }
       end
     else
-      {caller, new_waiting_callers_state} =
-        WaitingCallers.pop(state.pool_id, state.waiting_callers_state)
-
-      GenServer.reply(caller, {:ok, worker_pid})
-
-      {:noreply, %{state | waiting_callers_state: new_waiting_callers_state}}
+      state
     end
+  end
+
+  @spec provide_worker_to_waiting_caller(State.t(), worker()) :: State.t()
+  defp provide_worker_to_waiting_caller(%State{} = state, worker) do
+    {caller, new_waiting_callers_state} =
+      WaitingCallers.pop(state.pool_id, state.waiting_callers_state)
+
+    GenServer.reply(caller, {:ok, worker})
+
+    %{state | waiting_callers_state: new_waiting_callers_state}
   end
 
   @impl GenServer
