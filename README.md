@@ -41,7 +41,7 @@ With `poolex` you can:
 - [Migration from `:poolboy`](https://hexdocs.pm/poolex/migration-from-poolboy.html)
 - [Example of use](https://hexdocs.pm/poolex/example-of-use.html)
   - [Defining the worker](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
-  - [Configuring Poolex](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
+  - [Configuring Poolex](https://hexdocs.pm/poolex/example-of-use.html#configuring-poolex)
   - [Using Poolex](https://hexdocs.pm/poolex/example-of-use.html#using-poolex)
 - [Custom implementations](https://hexdocs.pm/poolex/custom-implementations.html)
   - [Callers](https://hexdocs.pm/poolex/custom-implementations.html#callers)
