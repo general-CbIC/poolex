@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Documentation updates
 
-- [Docs] Refactored some custom types and added some typedocs.
+- Refactored some custom types and added some typedocs.
+- Added `diff` syntax highlighting support.
 
 ## [0.6.0] - 2023-03-09
 
