@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Refactored some custom types and added some typedocs.
 - Added `diff` syntax highlighting support.
+- The guides were merged into a group called `Guides`.
 
 ## [0.6.0] - 2023-03-09
 
