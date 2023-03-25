@@ -4,14 +4,21 @@ If you are using `:poolboy` and want to use `Poolex` instead, then you need to f
 
 ## I. Install the `Poolex` dependency
 
+#### mix.exs
+
 ```diff
-# mix.exs
 defp deps do
   [
 -    {:poolboy, "~> 1.5.0"}
 +    {:poolex, "~> 0.6.0"}
   ]
 end
+```
+
+Install it.
+
+```bash
+mix deps.get
 ```
 
 Well, you can also clean up installed dependencies locally and remove them from the `lock` file.
@@ -22,8 +29,9 @@ mix deps.clean --unlock --unused
 
 ## II. Update child specs
 
+#### Your Application or Supervisor file
+
 ```diff
-# Your Application or Supervisor file
 def init(_args) do
   children = [
 -    :poolboy.child_spec(:some_pool,
@@ -46,9 +54,10 @@ end
 
 ## III. Update call site
 
+Use `run!/3` to leave the same behavior. 
+If you want a safe interface with error handling, then use `run/3`.
+
 ```diff
-# Use `run!/3` to leave the same behavior. 
-# If you want a safe interface with error handling, then use `run/3`.
 -  :poolboy.transaction(
 -    :some_pool,
 -    fn pid -> some_function(pid) end,

@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Refactored some custom types and added some typedocs.
 - Added `diff` syntax highlighting support.
-- The guides were merged into a group called `Guides`.
+- Updated guides:
+  - The pages were merged into a group called `Guides`.
+  - Tried to refresh some pages with [cheatmd](https://hexdocs.pm/ex_doc/cheatsheet.html).
 
 ## [0.6.0] - 2023-03-09
 
@@ -45,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- [Docs] Simple [migration guide from `:poolboy`](docs/guides/migration-from-poolboy.md)
+- [Docs] Simple [migration guide from `:poolboy`](https://hexdocs.pm/poolex/migration-from-poolboy.html)
 
 ### Fixed
 
@@ -83,7 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Overflow feature. [Example of use](docs/guides/example-of-use.md)
+- Overflow feature. [Example of use](https://hexdocs.pm/poolex/example-of-use.html)
 - Speeding up CI by adding dialyzer PLT files caches.
 
 ### Fixed
