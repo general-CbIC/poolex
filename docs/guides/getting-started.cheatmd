@@ -12,12 +12,11 @@ In general, you should place it into your Supervision tree for fault tolerance.
 
 ```elixir
 children = [
-  Poolex.child_spec(
-    pool_id: :my_pool,
-    worker_module: SomeWorker,
-    workers_count: 10,
-    max_overflow: 10
-  )
+  {Poolex,
+  pool_id: :my_pool,
+  worker_module: SomeWorker,
+  workers_count: 10,
+  max_overflow: 10}
 ]
 
 Supervisor.start_link(children, strategy: :one_for_one)
@@ -25,7 +24,7 @@ Supervisor.start_link(children, strategy: :one_for_one)
 
 The second argument should contain a set of options for starting the pool.
 
-### Poolex configuration options
+## Poolex configuration options
 
 | Option                 | Description                                          | Example               | Default value                     |
 |------------------------|------------------------------------------------------|-----------------------|-----------------------------------|
@@ -57,4 +56,4 @@ iex> Poolex.run!(:agent_pool, fn pid -> Agent.get(pid, &(&1)) end)
 5
 ```
 
-If you would like to see examples of using Poolex, then check out [Example of Use](example-of-use.md).
+If you would like to see examples of using Poolex, then check out [Example of Use](https://hexdocs.pm/poolex/example-of-use.html).

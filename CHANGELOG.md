@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- [Docs] Simple [migration guide from `:poolboy`](docs/guides/migration-from-poolboy.md)
+- [Docs] Simple [migration guide from `:poolboy`](https://hexdocs.pm/poolex/migration-from-poolboy.html)
 
 ### Fixed
 
@@ -83,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Overflow feature. [Example of use](docs/guides/example-of-use.md)
+- Overflow feature. [Example of use](https://hexdocs.pm/poolex/example-of-use.html)
 - Speeding up CI by adding dialyzer PLT files caches.
 
 ### Fixed

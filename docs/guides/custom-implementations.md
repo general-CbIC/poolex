@@ -4,9 +4,11 @@
 
 ## Callers
 
-**Callers** are processes that have requested to get a worker (used `run/3` or `run!/3`). Each pool keeps the information about **callers** to distribute workers to them when they are free.
+`Callers` are processes that have requested to get a worker (used `run/3` or `run!/3`). Each pool keeps the information about `callers` to distribute workers to them when they are free.
 
-:warning: **Caller's typespec is `GenServer.from()` not a `pid()`** :warning:
+> ### Caller's typespec {: .warning}
+>
+> Caller's typespec is `GenServer.from()` not a `pid()`.
 
 The implementation of the caller storage structure should be conceptually similar to a queue since by default we want to give workers in the order they are requested. But this logic can be easily changed by writing your implementation.
 
