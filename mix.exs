@@ -43,8 +43,9 @@ defmodule Poolex.MixProject do
     [
       licenses: ["MIT"],
       links: %{
+        "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md",
         "GitHub" => "https://github.com/general-CbIC/poolex",
-        "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md"
+        "Sponsor" => "https://github.com/sponsors/general-CbIC"
       }
     ]
   end
