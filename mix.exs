@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "0.6.1"
+      version: "0.7.0"
     ]
   end
 
@@ -43,8 +43,9 @@ defmodule Poolex.MixProject do
     [
       licenses: ["MIT"],
       links: %{
+        "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md",
         "GitHub" => "https://github.com/general-CbIC/poolex",
-        "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md"
+        "Sponsor" => "https://github.com/sponsors/general-CbIC"
       }
     ]
   end
@@ -54,7 +55,7 @@ defmodule Poolex.MixProject do
       main: "readme",
       extras: [
         "docs/CONTRIBUTING.md",
-        "docs/guides/custom-implementations.md",
+        "docs/guides/workers-and-callers-implementations.md",
         "docs/guides/migration-from-poolboy.cheatmd",
         "docs/guides/example-of-use.cheatmd",
         "docs/guides/getting-started.cheatmd",
