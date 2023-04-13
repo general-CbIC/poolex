@@ -43,10 +43,10 @@ With `poolex` you can:
   - [Defining the worker](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
   - [Configuring Poolex](https://hexdocs.pm/poolex/example-of-use.html#configuring-poolex)
   - [Using Poolex](https://hexdocs.pm/poolex/example-of-use.html#using-poolex)
-- [Custom implementations](https://hexdocs.pm/poolex/custom-implementations.html)
-  - [Callers](https://hexdocs.pm/poolex/custom-implementations.html#callers)
-  - [Workers](https://hexdocs.pm/poolex/custom-implementations.html#workers)
-  - [Writing custom implementations](https://hexdocs.pm/poolex/custom-implementations.html#writing-custom-implementations)
+- [Workers and callers implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html)
+  - [Callers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#callers)
+  - [Workers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#workers)
+  - [Writing custom implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#writing-custom-implementations)
 - [Contributions](#contributions)
 
 ## Installation
