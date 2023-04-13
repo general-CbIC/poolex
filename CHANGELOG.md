@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `FIFO` worker's implementation. [About implemetations](https://hexdocs.pm/poolex/custom-implementations.html)
+
 ## [0.6.1] - 2023-03-25
 
 ### Documentation updates

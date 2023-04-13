@@ -1,4 +1,4 @@
-# Custom Implementations
+# Workers and callers implementations
 
 `Poolex` operates with two concepts: `callers` and `workers`. In both cases, we are talking about processes.
 
@@ -12,9 +12,7 @@
 
 The implementation of the caller storage structure should be conceptually similar to a queue since by default we want to give workers in the order they are requested. But this logic can be easily changed by writing your implementation.
 
-Behaviour of callers collection described [here](../../lib/poolex/callers/behaviour.ex).
-
-Default implementation based on erlang `:queue` you can see [here](../../lib/poolex/callers/impl/erlang_queue.ex).
+Behaviour of callers collection described [here](https://hexdocs.pm/poolex/Poolex.Callers.Behaviour.html).
 
 ### Behaviour callbacks
 
@@ -27,6 +25,12 @@ Default implementation based on erlang `:queue` you can see [here](../../lib/poo
 | `remove_by_pid/2` | Removes given caller by caller's pid from `state` and returns a new state.                                           |
 | `to_list/1`       | Returns list of callers.                                                                                             |
 
+### Callers implementations out of the box
+
+| Module                            | Description                                    | Source                                                                                           | Default? |
+|-----------------------------------|------------------------------------------------|--------------------------------------------------------------------------------------------------|----------|
+| `Poolex.Callers.Impl.ErlangQueue` | `FIFO` implementation based on `:erlang.queue` | [link](https://github.com/general-CbIC/poolex/blob/main/lib/poolex/callers/impl/erlang_queue.ex) | ✅       |
+
 ## Workers
 
 **Workers** are processes launched in a pool. `Poolex` works with two collections of workers:
@@ -36,9 +40,7 @@ Default implementation based on erlang `:queue` you can see [here](../../lib/poo
 
 For both cases, the default implementation is based on lists. But it is possible to set different implementations for them.
 
-Behaviour of workers collection described [here](../../lib/poolex/workers/behaviour.ex).
-
-The default implementation for `idle` and `busy` workers is [here](../../lib/poolex/workers/impl/list.ex).
+Behaviour of workers collection described [here](https://hexdocs.pm/poolex/Poolex.Workers.Behaviour.html).
 
 ### Behaviour callbacks
 
@@ -53,6 +55,13 @@ The default implementation for `idle` and `busy` workers is [here](../../lib/poo
 | `to_list/1` | Returns list of workers pids.                                                                                    |
 | `empty?/1`  | Returns `true` if the `state` is empty, `false` otherwise.                                                       |
 | `pop/1`     | Removes one of workers from `state` and returns it as `{caller, state}`. Returns `:empty` if the state is empty. |
+
+### Workers implementations out of the box
+
+| Module                            | Description                                    | Source                                                                                           | Default? |
+|-----------------------------------|------------------------------------------------|--------------------------------------------------------------------------------------------------|----------|
+| `Poolex.Workers.Impl.List`        | `LIFO` implementation based on Elixir's `List` | [link](https://github.com/general-CbIC/poolex/blob/main/lib/poolex/workers/impl/list.ex)         | ✅       |
+| `Poolex.Workers.Impl.ErlangQueue` | `FIFO` implementation based on `:erlang.queue` | [link](https://github.com/general-CbIC/poolex/blob/main/lib/poolex/workers/impl/erlang_queue.ex) | ❌       |
 
 ## Writing custom implementations
 

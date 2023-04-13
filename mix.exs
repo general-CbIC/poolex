@@ -55,7 +55,7 @@ defmodule Poolex.MixProject do
       main: "readme",
       extras: [
         "docs/CONTRIBUTING.md",
-        "docs/guides/custom-implementations.md",
+        "docs/guides/workers-and-callers-implementations.md",
         "docs/guides/migration-from-poolboy.cheatmd",
         "docs/guides/example-of-use.cheatmd",
         "docs/guides/getting-started.cheatmd",
