@@ -3,7 +3,7 @@ defmodule SomeIdleWorkersImpl do
   @behaviour Poolex.Workers.Behaviour
 
   @impl true
-  def init() do
+  def init do
     []
   end
 

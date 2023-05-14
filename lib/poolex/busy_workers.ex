@@ -1,7 +1,7 @@
 defmodule Poolex.BusyWorkers do
   @moduledoc false
-  alias Poolex.Workers.Behaviour
   alias Poolex.Settings
+  alias Poolex.Workers.Behaviour
 
   @doc false
   @spec init(Poolex.pool_id(), module()) :: Behaviour.state()
