@@ -32,6 +32,8 @@ jobs:
             otp: '25'
           - elixir: '1.14'
             otp: '25'
+          - elixir: '1.14'
+            otp: '26'
     steps:
       - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
@@ -63,7 +65,7 @@ jobs:
       - name: Run dialyzer
         uses: erlef/setup-beam@v1
         with:
-          otp-version: '25'
+          otp-version: '26'
           elixir-version: '1.14'
       - run: mix do deps.get, compile
       - run: mix check
