@@ -472,4 +472,12 @@ defmodule Poolex do
         {:noreply, %{state | waiting_callers_state: new_waiting_callers_state}}
     end
   end
+
+  @impl GenServer
+  def terminate(reason, %State{} = state) do
+    DynamicSupervisor.stop(state.supervisor, reason)
+    Monitoring.stop(state.monitor_id)
+
+    :ok
+  end
 end
