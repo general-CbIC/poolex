@@ -5,7 +5,7 @@ defmodule Poolex.Workers.Impl.ErlangQueue do
   @behaviour Poolex.Workers.Behaviour
 
   @impl true
-  def init() do
+  def init do
     :queue.new()
   end
 

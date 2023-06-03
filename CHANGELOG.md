@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2023-06-03
+
+### Fixed
+
+- Fix the shutdown process: stop workers before the pool ([issue](https://github.com/general-CbIC/poolex/issues/44)).
+
 ## [0.7.0] - 2023-04-13
 
 ### Added
 
-- Added `FIFO` worker's implementation. [About implemetations](https://hexdocs.pm/poolex/custom-implementations.html)
+- Added `FIFO` worker's implementation ([About implemetations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html)).
 
 ## [0.6.1] - 2023-03-25
 
@@ -161,7 +167,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.7.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/general-CbIC/poolex/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/general-CbIC/poolex/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/general-CbIC/poolex/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/general-CbIC/poolex/compare/v0.5.1...v0.6.0

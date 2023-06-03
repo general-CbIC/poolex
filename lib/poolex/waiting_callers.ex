@@ -1,7 +1,7 @@
 defmodule Poolex.WaitingCallers do
   @moduledoc false
-  alias Poolex.Settings
   alias Poolex.Callers.Behaviour
+  alias Poolex.Settings
 
   @doc false
   @spec init(Poolex.pool_id(), module()) :: Behaviour.state()
