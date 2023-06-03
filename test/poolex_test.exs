@@ -372,6 +372,28 @@ defmodule PoolexTest do
     end
   end
 
+  describe "shutdown process" do
+    test "workers stop before the pool", %{pool_name: pool_name} do
+      {:ok, pool_pid} =
+        Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
+
+      supervisor_pid = Poolex.get_state(pool_name).supervisor
+      worker_pid = Poolex.run!(pool_name, fn pid -> pid end)
+
+      pool_monitor_ref = Process.monitor(pool_pid)
+      supervisor_monitor_ref = Process.monitor(supervisor_pid)
+      worker_monitor_ref = Process.monitor(worker_pid)
+
+      GenServer.stop(pool_name)
+
+      {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
+
+      assert message_1 == {:DOWN, worker_monitor_ref, :process, worker_pid, :shutdown}
+      assert message_2 == {:DOWN, supervisor_monitor_ref, :process, supervisor_pid, :normal}
+      assert message_3 == {:DOWN, pool_monitor_ref, :process, pool_pid, :normal}
+    end
+  end
+
   defp pool_name do
     1..10
     |> Enum.map(fn _ -> Enum.random(?a..?z) end)
