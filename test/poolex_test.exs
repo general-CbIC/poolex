@@ -377,7 +377,9 @@ defmodule PoolexTest do
       {:ok, pool_pid} =
         Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
 
-      supervisor_pid = Poolex.get_state(pool_name).supervisor
+      state = Poolex.get_state(pool_name)
+
+      supervisor_pid = state.supervisor
       worker_pid = Poolex.run!(pool_name, fn pid -> pid end)
 
       pool_monitor_ref = Process.monitor(pool_pid)

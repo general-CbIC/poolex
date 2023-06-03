@@ -476,6 +476,7 @@ defmodule Poolex do
   @impl GenServer
   def terminate(reason, %State{} = state) do
     DynamicSupervisor.stop(state.supervisor, reason)
+    Monitoring.stop(state.monitor_id)
 
     :ok
   end

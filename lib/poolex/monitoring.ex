@@ -11,6 +11,14 @@ defmodule Poolex.Monitoring do
     {:ok, monitor_id}
   end
 
+  @spec stop(monitor_id()) :: :ok
+  @doc false
+  def stop(monitor_id) do
+    :ets.delete(monitor_id)
+
+    :ok
+  end
+
   @spec add(monitor_id(), pid(), kind_of_process()) :: :ok
   @doc false
   def add(monitor_id, process_pid, kind_of_process) do
