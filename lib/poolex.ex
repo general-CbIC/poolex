@@ -26,7 +26,7 @@ defmodule Poolex do
   Fore more information see [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
   """
 
-  use GenServer
+  use GenServer, shutdown: :infinity
 
   alias Poolex.BusyWorkers
   alias Poolex.DebugInfo
@@ -261,6 +261,8 @@ defmodule Poolex do
 
   @impl GenServer
   def init(opts) do
+    Process.flag(:trap_exit, true)
+
     pool_id = Keyword.fetch!(opts, :pool_id)
     worker_module = Keyword.fetch!(opts, :worker_module)
     workers_count = Keyword.fetch!(opts, :workers_count)
