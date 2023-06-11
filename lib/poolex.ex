@@ -104,6 +104,7 @@ defmodule Poolex do
   """
   @spec start(list(poolex_option())) :: GenServer.on_start()
   def start(opts) do
+    :ok = Settings.init()
     pool_id = Keyword.fetch!(opts, :pool_id)
     GenServer.start(__MODULE__, opts, name: pool_id)
   end
@@ -128,6 +129,7 @@ defmodule Poolex do
   """
   @spec start_link(list(poolex_option())) :: GenServer.on_start()
   def start_link(opts) do
+    :ok = Settings.init()
     pool_id = Keyword.fetch!(opts, :pool_id)
     GenServer.start_link(__MODULE__, opts, name: pool_id)
   end
@@ -215,8 +217,8 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> state = %Poolex.State{} = Poolex.get_state(:my_pool)
+      iex> Poolex.start(pool_id: :my_pool_2, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> state = %Poolex.State{} = Poolex.get_state(:my_pool_2)
       iex> state.worker_module
       Agent
       iex> is_pid(state.supervisor)
@@ -247,8 +249,8 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> debug_info = %Poolex.DebugInfo{} = Poolex.get_debug_info(:my_pool)
+      iex> Poolex.start(pool_id: :my_pool_3, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> debug_info = %Poolex.DebugInfo{} = Poolex.get_debug_info(:my_pool_3)
       iex> debug_info.busy_workers_count
       0
       iex> debug_info.idle_workers_count
@@ -277,7 +279,6 @@ defmodule Poolex do
     waiting_callers_impl =
       Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
-    :ok = Settings.init()
     {:ok, monitor_id} = Monitoring.init(pool_id)
     {:ok, supervisor} = Poolex.Supervisor.start_link()
 
