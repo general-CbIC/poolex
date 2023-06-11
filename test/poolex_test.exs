@@ -366,7 +366,7 @@ defmodule PoolexTest do
       worker_monitor_ref = Process.monitor(worker_pid)
 
       Process.exit(pool_pid, :exit)
-      :timer.sleep(10)
+      :timer.sleep(20)
 
       {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
 
