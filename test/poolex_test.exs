@@ -1,6 +1,6 @@
 defmodule PoolexTest do
   use ExUnit.Case, async: false
-  # doctest Poolex
+  doctest Poolex
 
   describe "debug info" do
     test "valid after initialization" do
