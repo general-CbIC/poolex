@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Implementation settings are stored in the pool process state instead of the ETS table. This makes the testing process easier and removes unnecessary entities.
+
 ## [0.7.1] - 2023-06-03
 
 ### Fixed
 
-- Fix the shutdown process: stop workers before the pool ([issue](https://github.com/general-CbIC/poolex/issues/44)).
+- Fixed the shutdown process: stop workers before the pool ([issue](https://github.com/general-CbIC/poolex/issues/44)).
 
 ## [0.7.0] - 2023-04-13
 
