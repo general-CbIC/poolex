@@ -283,11 +283,14 @@ defmodule Poolex do
     {:ok, supervisor} = Poolex.Supervisor.start_link()
 
     state = %State{
-      busy_workers_state: BusyWorkers.init(pool_id, busy_workers_impl),
+      busy_workers_impl: busy_workers_impl,
+      busy_workers_state: BusyWorkers.init(busy_workers_impl),
+      idle_workers_impl: idle_workers_impl,
       max_overflow: max_overflow,
       monitor_id: monitor_id,
       pool_id: pool_id,
       supervisor: supervisor,
+      waiting_callers_impl: waiting_callers_impl,
       waiting_callers_state: WaitingCallers.init(pool_id, waiting_callers_impl),
       worker_args: worker_args,
       worker_module: worker_module,
@@ -330,7 +333,7 @@ defmodule Poolex do
         new_state = %State{
           state
           | busy_workers_state:
-              BusyWorkers.add(state.pool_id, state.busy_workers_state, new_worker),
+              BusyWorkers.add(state.busy_workers_impl, state.busy_workers_state, new_worker),
             overflow: state.overflow + 1
         }
 
@@ -347,7 +350,7 @@ defmodule Poolex do
         IdleWorkers.pop(state.pool_id, state.idle_workers_state)
 
       new_busy_workers_state =
-        BusyWorkers.add(state.pool_id, state.busy_workers_state, idle_worker_pid)
+        BusyWorkers.add(state.busy_workers_impl, state.busy_workers_state, idle_worker_pid)
 
       new_state = %State{
         state
@@ -365,9 +368,9 @@ defmodule Poolex do
 
   def handle_call(:get_debug_info, _form, %Poolex.State{} = state) do
     debug_info = %DebugInfo{
-      busy_workers_count: BusyWorkers.count(state.pool_id, state.busy_workers_state),
-      busy_workers_impl: BusyWorkers.impl(state.pool_id),
-      busy_workers_pids: BusyWorkers.to_list(state.pool_id, state.busy_workers_state),
+      busy_workers_count: BusyWorkers.count(state.busy_workers_impl, state.busy_workers_state),
+      busy_workers_impl: state.busy_workers_impl,
+      busy_workers_pids: BusyWorkers.to_list(state.busy_workers_impl, state.busy_workers_state),
       idle_workers_count: IdleWorkers.count(state.pool_id, state.idle_workers_state),
       idle_workers_impl: IdleWorkers.impl(state.pool_id),
       idle_workers_pids: IdleWorkers.to_list(state.pool_id, state.idle_workers_state),
@@ -396,8 +399,9 @@ defmodule Poolex do
 
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
-    if BusyWorkers.member?(state.pool_id, state.busy_workers_state, worker) do
-      busy_workers_state = BusyWorkers.remove(state.pool_id, state.busy_workers_state, worker)
+    if BusyWorkers.member?(state.busy_workers_impl, state.busy_workers_state, worker) do
+      busy_workers_state =
+        BusyWorkers.remove(state.busy_workers_impl, state.busy_workers_state, worker)
 
       if state.overflow > 0 do
         stop_worker(state.supervisor, worker)
@@ -459,7 +463,11 @@ defmodule Poolex do
           state
           | idle_workers_state: new_idle_workers_state,
             busy_workers_state:
-              BusyWorkers.remove(state.pool_id, state.busy_workers_state, dead_process_pid)
+              BusyWorkers.remove(
+                state.busy_workers_impl,
+                state.busy_workers_state,
+                dead_process_pid
+              )
         }
 
         {:noreply, state}
