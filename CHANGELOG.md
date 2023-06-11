@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2023-06-11
+
+### Fixed
+
+- Trap exit to shutdown correctly ([PR](https://github.com/general-CbIC/poolex/pull/46)) .
+
 ### Changed
 
 - Implementation settings are stored in the pool process state instead of the ETS table. This makes the testing process easier and removes unnecessary entities.
@@ -171,7 +177,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.7.1...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/general-CbIC/poolex/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/general-CbIC/poolex/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/general-CbIC/poolex/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/general-CbIC/poolex/compare/v0.6.0...v0.6.1
