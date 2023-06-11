@@ -372,8 +372,8 @@ defmodule PoolexTest do
     end
   end
 
-  describe "shutdown process" do
-    test "workers stop before the pool", %{pool_name: pool_name} do
+  describe "terminate process" do
+    test "workers stop before the pool with reason :normal", %{pool_name: pool_name} do
       {:ok, pool_pid} =
         Poolex.start_link(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
 
@@ -393,6 +393,37 @@ defmodule PoolexTest do
       assert message_1 == {:DOWN, worker_monitor_ref, :process, worker_pid, :shutdown}
       assert message_2 == {:DOWN, supervisor_monitor_ref, :process, supervisor_pid, :normal}
       assert message_3 == {:DOWN, pool_monitor_ref, :process, pool_pid, :normal}
+    end
+
+    test "workers stop before the pool with reason :exit", %{pool_name: pool_name} do
+      {:ok, pool_pid} =
+        Poolex.start(pool_id: pool_name, worker_module: SomeWorker, workers_count: 1)
+
+      state = Poolex.get_state(pool_name)
+
+      supervisor_pid = state.supervisor
+      worker_pid = Poolex.run!(pool_name, fn pid -> pid end)
+
+      pool_monitor_ref = Process.monitor(pool_pid)
+      supervisor_monitor_ref = Process.monitor(supervisor_pid)
+      worker_monitor_ref = Process.monitor(worker_pid)
+
+      Process.exit(pool_pid, :exit)
+      :timer.sleep(10)
+
+      {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
+
+      assert message_1 == {:DOWN, worker_monitor_ref, :process, worker_pid, :shutdown}
+
+      assert elem(message_2, 0) == :DOWN
+      assert elem(message_2, 1) == supervisor_monitor_ref
+      assert elem(message_2, 2) == :process
+      assert elem(message_2, 3) == supervisor_pid
+
+      assert elem(message_3, 0) == :DOWN
+      assert elem(message_3, 1) == pool_monitor_ref
+      assert elem(message_3, 2) == :process
+      assert elem(message_3, 3) == pool_pid
     end
   end
 
