@@ -32,7 +32,6 @@ defmodule Poolex do
   alias Poolex.DebugInfo
   alias Poolex.IdleWorkers
   alias Poolex.Monitoring
-  alias Poolex.Settings
   alias Poolex.State
   alias Poolex.WaitingCallers
 
@@ -104,7 +103,6 @@ defmodule Poolex do
   """
   @spec start(list(poolex_option())) :: GenServer.on_start()
   def start(opts) do
-    :ok = Settings.init()
     pool_id = Keyword.fetch!(opts, :pool_id)
     GenServer.start(__MODULE__, opts, name: pool_id)
   end
@@ -129,7 +127,6 @@ defmodule Poolex do
   """
   @spec start_link(list(poolex_option())) :: GenServer.on_start()
   def start_link(opts) do
-    :ok = Settings.init()
     pool_id = Keyword.fetch!(opts, :pool_id)
     GenServer.start_link(__MODULE__, opts, name: pool_id)
   end
