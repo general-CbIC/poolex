@@ -315,6 +315,45 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 0
       assert debug_info.overflow == 0
     end
+
+    test "allows workers_count: 0" do
+      pool_name = start_pool(worker_module: SomeWorker, workers_count: 0, max_overflow: 2)
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.idle_workers_count == 0
+      assert debug_info.idle_workers_pids == []
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.busy_workers_pids == []
+      assert debug_info.overflow == 0
+
+      pid = self()
+
+      spawn(fn ->
+        Poolex.run!(pool_name, fn server ->
+          SomeWorker.traceable_call(server, pid, :foo, 50)
+        end)
+      end)
+
+      assert_receive {:traceable_start, :foo, worker_pid}
+      refute_received {:traceable_end, _, _}
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.idle_workers_count == 0
+      assert debug_info.idle_workers_pids == []
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.busy_workers_pids == [worker_pid]
+      assert debug_info.overflow == 1
+
+      assert_receive {:traceable_end, :foo, ^worker_pid}, 5000
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.idle_workers_count == 0
+      assert debug_info.idle_workers_pids == []
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.busy_workers_pids == []
+      assert debug_info.overflow == 0
+    end
   end
 
   describe "child_spec" do
