@@ -298,7 +298,7 @@ defmodule Poolex do
     {:ok, %State{state | idle_workers_state: IdleWorkers.init(idle_workers_impl, worker_pids)}}
   end
 
-  @spec start_workers(non_neg_integer(), State.t(), Monitoring.id()) :: [pid]
+  @spec start_workers(non_neg_integer(), State.t(), Monitoring.monitor_id()) :: [pid]
   defp start_workers(0, _state, _monitor_id) do
     []
   end
