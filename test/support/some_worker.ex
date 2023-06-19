@@ -23,7 +23,6 @@ defmodule SomeWorker do
     {:reply, :ok, state}
   end
 
-  @impl true
   def handle_call(:do_some_work, _from, state) do
     {:reply, :some_result, state}
   end

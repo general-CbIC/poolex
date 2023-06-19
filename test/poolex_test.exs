@@ -345,7 +345,7 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_pids == [worker_pid]
       assert debug_info.overflow == 1
 
-      assert_receive {:traceable_end, :foo, ^worker_pid}, 5000
+      assert_receive {:traceable_end, :foo, ^worker_pid}
       debug_info = Poolex.get_debug_info(pool_name)
 
       assert debug_info.idle_workers_count == 0
