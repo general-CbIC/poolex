@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed a bug with an incorrect number of running workers when specifying a zero or negative number in the `workers_count` parameter ([PR](https://github.com/general-CbIC/poolex/pull/49)).
+
 ## [0.7.2] - 2023-06-11
 
 ### Fixed
