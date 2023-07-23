@@ -531,15 +531,20 @@ defmodule Poolex do
         end
 
       :caller ->
-        new_waiting_callers_state =
-          WaitingCallers.remove_by_pid(
-            state.waiting_callers_impl,
-            state.waiting_callers_state,
-            dead_process_pid
-          )
-
-        {:noreply, %{state | waiting_callers_state: new_waiting_callers_state}}
+        {:noreply, handle_down_caller(state, dead_process_pid)}
     end
+  end
+
+  @spec handle_down_caller(State.t(), pid()) :: State.t()
+  defp handle_down_caller(%State{} = state, dead_process_pid) do
+    new_waiting_callers_state =
+      WaitingCallers.remove_by_pid(
+        state.waiting_callers_impl,
+        state.waiting_callers_state,
+        dead_process_pid
+      )
+
+    %State{state | waiting_callers_state: new_waiting_callers_state}
   end
 
   @impl GenServer
