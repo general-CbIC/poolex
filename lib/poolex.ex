@@ -408,11 +408,7 @@ defmodule Poolex do
 
         state
       else
-        %State{
-          state
-          | idle_workers_state:
-              IdleWorkers.add(state.idle_workers_impl, state.idle_workers_state, worker)
-        }
+        add_worker_to_idle_workers(state, worker)
       end
     else
       state
@@ -453,14 +449,7 @@ defmodule Poolex do
               state
               |> remove_worker_from_idle_workers(dead_process_pid)
               |> remove_worker_from_busy_workers(dead_process_pid)
-
-            new_idle_workers_state =
-              IdleWorkers.add(state.idle_workers_impl, state.idle_workers_state, new_worker)
-
-            state = %State{
-              state
-              | idle_workers_state: new_idle_workers_state
-            }
+              |> add_worker_to_idle_workers(new_worker)
 
             {:noreply, state}
           end
@@ -490,6 +479,19 @@ defmodule Poolex do
       | busy_workers_state:
           BusyWorkers.add(
             state.busy_workers_impl,
+            state.busy_workers_state,
+            worker
+          )
+    }
+  end
+
+  @spec add_worker_to_idle_workers(State.t(), worker()) :: State.t()
+  defp add_worker_to_idle_workers(%State{} = state, worker) do
+    %State{
+      state
+      | idle_workers_state:
+          IdleWorkers.add(
+            state.idle_workers_impl,
             state.busy_workers_state,
             worker
           )
