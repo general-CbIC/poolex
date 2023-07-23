@@ -6,11 +6,10 @@ defmodule Poolex do
 
   ```elixir
   children = [
-    Poolex.child_spec(
+    {Poolex,
       pool_id: :worker_pool,
       worker_module: SomeWorker,
-      workers_count: 5
-    )
+      workers_count: 5}
   ]
 
   Supervisor.start_link(children, strategy: :one_for_one)
@@ -321,7 +320,8 @@ defmodule Poolex do
   defp start_worker(%State{} = state) do
     DynamicSupervisor.start_child(state.supervisor, %{
       id: make_ref(),
-      start: {state.worker_module, state.worker_start_fun, state.worker_args}
+      start: {state.worker_module, state.worker_start_fun, state.worker_args},
+      restart: :temporary
     })
   end
 
@@ -336,16 +336,11 @@ defmodule Poolex do
       if state.overflow < state.max_overflow do
         {:ok, new_worker} = start_worker(state)
 
-        Monitoring.add(state.monitor_id, new_worker, :temporary_worker)
+        Monitoring.add(state.monitor_id, new_worker, :worker)
 
-        new_state = %State{
-          state
-          | busy_workers_state:
-              BusyWorkers.add(state.busy_workers_impl, state.busy_workers_state, new_worker),
-            overflow: state.overflow + 1
-        }
+        state = add_worker_to_busy_workers(state, new_worker)
 
-        {:reply, {:ok, new_worker}, new_state}
+        {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
         Monitoring.add(state.monitor_id, from_pid, :caller)
 
@@ -358,14 +353,9 @@ defmodule Poolex do
       {idle_worker_pid, new_idle_workers_state} =
         IdleWorkers.pop(state.idle_workers_impl, state.idle_workers_state)
 
-      new_busy_workers_state =
-        BusyWorkers.add(state.busy_workers_impl, state.busy_workers_state, idle_worker_pid)
+      state = add_worker_to_busy_workers(state, idle_worker_pid)
 
-      new_state = %State{
-        state
-        | idle_workers_state: new_idle_workers_state,
-          busy_workers_state: new_busy_workers_state
-      }
+      new_state = %State{state | idle_workers_state: new_idle_workers_state}
 
       {:reply, {:ok, idle_worker_pid}, new_state}
     end
@@ -407,23 +397,31 @@ defmodule Poolex do
     end
   end
 
+  @impl GenServer
+  def handle_info(
+        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
+        %State{} = state
+      ) do
+    case Monitoring.remove(state.monitor_id, monitoring_reference) do
+      :worker ->
+        {:noreply, handle_down_worker(state, dead_process_pid)}
+
+      :caller ->
+        {:noreply, handle_down_caller(state, dead_process_pid)}
+    end
+  end
+
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
     if BusyWorkers.member?(state.busy_workers_impl, state.busy_workers_state, worker) do
-      busy_workers_state =
-        BusyWorkers.remove(state.busy_workers_impl, state.busy_workers_state, worker)
+      state = remove_worker_from_busy_workers(state, worker)
 
       if state.overflow > 0 do
         stop_worker(state.supervisor, worker)
 
-        %State{state | busy_workers_state: busy_workers_state}
+        state
       else
-        %State{
-          state
-          | busy_workers_state: busy_workers_state,
-            idle_workers_state:
-              IdleWorkers.add(state.idle_workers_impl, state.idle_workers_state, worker)
-        }
+        add_worker_to_idle_workers(state, worker)
       end
     else
       state
@@ -440,59 +438,95 @@ defmodule Poolex do
     %{state | waiting_callers_state: new_waiting_callers_state}
   end
 
-  @impl GenServer
-  def handle_info(
-        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
-        %State{} = state
-      ) do
-    case Monitoring.remove(state.monitor_id, monitoring_reference) do
-      :temporary_worker ->
-        {:noreply,
-         %State{
-           state
-           | overflow: state.overflow - 1,
-             idle_workers_state:
-               IdleWorkers.remove(
-                 state.idle_workers_impl,
-                 state.idle_workers_state,
-                 dead_process_pid
-               )
-         }}
+  @spec add_worker_to_busy_workers(State.t(), worker()) :: State.t()
+  defp add_worker_to_busy_workers(%State{} = state, worker) do
+    %State{
+      state
+      | busy_workers_state:
+          BusyWorkers.add(
+            state.busy_workers_impl,
+            state.busy_workers_state,
+            worker
+          )
+    }
+  end
 
-      :worker ->
+  @spec add_worker_to_idle_workers(State.t(), worker()) :: State.t()
+  defp add_worker_to_idle_workers(%State{} = state, worker) do
+    %State{
+      state
+      | idle_workers_state:
+          IdleWorkers.add(
+            state.idle_workers_impl,
+            state.busy_workers_state,
+            worker
+          )
+    }
+  end
+
+  @spec remove_worker_from_busy_workers(State.t(), worker()) :: State.t()
+  defp remove_worker_from_busy_workers(%State{} = state, worker) do
+    %State{
+      state
+      | busy_workers_state:
+          BusyWorkers.remove(
+            state.busy_workers_impl,
+            state.busy_workers_state,
+            worker
+          )
+    }
+  end
+
+  @spec remove_worker_from_idle_workers(State.t(), worker()) :: State.t()
+  defp remove_worker_from_idle_workers(%State{} = state, worker) do
+    %State{
+      state
+      | idle_workers_state:
+          IdleWorkers.remove(
+            state.idle_workers_impl,
+            state.idle_workers_state,
+            worker
+          )
+    }
+  end
+
+  @spec handle_down_worker(State.t(), pid()) :: State.t()
+  defp handle_down_worker(%State{} = state, dead_process_pid) do
+    state =
+      state
+      |> remove_worker_from_idle_workers(dead_process_pid)
+      |> remove_worker_from_busy_workers(dead_process_pid)
+
+    if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
+      if state.overflow > 0 do
+        %State{state | overflow: state.overflow - 1}
+      else
         {:ok, new_worker} = start_worker(state)
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 
-        temp_idle_workers_state =
-          IdleWorkers.remove(state.idle_workers_impl, state.idle_workers_state, dead_process_pid)
+        add_worker_to_idle_workers(state, new_worker)
+      end
+    else
+      {:ok, new_worker} = start_worker(state)
+      Monitoring.add(state.monitor_id, new_worker, :worker)
 
-        new_idle_workers_state =
-          IdleWorkers.add(state.idle_workers_impl, temp_idle_workers_state, new_worker)
-
-        state = %State{
-          state
-          | idle_workers_state: new_idle_workers_state,
-            busy_workers_state:
-              BusyWorkers.remove(
-                state.busy_workers_impl,
-                state.busy_workers_state,
-                dead_process_pid
-              )
-        }
-
-        {:noreply, state}
-
-      :caller ->
-        new_waiting_callers_state =
-          WaitingCallers.remove_by_pid(
-            state.waiting_callers_impl,
-            state.waiting_callers_state,
-            dead_process_pid
-          )
-
-        {:noreply, %{state | waiting_callers_state: new_waiting_callers_state}}
+      state
+      |> add_worker_to_busy_workers(new_worker)
+      |> provide_worker_to_waiting_caller(new_worker)
     end
+  end
+
+  @spec handle_down_caller(State.t(), pid()) :: State.t()
+  defp handle_down_caller(%State{} = state, dead_process_pid) do
+    new_waiting_callers_state =
+      WaitingCallers.remove_by_pid(
+        state.waiting_callers_impl,
+        state.waiting_callers_state,
+        dead_process_pid
+      )
+
+    %State{state | waiting_callers_state: new_waiting_callers_state}
   end
 
   @impl GenServer

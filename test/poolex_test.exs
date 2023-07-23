@@ -155,6 +155,31 @@ defmodule PoolexTest do
       assert agent_pid != new_agent_pid
     end
 
+    test "restart busy workers when pending callers" do
+      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+
+      # test_process = self()
+      launch_long_tasks(pool_name, 2)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 1
+      assert length(debug_info.waiting_callers) == 1
+
+      [busy_worker_pid] = debug_info.busy_workers_pids
+      Process.exit(busy_worker_pid, :kill)
+
+      # To be sure that DOWN message will be handed
+      :timer.sleep(1)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 1
+      assert Enum.empty?(debug_info.waiting_callers)
+
+      [new_worker_pid] = debug_info.busy_workers_pids
+
+      assert busy_worker_pid != new_worker_pid
+    end
+
     test "works on callers" do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
 

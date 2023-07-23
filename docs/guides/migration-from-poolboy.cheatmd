@@ -2,7 +2,9 @@
 
 If you are using `:poolboy` and want to use `Poolex` instead, then you need to follow three simple steps.
 
-## I. Install the `Poolex` dependency
+## Installation steps
+
+### I. Install the Poolex dependency
 
 #### mix.exs
 
@@ -27,7 +29,7 @@ Well, you can also clean up installed dependencies locally and remove them from 
 mix deps.clean --unlock --unused
 ```
 
-## II. Update child specs
+### II. Update child specs
 
 #### Your Application or Supervisor file
 
@@ -40,19 +42,18 @@ def init(_args) do
 -      size: 100,
 -      max_overflow: 50
 -    )
-+    Poolex.child_spec(
++    {Poolex,
 +      pool_id: :some_pool,
 +      worker_module: MyApp.SomeWorker,
 +      workers_count: 100,
-+      max_overflow: 50
-+    )
++      max_overflow: 50}
   ]
 
   Supervisor.init(children, strategy: :one_for_one)
 end
 ```
 
-## III. Update call site
+### III. Update call site
 
 Use `run!/3` to leave the same behavior. 
 If you want a safe interface with error handling, then use `run/3`.
