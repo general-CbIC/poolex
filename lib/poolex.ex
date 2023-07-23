@@ -321,7 +321,8 @@ defmodule Poolex do
   defp start_worker(%State{} = state) do
     DynamicSupervisor.start_child(state.supervisor, %{
       id: make_ref(),
-      start: {state.worker_module, state.worker_start_fun, state.worker_args}
+      start: {state.worker_module, state.worker_start_fun, state.worker_args},
+      restart: :temporary
     })
   end
 
