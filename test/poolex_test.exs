@@ -173,7 +173,7 @@ defmodule PoolexTest do
 
       debug_info = Poolex.get_debug_info(pool_name)
       assert debug_info.busy_workers_count == 1
-      assert length(debug_info.waiting_callers) == 0
+      assert Enum.empty?(debug_info.waiting_callers)
 
       [new_worker_pid] = debug_info.busy_workers_pids
 
