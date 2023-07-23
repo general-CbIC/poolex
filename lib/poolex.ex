@@ -450,12 +450,7 @@ defmodule Poolex do
       :worker ->
         if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
           if state.overflow > 0 do
-            idle_workers_state =
-              IdleWorkers.remove(
-                state.idle_workers_impl,
-                state.idle_workers_state,
-                dead_process_pid
-              )
+            state = remove_worker_from_idle_workers(state, dead_process_pid)
 
             busy_workers_state =
               BusyWorkers.remove(
@@ -467,7 +462,6 @@ defmodule Poolex do
             state = %State{
               state
               | overflow: state.overflow - 1,
-                idle_workers_state: idle_workers_state,
                 busy_workers_state: busy_workers_state
             }
 
@@ -477,15 +471,10 @@ defmodule Poolex do
 
             Monitoring.add(state.monitor_id, new_worker, :worker)
 
-            temp_idle_workers_state =
-              IdleWorkers.remove(
-                state.idle_workers_impl,
-                state.idle_workers_state,
-                dead_process_pid
-              )
+            state = remove_worker_from_idle_workers(state, dead_process_pid)
 
             new_idle_workers_state =
-              IdleWorkers.add(state.idle_workers_impl, temp_idle_workers_state, new_worker)
+              IdleWorkers.add(state.idle_workers_impl, state.idle_workers_state, new_worker)
 
             state = %State{
               state
@@ -504,14 +493,10 @@ defmodule Poolex do
           {:ok, new_worker} = start_worker(state)
           Monitoring.add(state.monitor_id, new_worker, :worker)
 
-          state = provide_worker_to_waiting_caller(state, new_worker)
-
-          idle_workers_state =
-            IdleWorkers.remove(
-              state.idle_workers_impl,
-              state.idle_workers_state,
-              dead_process_pid
-            )
+          state =
+            state
+            |> provide_worker_to_waiting_caller(new_worker)
+            |> remove_worker_from_idle_workers(dead_process_pid)
 
           busy_workers_state =
             BusyWorkers.remove(
@@ -522,8 +507,7 @@ defmodule Poolex do
 
           state = %State{
             state
-            | idle_workers_state: idle_workers_state,
-              busy_workers_state:
+            | busy_workers_state:
                 BusyWorkers.add(state.busy_workers_impl, busy_workers_state, new_worker)
           }
 
@@ -533,6 +517,19 @@ defmodule Poolex do
       :caller ->
         {:noreply, handle_down_caller(state, dead_process_pid)}
     end
+  end
+
+  @spec remove_worker_from_idle_workers(State.t(), worker()) :: State.t()
+  defp remove_worker_from_idle_workers(%State{} = state, worker) do
+    %State{
+      state
+      | idle_workers_state:
+          IdleWorkers.remove(
+            state.idle_workers_impl,
+            state.idle_workers_state,
+            worker
+          )
+    }
   end
 
   @spec handle_down_caller(State.t(), pid()) :: State.t()
