@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed a bug where a restarted worker was not automatically dispatched to pending callers ([Issue](https://github.com/general-CbIC/poolex/issues/53) / [PR](https://github.com/general-CbIC/poolex/pull/54)).
+
+### Changed
+
+- Upgraded [ex_doc](https://hex.pm/packages/ex_doc) from `0.29.4` to `0.30.3`
+
 ## [0.7.3] - 2023-06-21
 
 ### Fixed
