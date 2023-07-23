@@ -339,14 +339,9 @@ defmodule Poolex do
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 
-        new_state = %State{
-          state
-          | busy_workers_state:
-              BusyWorkers.add(state.busy_workers_impl, state.busy_workers_state, new_worker),
-            overflow: state.overflow + 1
-        }
+        state = add_worker_to_busy_workers(state, new_worker)
 
-        {:reply, {:ok, new_worker}, new_state}
+        {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
         Monitoring.add(state.monitor_id, from_pid, :caller)
 
@@ -359,14 +354,9 @@ defmodule Poolex do
       {idle_worker_pid, new_idle_workers_state} =
         IdleWorkers.pop(state.idle_workers_impl, state.idle_workers_state)
 
-      new_busy_workers_state =
-        BusyWorkers.add(state.busy_workers_impl, state.busy_workers_state, idle_worker_pid)
+      state = add_worker_to_busy_workers(state, idle_worker_pid)
 
-      new_state = %State{
-        state
-        | idle_workers_state: new_idle_workers_state,
-          busy_workers_state: new_busy_workers_state
-      }
+      new_state = %State{state | idle_workers_state: new_idle_workers_state}
 
       {:reply, {:ok, idle_worker_pid}, new_state}
     end
@@ -483,12 +473,7 @@ defmodule Poolex do
             |> provide_worker_to_waiting_caller(new_worker)
             |> remove_worker_from_idle_workers(dead_process_pid)
             |> remove_worker_from_busy_workers(dead_process_pid)
-
-          state = %State{
-            state
-            | busy_workers_state:
-                BusyWorkers.add(state.busy_workers_impl, state.busy_workers_state, new_worker)
-          }
+            |> add_worker_to_busy_workers(new_worker)
 
           {:noreply, state}
         end
@@ -496,6 +481,19 @@ defmodule Poolex do
       :caller ->
         {:noreply, handle_down_caller(state, dead_process_pid)}
     end
+  end
+
+  @spec add_worker_to_busy_workers(State.t(), worker()) :: State.t()
+  defp add_worker_to_busy_workers(%State{} = state, worker) do
+    %State{
+      state
+      | busy_workers_state:
+          BusyWorkers.add(
+            state.busy_workers_impl,
+            state.busy_workers_state,
+            worker
+          )
+    }
   end
 
   @spec remove_worker_from_busy_workers(State.t(), worker()) :: State.t()
