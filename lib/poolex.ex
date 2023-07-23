@@ -432,40 +432,7 @@ defmodule Poolex do
       ) do
     case Monitoring.remove(state.monitor_id, monitoring_reference) do
       :worker ->
-        if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
-          if state.overflow > 0 do
-            state =
-              state
-              |> remove_worker_from_idle_workers(dead_process_pid)
-              |> remove_worker_from_busy_workers(dead_process_pid)
-
-            {:noreply, %State{state | overflow: state.overflow - 1}}
-          else
-            {:ok, new_worker} = start_worker(state)
-
-            Monitoring.add(state.monitor_id, new_worker, :worker)
-
-            state =
-              state
-              |> remove_worker_from_idle_workers(dead_process_pid)
-              |> remove_worker_from_busy_workers(dead_process_pid)
-              |> add_worker_to_idle_workers(new_worker)
-
-            {:noreply, state}
-          end
-        else
-          {:ok, new_worker} = start_worker(state)
-          Monitoring.add(state.monitor_id, new_worker, :worker)
-
-          state =
-            state
-            |> provide_worker_to_waiting_caller(new_worker)
-            |> remove_worker_from_idle_workers(dead_process_pid)
-            |> remove_worker_from_busy_workers(dead_process_pid)
-            |> add_worker_to_busy_workers(new_worker)
-
-          {:noreply, state}
-        end
+        {:noreply, handle_down_worker(state, dead_process_pid)}
 
       :caller ->
         {:noreply, handle_down_caller(state, dead_process_pid)}
@@ -522,6 +489,33 @@ defmodule Poolex do
             worker
           )
     }
+  end
+
+  @spec handle_down_worker(State.t(), pid()) :: State.t()
+  defp handle_down_worker(%State{} = state, dead_process_pid) do
+    state =
+      state
+      |> remove_worker_from_idle_workers(dead_process_pid)
+      |> remove_worker_from_busy_workers(dead_process_pid)
+
+    if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
+      if state.overflow > 0 do
+        %State{state | overflow: state.overflow - 1}
+      else
+        {:ok, new_worker} = start_worker(state)
+
+        Monitoring.add(state.monitor_id, new_worker, :worker)
+
+        add_worker_to_idle_workers(state, new_worker)
+      end
+    else
+      {:ok, new_worker} = start_worker(state)
+      Monitoring.add(state.monitor_id, new_worker, :worker)
+
+      state
+      |> add_worker_to_busy_workers(new_worker)
+      |> provide_worker_to_waiting_caller(new_worker)
+    end
   end
 
   @spec handle_down_caller(State.t(), pid()) :: State.t()
