@@ -398,6 +398,20 @@ defmodule Poolex do
     end
   end
 
+  @impl GenServer
+  def handle_info(
+        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
+        %State{} = state
+      ) do
+    case Monitoring.remove(state.monitor_id, monitoring_reference) do
+      :worker ->
+        {:noreply, handle_down_worker(state, dead_process_pid)}
+
+      :caller ->
+        {:noreply, handle_down_caller(state, dead_process_pid)}
+    end
+  end
+
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
     if BusyWorkers.member?(state.busy_workers_impl, state.busy_workers_state, worker) do
@@ -423,20 +437,6 @@ defmodule Poolex do
     GenServer.reply(caller, {:ok, worker})
 
     %{state | waiting_callers_state: new_waiting_callers_state}
-  end
-
-  @impl GenServer
-  def handle_info(
-        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
-        %State{} = state
-      ) do
-    case Monitoring.remove(state.monitor_id, monitoring_reference) do
-      :worker ->
-        {:noreply, handle_down_worker(state, dead_process_pid)}
-
-      :caller ->
-        {:noreply, handle_down_caller(state, dead_process_pid)}
-    end
   end
 
   @spec add_worker_to_busy_workers(State.t(), worker()) :: State.t()
