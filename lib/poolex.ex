@@ -458,7 +458,7 @@ defmodule Poolex do
       | idle_workers_state:
           IdleWorkers.add(
             state.idle_workers_impl,
-            state.busy_workers_state,
+            state.idle_workers_state,
             worker
           )
     }

@@ -41,6 +41,24 @@ defmodule PoolexTest do
       assert debug_info.waiting_callers_impl == SomeWaitingCallersImpl
     end
 
+    test "valid after using the worker" do
+      initial_fun = fn -> 0 end
+      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+
+      {:ok, 0} = Poolex.run(pool_name, fn pid -> Agent.get(pid, & &1) end)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.__struct__ == Poolex.DebugInfo
+      assert debug_info.busy_workers_count == 0
+      assert Enum.empty?(debug_info.busy_workers_pids)
+      assert debug_info.idle_workers_count == 5
+      assert Enum.count(debug_info.idle_workers_pids) == 5
+      assert debug_info.worker_module == Agent
+      assert debug_info.worker_args == [initial_fun]
+      assert debug_info.waiting_callers == []
+    end
+
     test "valid after holding some workers" do
       initial_fun = fn -> 0 end
       pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
