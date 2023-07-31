@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.7.4] - 2023-07-23
+## [0.7.5] - 2023-07-31
+
+### Fixed
+
+- Fixed a serious bug when working with the `idle_workers` set. Previous version retired.
+
+## [0.7.4] - 2023-07-23 (RETIRED)
 
 ### Fixed
 
@@ -133,7 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix links in hex documentation.
 - Added missing spec for `get_debug_info/1`.
 
-## [0.3.0] - 2023-02-03
+## [0.3.0] - 2023-02-03 (RETIRED)
 
 ### Added
 
@@ -193,7 +199,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.7.4...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.7.5...HEAD
+[0.7.5]: https://github.com/general-CbIC/poolex/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/general-CbIC/poolex/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/general-CbIC/poolex/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/general-CbIC/poolex/compare/v0.7.1...v0.7.2
