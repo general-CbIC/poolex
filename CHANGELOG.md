@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed a serious bug when working with the `idle_workers` set. Previous version retired.
 
-## [0.7.4] - 2023-07-23
+## [0.7.4] - 2023-07-23 (RETIRED)
 
 ### Fixed
 
@@ -137,7 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix links in hex documentation.
 - Added missing spec for `get_debug_info/1`.
 
-## [0.3.0] - 2023-02-03
+## [0.3.0] - 2023-02-03 (RETIRED)
 
 ### Added
 
