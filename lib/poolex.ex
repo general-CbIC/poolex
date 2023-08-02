@@ -338,7 +338,7 @@ defmodule Poolex do
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 
-        link_caller_and_worker(from_pid, new_worker)
+        monitor_caller(state.pool_id, from_pid, new_worker)
 
         state = add_worker_to_busy_workers(state, new_worker)
 
@@ -357,7 +357,7 @@ defmodule Poolex do
 
       state = add_worker_to_busy_workers(state, idle_worker_pid)
 
-      link_caller_and_worker(from_pid, idle_worker_pid)
+      monitor_caller(state.pool_id, from_pid, idle_worker_pid)
 
       new_state = %State{state | idle_workers_state: new_idle_workers_state}
 
@@ -541,13 +541,14 @@ defmodule Poolex do
     :ok
   end
 
-  @spec link_caller_and_worker(caller :: pid(), worker :: pid()) :: :ok
-  defp link_caller_and_worker(caller, worker) do
+  @spec monitor_caller(pool_id(), caller :: pid(), worker :: pid()) :: :ok
+  defp monitor_caller(pool_id, caller, worker) do
     spawn(fn ->
-      Process.link(caller)
-      Process.link(worker)
+      reference = Process.monitor(caller)
 
       receive do
+        {:DOWN, ^reference, :process, ^caller, _reason} ->
+          GenServer.cast(pool_id, {:release_busy_worker, worker})
       end
     end)
 
