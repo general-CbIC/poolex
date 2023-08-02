@@ -237,6 +237,32 @@ defmodule PoolexTest do
              end)
     end
 
+    test "release busy worker when caller dies" do
+      pool_name = start_pool(worker_module: SomeWorker, workers_count: 2)
+
+      caller =
+        spawn(fn ->
+          Poolex.run(pool_name, fn pid ->
+            GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
+          end)
+        end)
+
+      :timer.sleep(10)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.idle_workers_count == 1
+
+      Process.exit(caller, :kill)
+
+      :timer.sleep(10)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_count == 2
+    end
+
     test "runtime errors" do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
       Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_raise) end)
