@@ -250,6 +250,7 @@ defmodule PoolexTest do
       :timer.sleep(10)
 
       debug_info = Poolex.get_debug_info(pool_name)
+
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 1
 
