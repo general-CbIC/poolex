@@ -338,6 +338,8 @@ defmodule Poolex do
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 
+        link_caller_and_worker(from_pid, new_worker)
+
         state = add_worker_to_busy_workers(state, new_worker)
 
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
@@ -354,6 +356,8 @@ defmodule Poolex do
         IdleWorkers.pop(state.idle_workers_impl, state.idle_workers_state)
 
       state = add_worker_to_busy_workers(state, idle_worker_pid)
+
+      link_caller_and_worker(from_pid, idle_worker_pid)
 
       new_state = %State{state | idle_workers_state: new_idle_workers_state}
 
@@ -533,6 +537,19 @@ defmodule Poolex do
   def terminate(reason, %State{} = state) do
     DynamicSupervisor.stop(state.supervisor, reason)
     Monitoring.stop(state.monitor_id)
+
+    :ok
+  end
+
+  @spec link_caller_and_worker(caller :: pid(), worker :: pid()) :: :ok
+  defp link_caller_and_worker(caller, worker) do
+    spawn(fn ->
+      Process.link(caller)
+      Process.link(worker)
+
+      receive do
+      end
+    end)
 
     :ok
   end
