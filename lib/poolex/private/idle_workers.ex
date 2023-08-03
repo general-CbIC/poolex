@@ -25,9 +25,10 @@ defmodule Poolex.Private.IdleWorkers do
     %State{state | idle_workers_state: impl.remove(idle_workers_state, worker)}
   end
 
-  @doc false
-  @spec count(module(), Behaviour.state()) :: non_neg_integer()
-  def count(impl, state), do: impl.count(state)
+  @spec count(State.t()) :: neg_integer()
+  def count(%State{idle_workers_impl: impl, idle_workers_state: state}) do
+    impl.count(state)
+  end
 
   @doc false
   @spec to_list(module(), Behaviour.state()) :: list(Poolex.worker())
