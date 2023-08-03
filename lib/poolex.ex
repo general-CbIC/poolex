@@ -416,7 +416,7 @@ defmodule Poolex do
 
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
-    if BusyWorkers.member?(state.busy_workers_impl, state.busy_workers_state, worker) do
+    if BusyWorkers.member?(state, worker) do
       state = remove_worker_from_busy_workers(state, worker)
 
       if state.overflow > 0 do

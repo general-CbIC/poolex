@@ -18,8 +18,10 @@ defmodule Poolex.Private.BusyWorkers do
   end
 
   @doc false
-  @spec member?(module(), busy_workers_state(), Poolex.worker()) :: boolean()
-  def member?(impl, state, worker), do: impl.member?(state, worker)
+  @spec member?(State.t(), Poolex.worker()) :: boolean()
+  def member?(%State{busy_workers_impl: impl, busy_workers_state: busy_workers_state}, worker) do
+    impl.member?(busy_workers_state, worker)
+  end
 
   @doc false
   @spec remove(module(), busy_workers_state(), Poolex.worker()) :: busy_workers_state()
