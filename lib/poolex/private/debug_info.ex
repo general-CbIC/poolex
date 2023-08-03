@@ -1,4 +1,4 @@
-defmodule Poolex.DebugInfo do
+defmodule Poolex.Private.DebugInfo do
   @moduledoc """
   Information with the current state of the pool.
 

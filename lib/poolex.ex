@@ -27,10 +27,10 @@ defmodule Poolex do
 
   use GenServer, shutdown: :infinity
 
-  alias Poolex.DebugInfo
   alias Poolex.IdleWorkers
   alias Poolex.Monitoring
   alias Poolex.Private.BusyWorkers
+  alias Poolex.Private.DebugInfo
   alias Poolex.State
   alias Poolex.WaitingCallers
 
