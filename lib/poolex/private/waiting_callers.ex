@@ -12,8 +12,13 @@ defmodule Poolex.Private.WaitingCallers do
   end
 
   @doc false
-  @spec add(module(), Behaviour.state(), Poolex.caller()) :: Behaviour.state()
-  def add(impl, state, caller), do: impl.add(state, caller)
+  @spec add(State.t(), Poolex.caller()) :: State.t()
+  def add(
+        %State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state,
+        caller
+      ) do
+    %State{state | waiting_callers_state: impl.add(waiting_callers_state, caller)}
+  end
 
   @doc false
   @spec empty?(module(), Behaviour.state()) :: boolean()

@@ -349,11 +349,9 @@ defmodule Poolex do
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
         Monitoring.add(state.monitor_id, from_pid, :waiting_caller)
+        state = WaitingCallers.add(state, caller)
 
-        new_callers_state =
-          WaitingCallers.add(state.waiting_callers_impl, state.waiting_callers_state, caller)
-
-        {:noreply, %{state | waiting_callers_state: new_callers_state}}
+        {:noreply, state}
       end
     else
       {idle_worker_pid, state} = IdleWorkers.pop(state)
