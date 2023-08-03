@@ -41,9 +41,12 @@ defmodule Poolex.Private.WaitingCallers do
   end
 
   @doc false
-  @spec remove_by_pid(module(), Behaviour.state(), pid()) :: Behaviour.state()
-  def remove_by_pid(impl, state, caller_pid) do
-    impl.remove_by_pid(state, caller_pid)
+  @spec remove_by_pid(State.t(), caller_pid :: pid()) :: State.t()
+  def remove_by_pid(
+        %State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state,
+        caller
+      ) do
+    %State{state | waiting_callers_state: impl.remove_by_pid(waiting_callers_state, caller)}
   end
 
   @doc false
