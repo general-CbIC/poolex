@@ -357,14 +357,10 @@ defmodule Poolex do
         {:noreply, %{state | waiting_callers_state: new_callers_state}}
       end
     else
-      {idle_worker_pid, new_idle_workers_state} =
-        IdleWorkers.pop(state.idle_workers_impl, state.idle_workers_state)
-
+      {idle_worker_pid, state} = IdleWorkers.pop(state)
       state = BusyWorkers.add(state, idle_worker_pid)
 
-      new_state = %State{state | idle_workers_state: new_idle_workers_state}
-
-      {:reply, {:ok, idle_worker_pid}, new_state}
+      {:reply, {:ok, idle_worker_pid}, state}
     end
   end
 

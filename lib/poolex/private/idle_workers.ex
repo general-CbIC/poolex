@@ -1,6 +1,5 @@
 defmodule Poolex.Private.IdleWorkers do
   @moduledoc false
-  alias Poolex.Workers.Behaviour
 
   alias Poolex.Private.State
 
@@ -44,7 +43,14 @@ defmodule Poolex.Private.IdleWorkers do
   end
 
   @doc false
-  @spec pop(module(), Behaviour.state()) ::
-          {Poolex.worker(), Behaviour.state()} | :empty
-  def pop(impl, state), do: impl.pop(state)
+  @spec pop(State.t()) :: {Poolex.worker(), State.t()} | :empty
+  def pop(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state) do
+    case impl.pop(idle_workers_state) do
+      {worker, new_idle_workers_state} ->
+        {worker, %State{state | idle_workers_state: new_idle_workers_state}}
+
+      :empty ->
+        :empty
+    end
+  end
 end
