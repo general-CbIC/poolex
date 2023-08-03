@@ -541,6 +541,7 @@ defmodule Poolex do
     :ok
   end
 
+  # Monitor the `caller`. Release attached worker in case of caller's death.
   @spec monitor_caller(pool_id(), caller :: pid(), worker :: pid()) :: :ok
   defp monitor_caller(pool_id, caller, worker) do
     spawn(fn ->
