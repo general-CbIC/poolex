@@ -417,7 +417,7 @@ defmodule Poolex do
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
     if BusyWorkers.member?(state, worker) do
-      state = remove_worker_from_busy_workers(state, worker)
+      state = BusyWorkers.remove(state, worker)
 
       if state.overflow > 0 do
         stop_worker(state.supervisor, worker)
@@ -454,19 +454,6 @@ defmodule Poolex do
     }
   end
 
-  @spec remove_worker_from_busy_workers(State.t(), worker()) :: State.t()
-  defp remove_worker_from_busy_workers(%State{} = state, worker) do
-    %State{
-      state
-      | busy_workers_state:
-          BusyWorkers.remove(
-            state.busy_workers_impl,
-            state.busy_workers_state,
-            worker
-          )
-    }
-  end
-
   @spec remove_worker_from_idle_workers(State.t(), worker()) :: State.t()
   defp remove_worker_from_idle_workers(%State{} = state, worker) do
     %State{
@@ -485,7 +472,7 @@ defmodule Poolex do
     state =
       state
       |> remove_worker_from_idle_workers(dead_process_pid)
-      |> remove_worker_from_busy_workers(dead_process_pid)
+      |> BusyWorkers.remove(dead_process_pid)
 
     if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
       if state.overflow > 0 do
