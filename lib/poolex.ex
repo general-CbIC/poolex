@@ -445,24 +445,11 @@ defmodule Poolex do
     %{state | waiting_callers_state: new_waiting_callers_state}
   end
 
-  @spec remove_worker_from_idle_workers(State.t(), worker()) :: State.t()
-  defp remove_worker_from_idle_workers(%State{} = state, worker) do
-    %State{
-      state
-      | idle_workers_state:
-          IdleWorkers.remove(
-            state.idle_workers_impl,
-            state.idle_workers_state,
-            worker
-          )
-    }
-  end
-
   @spec handle_down_worker(State.t(), pid()) :: State.t()
   defp handle_down_worker(%State{} = state, dead_process_pid) do
     state =
       state
-      |> remove_worker_from_idle_workers(dead_process_pid)
+      |> IdleWorkers.remove(dead_process_pid)
       |> BusyWorkers.remove(dead_process_pid)
 
     if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do

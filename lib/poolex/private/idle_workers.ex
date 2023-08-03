@@ -17,8 +17,13 @@ defmodule Poolex.Private.IdleWorkers do
   end
 
   @doc false
-  @spec remove(module(), Behaviour.state(), Poolex.worker()) :: Behaviour.state()
-  def remove(impl, state, worker), do: impl.remove(state, worker)
+  @spec remove(State.t(), Poolex.worker()) :: State.t()
+  def remove(
+        %State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state,
+        worker
+      ) do
+    %State{state | idle_workers_state: impl.remove(idle_workers_state, worker)}
+  end
 
   @doc false
   @spec count(module(), Behaviour.state()) :: non_neg_integer()
