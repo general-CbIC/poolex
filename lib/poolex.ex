@@ -370,7 +370,7 @@ defmodule Poolex do
 
   def handle_call(:get_debug_info, _form, %Poolex.State{} = state) do
     debug_info = %DebugInfo{
-      busy_workers_count: BusyWorkers.count(state.busy_workers_impl, state.busy_workers_state),
+      busy_workers_count: BusyWorkers.count(state),
       busy_workers_impl: state.busy_workers_impl,
       busy_workers_pids: BusyWorkers.to_list(state.busy_workers_impl, state.busy_workers_state),
       idle_workers_count: IdleWorkers.count(state.idle_workers_impl, state.idle_workers_state),

@@ -33,8 +33,10 @@ defmodule Poolex.Private.BusyWorkers do
   end
 
   @doc false
-  @spec count(module(), busy_workers_state()) :: non_neg_integer()
-  def count(impl, state), do: impl.count(state)
+  @spec count(State.t()) :: non_neg_integer()
+  def count(%State{busy_workers_impl: impl, busy_workers_state: state}) do
+    impl.count(state)
+  end
 
   @doc false
   @spec to_list(module(), busy_workers_state()) :: list(Poolex.worker())
