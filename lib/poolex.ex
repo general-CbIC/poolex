@@ -287,8 +287,6 @@ defmodule Poolex do
         monitor_id: monitor_id,
         pool_id: pool_id,
         supervisor: supervisor,
-        waiting_callers_impl: waiting_callers_impl,
-        waiting_callers_state: WaitingCallers.init(waiting_callers_impl),
         worker_args: worker_args,
         worker_module: worker_module,
         worker_start_fun: worker_start_fun
@@ -300,6 +298,7 @@ defmodule Poolex do
       state
       |> IdleWorkers.init(idle_workers_impl, initial_workers_pids)
       |> BusyWorkers.init(busy_workers_impl)
+      |> WaitingCallers.init(waiting_callers_impl)
 
     {:ok, state}
   end

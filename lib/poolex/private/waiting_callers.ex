@@ -1,11 +1,14 @@
 defmodule Poolex.Private.WaitingCallers do
   @moduledoc false
+
   alias Poolex.Callers.Behaviour
 
+  alias Poolex.Private.State
+
   @doc false
-  @spec init(module()) :: Behaviour.state()
-  def init(impl) do
-    impl.init()
+  @spec init(State.t(), waiting_callers_impl :: module()) :: State.t()
+  def init(%State{} = state, impl) do
+    %State{state | waiting_callers_impl: impl, waiting_callers_state: impl.init()}
   end
 
   @doc false
