@@ -20,7 +20,7 @@ With `poolex` you can:
   <summary>Why `poolex` instead of `poolboy`?</summary>
   
 - `poolex` is written in Elixir. This library is much more convenient to use in Elixir projects.
-- `poolboy` is a great library, but not actively maintained at the moment :crying_cat_face:![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
+- `poolboy` is a great library, but not actively maintained :crying_cat_face:![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
   
 </details>
 
@@ -87,6 +87,6 @@ A detailed description of the available configuration or examples of use can be 
 
 ## Contributions
 
-If you feel something can be improved, or have any questions about certain behaviors or pieces of implementation, please feel free to file an issue. Proposed changes should be taken to issues before any PRs to avoid wasting time on code that might not be merged upstream.
+If you feel something can be improved or have any questions about specific behaviors or pieces of implementation, please feel free to file an issue. Proposed changes should be taken to issues before any PRs to save time on code that might not be merged upstream.
 
-If you are ready to make changes to the project, then please read the [Contributing guide](docs/CONTRIBUTING.md) first.
+If you are ready to change the project, please read the [Contributing guide](docs/CONTRIBUTING.md) first.

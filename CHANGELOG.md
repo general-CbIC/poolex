@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.6] - 2023-08-03
+
+### Fixed
+
+- Fixed a bug with workers stuck in busy status. Added caller monitoring. [PR](https://github.com/general-CbIC/poolex/pull/56)
+
 ## [0.7.5] - 2023-07-31
 
 ### Fixed

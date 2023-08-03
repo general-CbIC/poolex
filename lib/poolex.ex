@@ -199,9 +199,12 @@ defmodule Poolex do
 
     {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, timeout)
 
+    monitor_process = monitor_caller(pool_id, self(), pid)
+
     try do
       fun.(pid)
     after
+      Process.exit(monitor_process, :kill)
       GenServer.cast(pool_id, {:release_busy_worker, pid})
     end
   end
@@ -342,7 +345,7 @@ defmodule Poolex do
 
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
-        Monitoring.add(state.monitor_id, from_pid, :caller)
+        Monitoring.add(state.monitor_id, from_pid, :waiting_caller)
 
         new_callers_state =
           WaitingCallers.add(state.waiting_callers_impl, state.waiting_callers_state, caller)
@@ -406,8 +409,8 @@ defmodule Poolex do
       :worker ->
         {:noreply, handle_down_worker(state, dead_process_pid)}
 
-      :caller ->
-        {:noreply, handle_down_caller(state, dead_process_pid)}
+      :waiting_caller ->
+        {:noreply, handle_down_waiting_caller(state, dead_process_pid)}
     end
   end
 
@@ -517,8 +520,8 @@ defmodule Poolex do
     end
   end
 
-  @spec handle_down_caller(State.t(), pid()) :: State.t()
-  defp handle_down_caller(%State{} = state, dead_process_pid) do
+  @spec handle_down_waiting_caller(State.t(), pid()) :: State.t()
+  defp handle_down_waiting_caller(%State{} = state, dead_process_pid) do
     new_waiting_callers_state =
       WaitingCallers.remove_by_pid(
         state.waiting_callers_impl,
@@ -535,5 +538,18 @@ defmodule Poolex do
     Monitoring.stop(state.monitor_id)
 
     :ok
+  end
+
+  # Monitor the `caller`. Release attached worker in case of caller's death.
+  @spec monitor_caller(pool_id(), caller :: pid(), worker :: pid()) :: monitor_process :: pid()
+  defp monitor_caller(pool_id, caller, worker) do
+    spawn(fn ->
+      reference = Process.monitor(caller)
+
+      receive do
+        {:DOWN, ^reference, :process, ^caller, _reason} ->
+          GenServer.cast(pool_id, {:release_busy_worker, worker})
+      end
+    end)
   end
 end
