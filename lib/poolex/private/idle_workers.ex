@@ -2,16 +2,12 @@ defmodule Poolex.Private.IdleWorkers do
   @moduledoc false
   alias Poolex.Workers.Behaviour
 
-  @doc false
-  @spec init(module()) :: Behaviour.state()
-  def init(impl) do
-    impl.init()
-  end
+  alias Poolex.Private.State
 
   @doc false
-  @spec init(module(), list(Poolex.worker())) :: Behaviour.state()
-  def init(impl, workers) do
-    impl.init(workers)
+  @spec init(State.t(), idle_workers_impl :: module(), list(Poolex.worker())) :: State.t()
+  def init(%State{} = state, impl, workers) do
+    %State{state | idle_workers_impl: impl, idle_workers_state: impl.init(workers)}
   end
 
   @doc false

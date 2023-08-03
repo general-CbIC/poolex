@@ -283,7 +283,6 @@ defmodule Poolex do
 
     state =
       %State{
-        idle_workers_impl: idle_workers_impl,
         max_overflow: max_overflow,
         monitor_id: monitor_id,
         pool_id: pool_id,
@@ -294,10 +293,15 @@ defmodule Poolex do
         worker_module: worker_module,
         worker_start_fun: worker_start_fun
       }
+
+    initial_workers_pids = start_workers(workers_count, state, monitor_id)
+
+    state =
+      state
+      |> IdleWorkers.init(idle_workers_impl, initial_workers_pids)
       |> BusyWorkers.init(busy_workers_impl)
 
-    worker_pids = start_workers(workers_count, state, monitor_id)
-    {:ok, %State{state | idle_workers_state: IdleWorkers.init(idle_workers_impl, worker_pids)}}
+    {:ok, state}
   end
 
   @spec start_workers(non_neg_integer(), State.t(), Monitoring.monitor_id()) :: [pid]

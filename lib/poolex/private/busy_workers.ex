@@ -3,8 +3,6 @@ defmodule Poolex.Private.BusyWorkers do
 
   alias Poolex.Private.State
 
-  @type busy_workers_state() :: Poolex.Workers.Behaviour.state()
-
   @doc false
   @spec init(State.t(), busy_workers_impl :: module()) :: State.t()
   def init(%State{} = state, impl) do
