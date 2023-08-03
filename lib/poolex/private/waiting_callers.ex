@@ -1,8 +1,6 @@
 defmodule Poolex.Private.WaitingCallers do
   @moduledoc false
 
-  alias Poolex.Callers.Behaviour
-
   alias Poolex.Private.State
 
   @doc false
@@ -50,6 +48,8 @@ defmodule Poolex.Private.WaitingCallers do
   end
 
   @doc false
-  @spec to_list(module(), Behaviour.state()) :: list(Poolex.caller())
-  def to_list(impl, state), do: impl.to_list(state)
+  @spec to_list(State.t()) :: list(Poolex.caller())
+  def to_list(%State{waiting_callers_impl: impl, waiting_callers_state: state}) do
+    impl.to_list(state)
+  end
 end

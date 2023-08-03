@@ -375,8 +375,7 @@ defmodule Poolex do
       idle_workers_pids: IdleWorkers.to_list(state),
       max_overflow: state.max_overflow,
       overflow: state.overflow,
-      waiting_callers:
-        WaitingCallers.to_list(state.waiting_callers_impl, state.waiting_callers_state),
+      waiting_callers: WaitingCallers.to_list(state),
       waiting_callers_impl: state.waiting_callers_impl,
       worker_args: state.worker_args,
       worker_module: state.worker_module,
