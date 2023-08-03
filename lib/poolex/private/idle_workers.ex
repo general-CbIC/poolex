@@ -38,8 +38,10 @@ defmodule Poolex.Private.IdleWorkers do
   end
 
   @doc false
-  @spec empty?(module(), Behaviour.state()) :: boolean()
-  def empty?(impl, state), do: impl.empty?(state)
+  @spec empty?(State.t()) :: boolean()
+  def empty?(%State{idle_workers_impl: impl, idle_workers_state: state}) do
+    impl.empty?(state)
+  end
 
   @doc false
   @spec pop(module(), Behaviour.state()) ::

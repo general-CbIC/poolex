@@ -339,7 +339,7 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_call(:get_idle_worker, {from_pid, _} = caller, %State{} = state) do
-    if IdleWorkers.empty?(state.idle_workers_impl, state.idle_workers_state) do
+    if IdleWorkers.empty?(state) do
       if state.overflow < state.max_overflow do
         {:ok, new_worker} = start_worker(state)
 
