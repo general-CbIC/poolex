@@ -10,7 +10,7 @@ defmodule PoolexTest do
 
       debug_info = Poolex.get_debug_info(pool_name)
 
-      assert debug_info.__struct__ == Poolex.DebugInfo
+      assert debug_info.__struct__ == Poolex.Private.DebugInfo
       assert debug_info.busy_workers_count == 0
       assert debug_info.busy_workers_impl == Poolex.Workers.Impl.List
       assert debug_info.busy_workers_pids == []
@@ -49,7 +49,7 @@ defmodule PoolexTest do
 
       debug_info = Poolex.get_debug_info(pool_name)
 
-      assert debug_info.__struct__ == Poolex.DebugInfo
+      assert debug_info.__struct__ == Poolex.Private.DebugInfo
       assert debug_info.busy_workers_count == 0
       assert Enum.empty?(debug_info.busy_workers_pids)
       assert debug_info.idle_workers_count == 5
@@ -78,7 +78,7 @@ defmodule PoolexTest do
 
       debug_info = Poolex.get_debug_info(pool_name)
 
-      assert debug_info.__struct__ == Poolex.DebugInfo
+      assert debug_info.__struct__ == Poolex.Private.DebugInfo
       assert debug_info.busy_workers_count == 1
       assert Enum.count(debug_info.busy_workers_pids) == 1
       assert debug_info.idle_workers_count == 4

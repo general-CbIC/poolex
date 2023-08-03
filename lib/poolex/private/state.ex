@@ -1,4 +1,4 @@
-defmodule Poolex.State do
+defmodule Poolex.Private.State do
   @moduledoc """
   Internal structure containing the state of the pool.
 

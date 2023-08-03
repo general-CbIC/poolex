@@ -27,12 +27,12 @@ defmodule Poolex do
 
   use GenServer, shutdown: :infinity
 
-  alias Poolex.IdleWorkers
-  alias Poolex.Monitoring
   alias Poolex.Private.BusyWorkers
   alias Poolex.Private.DebugInfo
-  alias Poolex.State
-  alias Poolex.WaitingCallers
+  alias Poolex.Private.IdleWorkers
+  alias Poolex.Private.Monitoring
+  alias Poolex.Private.State
+  alias Poolex.Private.WaitingCallers
 
   @default_wait_timeout :timer.seconds(5)
   @poolex_options_table """
@@ -96,7 +96,7 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
+      iex> %Poolex.Private.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
       iex> worker_module
       Agent
   """
@@ -120,7 +120,7 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start_link(pool_id: :other_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.State{worker_module: worker_module} = Poolex.get_state(:other_pool)
+      iex> %Poolex.Private.State{worker_module: worker_module} = Poolex.get_state(:other_pool)
       iex> worker_module
       Agent
   """
@@ -217,7 +217,7 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start(pool_id: :my_pool_2, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> state = %Poolex.State{} = Poolex.get_state(:my_pool_2)
+      iex> state = %Poolex.Private.State{} = Poolex.get_state(:my_pool_2)
       iex> state.worker_module
       Agent
       iex> is_pid(state.supervisor)
@@ -249,7 +249,7 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start(pool_id: :my_pool_3, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> debug_info = %Poolex.DebugInfo{} = Poolex.get_debug_info(:my_pool_3)
+      iex> debug_info = %Poolex.Private.DebugInfo{} = Poolex.get_debug_info(:my_pool_3)
       iex> debug_info.busy_workers_count
       0
       iex> debug_info.idle_workers_count
@@ -279,7 +279,7 @@ defmodule Poolex do
       Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
     {:ok, monitor_id} = Monitoring.init(pool_id)
-    {:ok, supervisor} = Poolex.Supervisor.start_link()
+    {:ok, supervisor} = Poolex.Private.Supervisor.start_link()
 
     state =
       %State{
@@ -368,7 +368,7 @@ defmodule Poolex do
     {:reply, state, state}
   end
 
-  def handle_call(:get_debug_info, _form, %Poolex.State{} = state) do
+  def handle_call(:get_debug_info, _form, %State{} = state) do
     debug_info = %DebugInfo{
       busy_workers_count: BusyWorkers.count(state),
       busy_workers_impl: state.busy_workers_impl,

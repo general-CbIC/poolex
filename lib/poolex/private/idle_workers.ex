@@ -1,4 +1,4 @@
-defmodule Poolex.IdleWorkers do
+defmodule Poolex.Private.IdleWorkers do
   @moduledoc false
   alias Poolex.Workers.Behaviour
 

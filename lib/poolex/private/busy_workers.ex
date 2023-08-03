@@ -1,7 +1,7 @@
 defmodule Poolex.Private.BusyWorkers do
   @moduledoc false
 
-  alias Poolex.State
+  alias Poolex.Private.State
 
   @type busy_workers_state() :: Poolex.Workers.Behaviour.state()
 

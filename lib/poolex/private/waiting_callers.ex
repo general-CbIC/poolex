@@ -1,4 +1,4 @@
-defmodule Poolex.WaitingCallers do
+defmodule Poolex.Private.WaitingCallers do
   @moduledoc false
   alias Poolex.Callers.Behaviour
 
