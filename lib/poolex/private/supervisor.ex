@@ -1,4 +1,4 @@
-defmodule Poolex.Supervisor do
+defmodule Poolex.Private.Supervisor do
   @moduledoc false
   use DynamicSupervisor
 

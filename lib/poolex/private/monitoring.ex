@@ -1,4 +1,4 @@
-defmodule Poolex.Monitoring do
+defmodule Poolex.Private.Monitoring do
   @moduledoc false
   @type monitor_id() :: atom() | reference()
   @type kind_of_process() :: :worker | :waiting_caller
