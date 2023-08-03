@@ -199,9 +199,12 @@ defmodule Poolex do
 
     {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, timeout)
 
+    monitor_process = monitor_caller(pool_id, self(), pid)
+
     try do
       fun.(pid)
     after
+      Process.exit(monitor_process, :normal)
       GenServer.cast(pool_id, {:release_busy_worker, pid})
     end
   end
@@ -338,8 +341,6 @@ defmodule Poolex do
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 
-        monitor_caller(state.pool_id, from_pid, new_worker)
-
         state = add_worker_to_busy_workers(state, new_worker)
 
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
@@ -356,8 +357,6 @@ defmodule Poolex do
         IdleWorkers.pop(state.idle_workers_impl, state.idle_workers_state)
 
       state = add_worker_to_busy_workers(state, idle_worker_pid)
-
-      monitor_caller(state.pool_id, from_pid, idle_worker_pid)
 
       new_state = %State{state | idle_workers_state: new_idle_workers_state}
 
@@ -542,7 +541,7 @@ defmodule Poolex do
   end
 
   # Monitor the `caller`. Release attached worker in case of caller's death.
-  @spec monitor_caller(pool_id(), caller :: pid(), worker :: pid()) :: :ok
+  @spec monitor_caller(pool_id(), caller :: pid(), worker :: pid()) :: monitor_process :: pid()
   defp monitor_caller(pool_id, caller, worker) do
     spawn(fn ->
       reference = Process.monitor(caller)
@@ -552,7 +551,5 @@ defmodule Poolex do
           GenServer.cast(pool_id, {:release_busy_worker, worker})
       end
     end)
-
-    :ok
   end
 end
