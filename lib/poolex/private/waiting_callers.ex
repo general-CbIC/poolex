@@ -27,9 +27,18 @@ defmodule Poolex.Private.WaitingCallers do
   end
 
   @doc false
-  @spec pop(module(), Behaviour.state()) ::
-          {Poolex.caller(), Behaviour.state()} | :empty
-  def pop(impl, state), do: impl.pop(state)
+  @spec pop(State.t()) :: {Poolex.caller(), State.t()} | :empty
+  def pop(
+        %State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state
+      ) do
+    case impl.pop(waiting_callers_state) do
+      {caller, new_waiting_callers_state} ->
+        {caller, %State{state | waiting_callers_state: new_waiting_callers_state}}
+
+      :empty ->
+        :empty
+    end
+  end
 
   @doc false
   @spec remove_by_pid(module(), Behaviour.state(), pid()) :: Behaviour.state()

@@ -430,12 +430,11 @@ defmodule Poolex do
 
   @spec provide_worker_to_waiting_caller(State.t(), worker()) :: State.t()
   defp provide_worker_to_waiting_caller(%State{} = state, worker) do
-    {caller, new_waiting_callers_state} =
-      WaitingCallers.pop(state.waiting_callers_impl, state.waiting_callers_state)
+    {caller, state} = WaitingCallers.pop(state)
 
     GenServer.reply(caller, {:ok, worker})
 
-    %{state | waiting_callers_state: new_waiting_callers_state}
+    state
   end
 
   @spec handle_down_worker(State.t(), pid()) :: State.t()
