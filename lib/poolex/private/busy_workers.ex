@@ -39,6 +39,8 @@ defmodule Poolex.Private.BusyWorkers do
   end
 
   @doc false
-  @spec to_list(module(), busy_workers_state()) :: list(Poolex.worker())
-  def to_list(impl, state), do: impl.to_list(state)
+  @spec to_list(State.t()) :: list(Poolex.worker())
+  def to_list(%State{busy_workers_impl: impl, busy_workers_state: state}) do
+    impl.to_list(state)
+  end
 end
