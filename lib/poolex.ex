@@ -204,7 +204,7 @@ defmodule Poolex do
     try do
       fun.(pid)
     after
-      Process.exit(monitor_process, :normal)
+      Process.exit(monitor_process, :kill)
       GenServer.cast(pool_id, {:release_busy_worker, pid})
     end
   end
