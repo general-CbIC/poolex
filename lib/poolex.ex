@@ -388,7 +388,7 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_cast({:release_busy_worker, worker}, %State{} = state) do
-    if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
+    if WaitingCallers.empty?(state) do
       new_state = release_busy_worker(state, worker)
       {:noreply, new_state}
     else
@@ -445,7 +445,7 @@ defmodule Poolex do
       |> IdleWorkers.remove(dead_process_pid)
       |> BusyWorkers.remove(dead_process_pid)
 
-    if WaitingCallers.empty?(state.waiting_callers_impl, state.waiting_callers_state) do
+    if WaitingCallers.empty?(state) do
       if state.overflow > 0 do
         %State{state | overflow: state.overflow - 1}
       else

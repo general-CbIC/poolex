@@ -21,8 +21,10 @@ defmodule Poolex.Private.WaitingCallers do
   end
 
   @doc false
-  @spec empty?(module(), Behaviour.state()) :: boolean()
-  def empty?(impl, state), do: impl.empty?(state)
+  @spec empty?(State.t()) :: boolean()
+  def empty?(%State{waiting_callers_impl: impl, waiting_callers_state: state}) do
+    impl.empty?(state)
+  end
 
   @doc false
   @spec pop(module(), Behaviour.state()) ::
