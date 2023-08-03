@@ -1,7 +1,7 @@
 defmodule Poolex.Monitoring do
   @moduledoc false
   @type monitor_id() :: atom() | reference()
-  @type kind_of_process() :: :worker | :caller
+  @type kind_of_process() :: :worker | :waiting_caller
 
   @spec init(Poolex.pool_id()) :: {:ok, monitor_id()}
   @doc false
