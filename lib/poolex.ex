@@ -428,7 +428,7 @@ defmodule Poolex do
 
         state
       else
-        add_worker_to_idle_workers(state, worker)
+        IdleWorkers.add(state, worker)
       end
     else
       state
@@ -443,19 +443,6 @@ defmodule Poolex do
     GenServer.reply(caller, {:ok, worker})
 
     %{state | waiting_callers_state: new_waiting_callers_state}
-  end
-
-  @spec add_worker_to_idle_workers(State.t(), worker()) :: State.t()
-  defp add_worker_to_idle_workers(%State{} = state, worker) do
-    %State{
-      state
-      | idle_workers_state:
-          IdleWorkers.add(
-            state.idle_workers_impl,
-            state.idle_workers_state,
-            worker
-          )
-    }
   end
 
   @spec remove_worker_from_idle_workers(State.t(), worker()) :: State.t()
@@ -486,7 +473,7 @@ defmodule Poolex do
 
         Monitoring.add(state.monitor_id, new_worker, :worker)
 
-        add_worker_to_idle_workers(state, new_worker)
+        IdleWorkers.add(state, new_worker)
       end
     else
       {:ok, new_worker} = start_worker(state)

@@ -11,8 +11,10 @@ defmodule Poolex.Private.IdleWorkers do
   end
 
   @doc false
-  @spec add(module(), Behaviour.state(), Poolex.worker()) :: Behaviour.state()
-  def add(impl, state, worker), do: impl.add(state, worker)
+  @spec add(State.t(), Poolex.worker()) :: State.t()
+  def add(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state, worker) do
+    %State{state | idle_workers_state: impl.add(idle_workers_state, worker)}
+  end
 
   @doc false
   @spec remove(module(), Behaviour.state(), Poolex.worker()) :: Behaviour.state()
