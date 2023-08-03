@@ -379,7 +379,7 @@ defmodule Poolex do
       busy_workers_pids: BusyWorkers.to_list(state),
       idle_workers_count: IdleWorkers.count(state),
       idle_workers_impl: state.idle_workers_impl,
-      idle_workers_pids: IdleWorkers.to_list(state.idle_workers_impl, state.idle_workers_state),
+      idle_workers_pids: IdleWorkers.to_list(state),
       max_overflow: state.max_overflow,
       overflow: state.overflow,
       waiting_callers:
