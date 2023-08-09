@@ -27,6 +27,7 @@ defmodule Poolex do
 
   use GenServer, shutdown: :infinity
 
+  alias Poolex.CheckoutTimeoutError
   alias Poolex.Private.BusyWorkers
   alias Poolex.Private.DebugInfo
   alias Poolex.Private.IdleWorkers
@@ -175,9 +176,9 @@ defmodule Poolex do
   def run(pool_id, fun, options \\ []) do
     {:ok, run!(pool_id, fun, options)}
   rescue
+    CheckoutTimeoutError -> {:error, :checkout_timeout}
     runtime_error -> {:runtime_error, runtime_error}
   catch
-    :exit, {:timeout, _meta} -> {:error, :checkout_timeout}
     :exit, reason -> {:runtime_error, reason}
   end
 
@@ -196,17 +197,24 @@ defmodule Poolex do
   @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
   def run!(pool_id, fun, options \\ []) do
     checkout_timeout = Keyword.get(options, :checkout_timeout, @default_checkout_timeout)
-
-    {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, checkout_timeout)
-
-    monitor_process = monitor_caller(pool_id, self(), pid)
+    worker_pid = get_idle_worker(pool_id, checkout_timeout)
+    monitor_process = monitor_caller(pool_id, self(), worker_pid)
 
     try do
-      fun.(pid)
+      fun.(worker_pid)
     after
       Process.exit(monitor_process, :kill)
-      GenServer.cast(pool_id, {:release_busy_worker, pid})
+      GenServer.cast(pool_id, {:release_busy_worker, worker_pid})
     end
+  end
+
+  @spec get_idle_worker(pool_id(), timeout()) :: worker()
+  defp get_idle_worker(pool_id, checkout_timeout) do
+    {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, checkout_timeout)
+
+    pid
+  catch
+    :exit, {:timeout, _meta} -> raise CheckoutTimeoutError
   end
 
   @doc """

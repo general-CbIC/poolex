@@ -350,17 +350,17 @@ defmodule PoolexTest do
       assert result == {:error, :checkout_timeout}
     end
 
-    test "run!/3 exits on timeout" do
+    test "run!/3 raises an error on checkout timeout" do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
       launch_long_task(pool_name)
 
-      assert catch_exit(
+      assert catch_error(
                Poolex.run!(
                  pool_name,
                  fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
                  checkout_timeout: 100
                )
-             ) == {:timeout, {GenServer, :call, [pool_name, :get_idle_worker, 100]}}
+             ) == %Poolex.CheckoutTimeoutError{message: "checkout timeout"}
     end
   end
 
