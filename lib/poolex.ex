@@ -18,7 +18,7 @@ defmodule Poolex do
   Then you can execute any code on the workers with `run/3`:
 
   ```elixir
-  Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
+  Poolex.run(:worker_pool, &(is_pid?(&1)), checkout_timeout: 1_000)
   {:ok, true}
   ```
 
@@ -34,7 +34,7 @@ defmodule Poolex do
   alias Poolex.Private.State
   alias Poolex.Private.WaitingCallers
 
-  @default_wait_timeout :timer.seconds(5)
+  @default_checkout_timeout :timer.seconds(5)
   @poolex_options_table """
   | Option                 | Description                                          | Example               | Default value                     |
   |------------------------|------------------------------------------------------|-----------------------|-----------------------------------|
@@ -82,11 +82,11 @@ defmodule Poolex do
   @type caller() :: GenServer.from()
 
   @typedoc """
-  | Option  | Description                                        | Example  | Default value              |
-  |---------|----------------------------------------------------|----------|----------------------------|
-  | timeout | How long we can wait for a worker on the call site | `60_000` | `#{@default_wait_timeout}` |
+  | Option  | Description                                        | Example  | Default value                           |
+  |---------|----------------------------------------------------|----------|-----------------------------------------|
+  | checkout_timeout | How long we can wait for a worker on the call site | `60_000` | `#{@default_checkout_timeout}` |
   """
-  @type run_option() :: {:timeout, timeout()}
+  @type run_option() :: {:checkout_timeout, timeout()}
 
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
@@ -195,9 +195,9 @@ defmodule Poolex do
   """
   @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
   def run!(pool_id, fun, options \\ []) do
-    timeout = Keyword.get(options, :timeout, @default_wait_timeout)
+    checkout_timeout = Keyword.get(options, :checkout_timeout, @default_checkout_timeout)
 
-    {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, timeout)
+    {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, checkout_timeout)
 
     monitor_process = monitor_caller(pool_id, self(), pid)
 

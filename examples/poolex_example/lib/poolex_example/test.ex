@@ -20,7 +20,7 @@ defmodule PoolexExample.Test do
               :ok
           end
         end,
-        timeout: @timeout
+        checkout_timeout: @timeout
       )
     end)
   end

@@ -46,7 +46,7 @@ The first argument is the name of the pool mentioned above.
 
 The second argument is the function that takes the pid of the worker as the only parameter and performs the necessary actions.
 
-The third argument contains run options. Currently, there is only one `timeout` option that tells Poolex how long we can wait for a worker on the call site.
+The third argument contains run options. Currently, there is only one `checkout_timeout` option that tells Poolex how long we can wait for a worker on the call site.
 
 ```elixir
 iex> Poolex.start_link(pool_id: :agent_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)

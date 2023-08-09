@@ -318,7 +318,7 @@ defmodule PoolexTest do
             fn pid ->
               GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
             end,
-            timeout: 100
+            checkout_timeout: 100
           )
         end)
 
@@ -344,7 +344,7 @@ defmodule PoolexTest do
         Poolex.run(
           pool_name,
           fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
-          timeout: 100
+          checkout_timeout: 100
         )
 
       assert result == :all_workers_are_busy
@@ -358,7 +358,7 @@ defmodule PoolexTest do
                Poolex.run!(
                  pool_name,
                  fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
-                 timeout: 100
+                 checkout_timeout: 100
                )
              ) == {:timeout, {GenServer, :call, [pool_name, :get_idle_worker, 100]}}
     end
@@ -384,7 +384,7 @@ defmodule PoolexTest do
         Poolex.run(
           pool_name,
           fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
-          timeout: 100
+          checkout_timeout: 100
         )
 
       assert result == :all_workers_are_busy
@@ -543,7 +543,7 @@ defmodule PoolexTest do
         Poolex.run(
           pool_id,
           fn pid -> GenServer.call(pid, {:do_some_work_with_delay, delay}) end,
-          timeout: 100
+          checkout_timeout: 100
         )
       end)
     end
