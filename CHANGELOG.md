@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     Poolex.run(:my_awesome_pool, fn worker -> some_work(worker) end, checkout_timeout: 10_000)
     ```
 
+- `Poolex.run/3` returns tuple `{:error, :checkout_timeout}` instead of `:all_workers_are_busy`.
+  - Reason: It is easier to understand the uniform format of the response from the function: `{:ok, result}` or `{:error, reason}`.
+
 ## [0.7.6] - 2023-08-03
 
 ### Fixed

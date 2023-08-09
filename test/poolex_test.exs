@@ -336,7 +336,7 @@ defmodule PoolexTest do
       assert Enum.empty?(debug_info.waiting_callers)
     end
 
-    test "run/3 returns :all_workers_are_busy on timeout" do
+    test "run/3 returns error on checkout timeout" do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
       launch_long_task(pool_name)
 
@@ -347,7 +347,7 @@ defmodule PoolexTest do
           checkout_timeout: 100
         )
 
-      assert result == :all_workers_are_busy
+      assert result == {:error, :checkout_timeout}
     end
 
     test "run!/3 exits on timeout" do
@@ -387,7 +387,7 @@ defmodule PoolexTest do
           checkout_timeout: 100
         )
 
-      assert result == :all_workers_are_busy
+      assert result == {:error, :checkout_timeout}
 
       debug_info = Poolex.get_debug_info(pool_name)
 

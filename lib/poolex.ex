@@ -158,7 +158,7 @@ defmodule Poolex do
 
   Returns:
     * `{:runtime_error, reason}` on errors.
-    * `:all_workers_are_busy` if no free worker was found before the timeout.
+    * `{:error, :checkout_timeout}` if no free worker was found before the timeout.
 
   See `run!/3` for more information.
 
@@ -171,13 +171,13 @@ defmodule Poolex do
       {:ok, 5}
   """
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
-          {:ok, any()} | :all_workers_are_busy | {:runtime_error, any()}
+          {:ok, any()} | {:error, :checkout_timeout} | {:runtime_error, any()}
   def run(pool_id, fun, options \\ []) do
     {:ok, run!(pool_id, fun, options)}
   rescue
     runtime_error -> {:runtime_error, runtime_error}
   catch
-    :exit, {:timeout, _meta} -> :all_workers_are_busy
+    :exit, {:timeout, _meta} -> {:error, :checkout_timeout}
     :exit, reason -> {:runtime_error, reason}
   end
 
