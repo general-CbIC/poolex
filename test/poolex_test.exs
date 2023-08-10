@@ -222,7 +222,7 @@ defmodule PoolexTest do
       debug_info = Poolex.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 10
 
-      assert Enum.find(debug_info.waiting_callers, fn {pid, _} ->
+      assert Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
                pid == waiting_caller
              end)
 
@@ -232,7 +232,7 @@ defmodule PoolexTest do
       debug_info = Poolex.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 9
 
-      refute Enum.find(debug_info.waiting_callers, fn {pid, _} ->
+      refute Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
                pid == waiting_caller
              end)
     end
@@ -327,7 +327,7 @@ defmodule PoolexTest do
       debug_info = Poolex.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 1
 
-      assert Enum.find(debug_info.waiting_callers, fn {pid, _} ->
+      assert Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
                pid == waiting_caller
              end)
 
@@ -348,6 +348,14 @@ defmodule PoolexTest do
         )
 
       assert result == {:error, :checkout_timeout}
+
+      :timer.sleep(10)
+
+      debug_info = Poolex.get_debug_info(pool_name) |> dbg()
+
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_count == 1
+      assert Enum.count(debug_info.waiting_callers) == 0
     end
 
     test "run!/3 raises an error on checkout timeout" do
@@ -361,6 +369,14 @@ defmodule PoolexTest do
                  checkout_timeout: 100
                )
              ) == %Poolex.CheckoutTimeoutError{message: "checkout timeout"}
+
+      :timer.sleep(10)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_count == 1
+      assert Enum.count(debug_info.waiting_callers) == 0
     end
   end
 

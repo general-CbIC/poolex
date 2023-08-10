@@ -12,13 +12,13 @@ defmodule Poolex.Callers.Behaviour do
   @doc "Returns `state` (any data structure) which will be passed as the first argument to all other functions."
   @callback init() :: state()
   @doc "Adds caller to `state` and returns new state."
-  @callback add(state(), Poolex.caller()) :: state()
+  @callback add(state(), Poolex.Caller.t()) :: state()
   @doc "Returns `true` if the `state` is empty, `false` otherwise."
   @callback empty?(state()) :: boolean()
   @doc "Removes one of callers from `state` and returns it as `{caller, state}`. Returns `:empty` if state is empty."
-  @callback pop(state()) :: {Poolex.caller(), state()} | :empty
+  @callback pop(state()) :: {Poolex.Caller.t(), state()} | :empty
   @doc "Removes given caller by caller's pid from `state` and returns new state."
   @callback remove_by_pid(state(), caller_pid :: pid()) :: state()
   @doc "Returns list of callers."
-  @callback to_list(state()) :: list(Poolex.caller())
+  @callback to_list(state()) :: list(Poolex.Caller.t())
 end

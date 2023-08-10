@@ -40,6 +40,9 @@ defmodule Poolex.Callers.Impl.ErlangQueueTest do
   end
 
   defp gen_caller(pid, tag \\ make_ref()) do
-    {pid, tag}
+    %Poolex.Caller{
+      from: {pid, tag},
+      reference: make_ref()
+    }
   end
 end
