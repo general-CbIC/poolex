@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Poolex.caller()` type replaced with struct defined in `Poolex.Caller.t()`.
   - Reason: We need to save uniq caller reference.
 
+### Fixed
+
+- Fixed a bug when workers get stuck in `busy` status after checkout timeout.
+
 ## [0.7.6] - 2023-08-03
 
 ### Fixed
