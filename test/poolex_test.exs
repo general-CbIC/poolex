@@ -372,6 +372,22 @@ defmodule PoolexTest do
       debug_info = Poolex.get_debug_info(pool_name)
       assert Enum.count(debug_info.waiting_callers) == 0
     end
+
+    test "handle worker's timout" do
+      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+      delay = 100
+
+      assert {:ok, :some_result} =
+               Poolex.run(pool_name, fn pid ->
+                 GenServer.call(pid, {:do_some_work_with_delay, delay}, 1000)
+               end)
+
+      assert {:runtime_error,
+              {:timeout, {GenServer, :call, [_pid, {:do_some_work_with_delay, ^delay}, 1]}}} =
+               Poolex.run(pool_name, fn pid ->
+                 GenServer.call(pid, {:do_some_work_with_delay, delay}, 1)
+               end)
+    end
   end
 
   describe "overflow" do
