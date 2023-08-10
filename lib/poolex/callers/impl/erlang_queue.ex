@@ -33,6 +33,14 @@ defmodule Poolex.Callers.Impl.ErlangQueue do
   end
 
   @impl true
+  def remove_by_reference(state, caller_reference) do
+    :queue.filter(
+      fn %Poolex.Caller{reference: reference} -> reference != caller_reference end,
+      state
+    )
+  end
+
+  @impl true
   def to_list(state) do
     :queue.to_list(state)
   end

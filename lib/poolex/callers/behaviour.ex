@@ -17,8 +17,10 @@ defmodule Poolex.Callers.Behaviour do
   @callback empty?(state()) :: boolean()
   @doc "Removes one of callers from `state` and returns it as `{caller, state}`. Returns `:empty` if state is empty."
   @callback pop(state()) :: {Poolex.Caller.t(), state()} | :empty
-  @doc "Removes given caller by caller's pid from `state` and returns new state."
+  @doc "Removes caller by pid from `state` and returns new state."
   @callback remove_by_pid(state(), caller_pid :: pid()) :: state()
+  @doc "Removes caller by reference from `state` and returns new state."
+  @callback remove_by_reference(state(), reference :: reference()) :: state()
   @doc "Returns list of callers."
   @callback to_list(state()) :: list(Poolex.Caller.t())
 end

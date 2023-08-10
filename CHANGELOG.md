@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `Poolex.run/3` returns tuple `{:error, :checkout_timeout}` instead of `:all_workers_are_busy`.
   - Reason: It is easier to understand the uniform format of the response from the function: `{:ok, result}` or `{:error, reason}`.
+- `Poolex.caller()` type replaced with struct defined in `Poolex.Caller.t()`.
+  - Reason: We need to save uniq caller reference.
 
 ## [0.7.6] - 2023-08-03
 

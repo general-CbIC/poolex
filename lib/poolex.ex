@@ -76,13 +76,6 @@ defmodule Poolex do
   @type worker() :: pid()
 
   @typedoc """
-  Tuple describing the `caller`.
-
-  **Callers** are processes that have requested to get a worker.
-  """
-  @type caller() :: GenServer.from()
-
-  @typedoc """
   | Option  | Description                                        | Example  | Default value                           |
   |---------|----------------------------------------------------|----------|-----------------------------------------|
   | checkout_timeout | How long we can wait for a worker on the call site | `60_000` | `#{@default_checkout_timeout}` |
@@ -197,7 +190,7 @@ defmodule Poolex do
   @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
   def run!(pool_id, fun, options \\ []) do
     checkout_timeout = Keyword.get(options, :checkout_timeout, @default_checkout_timeout)
-    worker_pid = get_idle_worker(pool_id, checkout_timeout)
+    {:ok, worker_pid} = get_idle_worker(pool_id, checkout_timeout)
     monitor_process = monitor_caller(pool_id, self(), worker_pid)
 
     try do
@@ -208,13 +201,15 @@ defmodule Poolex do
     end
   end
 
-  @spec get_idle_worker(pool_id(), timeout()) :: worker()
+  @spec get_idle_worker(pool_id(), timeout()) :: {:ok, worker()}
   defp get_idle_worker(pool_id, checkout_timeout) do
-    {:ok, pid} = GenServer.call(pool_id, :get_idle_worker, checkout_timeout)
-
-    pid
+    caller_reference = make_ref()
+    GenServer.call(pool_id, {:get_idle_worker, caller_reference}, checkout_timeout)
   catch
-    :exit, {:timeout, _meta} -> raise CheckoutTimeoutError
+    :exit,
+    {:timeout, {GenServer, :call, [_pool_id, {:get_idle_worker, caller_reference}, _timeout]}} ->
+      GenServer.cast(pool_id, {:cancel_waiting, caller_reference})
+      raise CheckoutTimeoutError
   end
 
   @doc """
@@ -345,7 +340,7 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_call(:get_idle_worker, {from_pid, _} = caller, %State{} = state) do
+  def handle_call({:get_idle_worker, caller_reference}, {from_pid, _} = caller, %State{} = state) do
     if IdleWorkers.empty?(state) do
       if state.overflow < state.max_overflow do
         {:ok, new_worker} = start_worker(state)
@@ -357,7 +352,9 @@ defmodule Poolex do
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
         Monitoring.add(state.monitor_id, from_pid, :waiting_caller)
-        state = WaitingCallers.add(state, caller)
+
+        state =
+          WaitingCallers.add(state, %Poolex.Caller{reference: caller_reference, from: caller})
 
         {:noreply, state}
       end
@@ -405,6 +402,11 @@ defmodule Poolex do
   end
 
   @impl GenServer
+  def handle_cast({:cancel_waiting, caller_reference}, %State{} = state) do
+    {:noreply, WaitingCallers.remove_by_reference(state, caller_reference)}
+  end
+
+  @impl GenServer
   def handle_info(
         {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
         %State{} = state
@@ -439,7 +441,7 @@ defmodule Poolex do
   defp provide_worker_to_waiting_caller(%State{} = state, worker) do
     {caller, state} = WaitingCallers.pop(state)
 
-    GenServer.reply(caller, {:ok, worker})
+    GenServer.reply(caller.from, {:ok, worker})
 
     state
   end
