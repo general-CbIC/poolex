@@ -334,6 +334,8 @@ defmodule PoolexTest do
       :timer.sleep(100)
       debug_info = Poolex.get_debug_info(pool_name)
       assert Enum.empty?(debug_info.waiting_callers)
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.idle_workers_count == 0
     end
 
     test "run/3 returns error on checkout timeout" do
@@ -353,6 +355,8 @@ defmodule PoolexTest do
 
       debug_info = Poolex.get_debug_info(pool_name)
       assert Enum.count(debug_info.waiting_callers) == 0
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.idle_workers_count == 0
     end
 
     test "run!/3 raises an error on checkout timeout" do
@@ -387,6 +391,56 @@ defmodule PoolexTest do
                Poolex.run(pool_name, fn pid ->
                  GenServer.call(pid, {:do_some_work_with_delay, delay}, 1)
                end)
+    end
+
+    test "worker not hangs in busy status after checkout timeout" do
+      test_pid = self()
+      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+      delay = 100
+
+      process_1 =
+        spawn(fn ->
+          assert {:ok, :some_result} =
+                   Poolex.run(pool_name, fn pid ->
+                     send(test_pid, {:worker, pid})
+                     GenServer.call(pid, {:do_some_work_with_delay, delay})
+                   end)
+        end)
+
+      reference_1 = Process.monitor(process_1)
+
+      process_2 =
+        spawn(fn ->
+          assert {:error, :checkout_timeout} =
+                   Poolex.run(
+                     pool_name,
+                     fn pid ->
+                       GenServer.call(pid, {:do_some_work_with_delay, delay})
+                     end,
+                     checkout_timeout: 0
+                   )
+
+          send(test_pid, {:waiting, self()})
+
+          receive do
+            :finish -> :ok
+          end
+        end)
+
+      reference_2 = Process.monitor(process_2)
+
+      assert_receive {:worker, worker}, 1000
+      assert_receive {:waiting, ^process_2}, 1000
+      assert_receive {:DOWN, ^reference_1, :process, ^process_1, _}, 1000
+      refute_received _
+
+      Process.sleep(100)
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_pids == [worker]
+
+      send(process_2, :finish)
+      assert_receive {:DOWN, ^reference_2, :process, ^process_2, _}
     end
   end
 
