@@ -354,7 +354,7 @@ defmodule PoolexTest do
       :timer.sleep(10)
 
       debug_info = Poolex.get_debug_info(pool_name)
-      assert Enum.count(debug_info.waiting_callers) == 0
+      assert Enum.empty?(debug_info.waiting_callers)
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 0
     end
@@ -374,7 +374,7 @@ defmodule PoolexTest do
       :timer.sleep(10)
 
       debug_info = Poolex.get_debug_info(pool_name)
-      assert Enum.count(debug_info.waiting_callers) == 0
+      assert Enum.empty?(debug_info.waiting_callers)
     end
 
     test "handle worker's timout" do
