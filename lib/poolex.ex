@@ -151,7 +151,7 @@ defmodule Poolex do
   Same as `run!/3` but handles runtime_errors.
 
   Returns:
-    * `{:runtime_error, reason}` on errors.
+    * `{:error, {:runtime_error, reason}}` on errors.
     * `{:error, :checkout_timeout}` if no free worker was found before the timeout.
 
   See `run!/3` for more information.
@@ -160,19 +160,19 @@ defmodule Poolex do
 
       iex> Poolex.start_link(pool_id: :some_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
       iex> Poolex.run(:some_pool, fn _pid -> raise RuntimeError end)
-      {:runtime_error, %RuntimeError{message: "runtime error"}}
+      {:error, {:runtime_error, %RuntimeError{message: "runtime error"}}}
       iex> Poolex.run(:some_pool, fn pid -> Agent.get(pid, &(&1)) end)
       {:ok, 5}
   """
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
-          {:ok, any()} | {:error, :checkout_timeout} | {:runtime_error, any()}
+          {:ok, any()} | {:error, :checkout_timeout | {:runtime_error, any()}}
   def run(pool_id, fun, options \\ []) do
     {:ok, run!(pool_id, fun, options)}
   rescue
     CheckoutTimeoutError -> {:error, :checkout_timeout}
-    runtime_error -> {:runtime_error, runtime_error}
+    runtime_error -> {:error, {:runtime_error, runtime_error}}
   catch
-    :exit, reason -> {:runtime_error, reason}
+    :exit, reason -> {:error, {:runtime_error, reason}}
   end
 
   @doc """

@@ -386,8 +386,9 @@ defmodule PoolexTest do
                  GenServer.call(pid, {:do_some_work_with_delay, delay}, 1000)
                end)
 
-      assert {:runtime_error,
-              {:timeout, {GenServer, :call, [_pid, {:do_some_work_with_delay, ^delay}, 1]}}} =
+      assert {:error,
+              {:runtime_error,
+               {:timeout, {GenServer, :call, [_pid, {:do_some_work_with_delay, ^delay}, 1]}}}} =
                Poolex.run(pool_name, fn pid ->
                  GenServer.call(pid, {:do_some_work_with_delay, delay}, 1)
                end)
