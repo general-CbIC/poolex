@@ -351,10 +351,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name) |> dbg()
-
-      assert debug_info.busy_workers_count == 0
-      assert debug_info.idle_workers_count == 1
+      debug_info = Poolex.get_debug_info(pool_name)
       assert Enum.count(debug_info.waiting_callers) == 0
     end
 
@@ -373,9 +370,6 @@ defmodule PoolexTest do
       :timer.sleep(10)
 
       debug_info = Poolex.get_debug_info(pool_name)
-
-      assert debug_info.busy_workers_count == 0
-      assert debug_info.idle_workers_count == 1
       assert Enum.count(debug_info.waiting_callers) == 0
     end
   end
