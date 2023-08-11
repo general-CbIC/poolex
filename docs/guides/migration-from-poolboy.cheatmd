@@ -67,6 +67,6 @@ If you want a safe interface with error handling, then use `run/3`.
 +  Poolex.run!(
 +    :some_pool,
 +    fn pid -> some_function(pid) end,
-+    timeout: :timer.seconds(10)
++    checkout_timeout: :timer.seconds(10)
 +  )
 ```

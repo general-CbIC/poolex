@@ -10,7 +10,7 @@ defmodule Poolex.Private.WaitingCallers do
   end
 
   @doc false
-  @spec add(State.t(), Poolex.caller()) :: State.t()
+  @spec add(State.t(), Poolex.Caller.t()) :: State.t()
   def add(
         %State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state,
         caller
@@ -25,7 +25,7 @@ defmodule Poolex.Private.WaitingCallers do
   end
 
   @doc false
-  @spec pop(State.t()) :: {Poolex.caller(), State.t()} | :empty
+  @spec pop(State.t()) :: {Poolex.Caller.t(), State.t()} | :empty
   def pop(
         %State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state
       ) do
@@ -48,7 +48,19 @@ defmodule Poolex.Private.WaitingCallers do
   end
 
   @doc false
-  @spec to_list(State.t()) :: list(Poolex.caller())
+  @spec remove_by_reference(State.t(), reference :: reference()) :: State.t()
+  def remove_by_reference(
+        %State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state,
+        reference
+      ) do
+    %State{
+      state
+      | waiting_callers_state: impl.remove_by_reference(waiting_callers_state, reference)
+    }
+  end
+
+  @doc false
+  @spec to_list(State.t()) :: list(Poolex.Caller.t())
   def to_list(%State{waiting_callers_impl: impl, waiting_callers_state: state}) do
     impl.to_list(state)
   end
