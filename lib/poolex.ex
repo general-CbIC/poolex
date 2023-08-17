@@ -190,7 +190,7 @@ defmodule Poolex do
   @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
   def run!(pool_id, fun, options \\ []) do
     checkout_timeout = Keyword.get(options, :checkout_timeout, @default_checkout_timeout)
-    {:ok, worker_pid} = get_idle_worker(pool_id, checkout_timeout)
+    worker_pid = get_idle_worker(pool_id, checkout_timeout)
     monitor_process = monitor_caller(pool_id, self(), worker_pid)
 
     try do
@@ -201,7 +201,7 @@ defmodule Poolex do
     end
   end
 
-  @spec get_idle_worker(pool_id(), timeout()) :: {:ok, worker()}
+  @spec get_idle_worker(pool_id(), timeout()) :: worker()
   defp get_idle_worker(pool_id, checkout_timeout) do
     caller_reference = make_ref()
     GenServer.call(pool_id, {:get_idle_worker, caller_reference}, checkout_timeout)
@@ -349,7 +349,7 @@ defmodule Poolex do
 
         state = BusyWorkers.add(state, new_worker)
 
-        {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
+        {:reply, new_worker, %State{state | overflow: state.overflow + 1}}
       else
         Monitoring.add(state.monitor_id, from_pid, :waiting_caller)
 
@@ -362,7 +362,7 @@ defmodule Poolex do
       {idle_worker_pid, state} = IdleWorkers.pop(state)
       state = BusyWorkers.add(state, idle_worker_pid)
 
-      {:reply, {:ok, idle_worker_pid}, state}
+      {:reply, idle_worker_pid, state}
     end
   end
 
@@ -441,7 +441,7 @@ defmodule Poolex do
   defp provide_worker_to_waiting_caller(%State{} = state, worker) do
     {caller, state} = WaitingCallers.pop(state)
 
-    GenServer.reply(caller.from, {:ok, worker})
+    GenServer.reply(caller.from, worker)
 
     state
   end
