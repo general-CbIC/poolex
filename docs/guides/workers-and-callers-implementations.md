@@ -4,7 +4,7 @@
 
 ## Callers
 
-`Callers` are processes that have requested to get a worker (used `run/3` or `run!/3`). Each pool keeps the information about `callers` to distribute workers to them when they are free.
+`Callers` are processes that have requested to get a worker (used `run/3`). Each pool keeps the information about `callers` to distribute workers to them when they are free.
 
 > ### Caller's typespec {: .warning}
 >

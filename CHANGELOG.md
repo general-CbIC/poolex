@@ -22,10 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     Poolex.run(:my_awesome_pool, fn worker -> some_work(worker) end, checkout_timeout: 10_000)
     ```
 
-- `Poolex.run/3` returns tuple `{:error, :checkout_timeout}` instead of `:all_workers_are_busy`. Also `{:runtime_error, reason}` moved to `{:error, {:runtime_error, reason}}`.
+- `Poolex.run/3` returns tuple `{:error, :checkout_timeout}` instead of `:all_workers_are_busy`.
   - Reason: It is easier to understand the uniform format of the response from the function: `{:ok, result}` or `{:error, reason}`.
 - `Poolex.caller()` type replaced with struct defined in `Poolex.Caller.t()`.
-  - Reason: We need to save uniq caller reference.
+  - Reason: We need to save unique caller references.
+- `Poolex.run!/3` was removed in favor of `Poolex.run/3`. The new unified function returns `{:ok, result}` or `{:error, :checkout_timeout}` and not handles runtime errors anymore.
+  - Reason: We should not catch errors in the caller process. The caller process itself must choose how to handle exceptions and exit signals.
 
 ### Fixed
 
