@@ -27,7 +27,6 @@ defmodule Poolex do
 
   use GenServer, shutdown: :infinity
 
-  alias Poolex.CheckoutTimeoutError
   alias Poolex.Private.BusyWorkers
   alias Poolex.Private.DebugInfo
   alias Poolex.Private.IdleWorkers
@@ -148,68 +147,56 @@ defmodule Poolex do
   end
 
   @doc """
-  Same as `run!/3` but handles runtime_errors.
+  The main function for working with the pool.
+
+  It takes a pool identifier, a function that takes a worker process id as an argument and returns any value.
+  When executed, an attempt is made to find a free worker with specified timeout (5 seconds by default).
+  You can set the timeout using the `checkout_timeout` option.
 
   Returns:
-    * `{:error, {:runtime_error, reason}}` on errors.
+    * `{:ok, result}` if the worker was found and the function was executed successfully.
     * `{:error, :checkout_timeout}` if no free worker was found before the timeout.
-
-  See `run!/3` for more information.
 
   ## Examples
 
       iex> Poolex.start_link(pool_id: :some_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
-      iex> Poolex.run(:some_pool, fn _pid -> raise RuntimeError end)
-      {:error, {:runtime_error, %RuntimeError{message: "runtime error"}}}
       iex> Poolex.run(:some_pool, fn pid -> Agent.get(pid, &(&1)) end)
       {:ok, 5}
   """
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
-          {:ok, any()} | {:error, :checkout_timeout | {:runtime_error, any()}}
+          {:ok, any()} | {:error, :checkout_timeout}
   def run(pool_id, fun, options \\ []) do
-    {:ok, run!(pool_id, fun, options)}
-  rescue
-    CheckoutTimeoutError -> {:error, :checkout_timeout}
-    runtime_error -> {:error, {:runtime_error, runtime_error}}
-  catch
-    :exit, reason -> {:error, {:runtime_error, reason}}
-  end
-
-  @doc """
-  The main function for working with the pool.
-
-  When executed, an attempt is made to obtain a worker with the specified timeout (5 seconds by default).
-  In case of successful execution of the passed function, the result will be returned, otherwise an error will be raised.
-
-  ## Examples
-
-      iex> Poolex.start_link(pool_id: :some_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
-      iex> Poolex.run!(:some_pool, fn pid -> Agent.get(pid, &(&1)) end)
-      5
-  """
-  @spec run!(pool_id(), (worker :: pid() -> any()), list(run_option())) :: any()
-  def run!(pool_id, fun, options \\ []) do
     checkout_timeout = Keyword.get(options, :checkout_timeout, @default_checkout_timeout)
-    {:ok, worker_pid} = get_idle_worker(pool_id, checkout_timeout)
-    monitor_process = monitor_caller(pool_id, self(), worker_pid)
 
-    try do
-      fun.(worker_pid)
-    after
-      Process.exit(monitor_process, :kill)
-      GenServer.cast(pool_id, {:release_busy_worker, worker_pid})
+    case get_idle_worker(pool_id, checkout_timeout) do
+      {:ok, worker_pid} ->
+        monitor_process = monitor_caller(pool_id, self(), worker_pid)
+
+        try do
+          {:ok, fun.(worker_pid)}
+        after
+          Process.exit(monitor_process, :kill)
+          GenServer.cast(pool_id, {:release_busy_worker, worker_pid})
+        end
+
+      {:error, :checkout_timeout} ->
+        {:error, :checkout_timeout}
     end
   end
 
-  @spec get_idle_worker(pool_id(), timeout()) :: {:ok, worker()}
+  @spec get_idle_worker(pool_id(), timeout()) :: {:ok, worker()} | {:error, :checkout_timeout}
   defp get_idle_worker(pool_id, checkout_timeout) do
     caller_reference = make_ref()
-    GenServer.call(pool_id, {:get_idle_worker, caller_reference}, checkout_timeout)
-  catch
-    :exit,
-    {:timeout, {GenServer, :call, [_pool_id, {:get_idle_worker, caller_reference}, _timeout]}} ->
+
+    try do
+      GenServer.call(pool_id, {:get_idle_worker, caller_reference}, checkout_timeout)
+    catch
+      :exit,
+      {:timeout, {GenServer, :call, [_pool_id, {:get_idle_worker, ^caller_reference}, _timeout]}} ->
+        {:error, :checkout_timeout}
+    after
       GenServer.cast(pool_id, {:cancel_waiting, caller_reference})
-      raise CheckoutTimeoutError
+    end
   end
 
   @doc """

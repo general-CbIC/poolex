@@ -105,9 +105,6 @@ defmodule PoolexTest do
 
       result = Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
       assert result == {:ok, :some_result}
-
-      result = Poolex.run!(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
-      assert result == :some_result
     end
 
     test "test waiting queue" do
@@ -117,7 +114,7 @@ defmodule PoolexTest do
         1..20
         |> Enum.map(fn _ ->
           Task.async(fn ->
-            Poolex.run!(pool_name, fn pid ->
+            Poolex.run(pool_name, fn pid ->
               GenServer.call(pid, {:do_some_work_with_delay, 100})
             end)
           end)
@@ -125,7 +122,7 @@ defmodule PoolexTest do
         |> Enum.map(&Task.await/1)
 
       assert length(result) == 20
-      assert Enum.all?(result, &(&1 == :some_result))
+      assert Enum.all?(result, &(&1 == {:ok, :some_result}))
     end
   end
 
@@ -293,7 +290,8 @@ defmodule PoolexTest do
 
     test "runtime errors" do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
-      Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_raise) end)
+
+      catch_exit(Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_raise) end))
 
       :timer.sleep(10)
 
@@ -359,25 +357,7 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 0
     end
 
-    test "run!/3 raises an error on checkout timeout" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
-      launch_long_task(pool_name)
-
-      assert catch_error(
-               Poolex.run!(
-                 pool_name,
-                 fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
-                 checkout_timeout: 100
-               )
-             ) == %Poolex.CheckoutTimeoutError{message: "checkout timeout"}
-
-      :timer.sleep(10)
-
-      debug_info = Poolex.get_debug_info(pool_name)
-      assert Enum.empty?(debug_info.waiting_callers)
-    end
-
-    test "handle worker's timout" do
+    test "handle worker's timeout" do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
       delay = 100
 
@@ -386,12 +366,12 @@ defmodule PoolexTest do
                  GenServer.call(pid, {:do_some_work_with_delay, delay}, 1000)
                end)
 
-      assert {:error,
-              {:runtime_error,
-               {:timeout, {GenServer, :call, [_pid, {:do_some_work_with_delay, ^delay}, 1]}}}} =
-               Poolex.run(pool_name, fn pid ->
-                 GenServer.call(pid, {:do_some_work_with_delay, delay}, 1)
-               end)
+      assert {:timeout, {GenServer, :call, [_worker_pid, {:do_some_work_with_delay, 100}, 1]}} =
+               catch_exit(
+                 Poolex.run(pool_name, fn pid ->
+                   GenServer.call(pid, {:do_some_work_with_delay, delay}, 1)
+                 end)
+               )
     end
 
     test "worker not hangs in busy status after checkout timeout" do
@@ -507,7 +487,7 @@ defmodule PoolexTest do
       pid = self()
 
       spawn(fn ->
-        Poolex.run!(pool_name, fn server ->
+        Poolex.run(pool_name, fn server ->
           SomeWorker.traceable_call(server, pid, :foo, 50)
         end)
       end)
@@ -554,7 +534,7 @@ defmodule PoolexTest do
       state = Poolex.get_state(pool_name)
 
       supervisor_pid = state.supervisor
-      worker_pid = Poolex.run!(pool_name, fn pid -> pid end)
+      {:ok, worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
 
       pool_monitor_ref = Process.monitor(pool_pid)
       supervisor_monitor_ref = Process.monitor(supervisor_pid)
@@ -576,7 +556,7 @@ defmodule PoolexTest do
       state = Poolex.get_state(pool_name)
 
       supervisor_pid = state.supervisor
-      worker_pid = Poolex.run!(pool_name, fn pid -> pid end)
+      {:ok, worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
 
       pool_monitor_ref = Process.monitor(pool_pid)
       supervisor_monitor_ref = Process.monitor(supervisor_pid)
