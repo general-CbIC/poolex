@@ -65,7 +65,7 @@ defmodule PoolexExample.Test do
 
   defp async_call_square_root(i) do
     Task.async(fn ->
-      Poolex.run!(
+      Poolex.run(
         :worker_pool,
         fn pid ->
           # Let's wrap the genserver call in a try-catch block. This allows us to trap any exceptions
@@ -79,7 +79,7 @@ defmodule PoolexExample.Test do
               :ok
           end
         end,
-        timeout: @timeout
+        checkout_timeout: @timeout
       )
     end)
   end

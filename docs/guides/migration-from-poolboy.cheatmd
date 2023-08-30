@@ -55,8 +55,8 @@ end
 
 ### III. Update call site
 
-Use `run!/3` to leave the same behavior. 
-If you want a safe interface with error handling, then use `run/3`.
+Use `run/3`.
+Be careful, unlike `:poolboy.transaction`, `Poolex.run` returns `{:ok, result}`.
 
 ```diff
 -  :poolboy.transaction(
@@ -64,9 +64,9 @@ If you want a safe interface with error handling, then use `run/3`.
 -    fn pid -> some_function(pid) end,
 -    :timer.seconds(10)
 -  )
-+  Poolex.run!(
++  Poolex.run(
 +    :some_pool,
 +    fn pid -> some_function(pid) end,
-+    timeout: :timer.seconds(10)
++    checkout_timeout: :timer.seconds(10)
 +  )
 ```

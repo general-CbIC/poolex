@@ -37,9 +37,20 @@ defmodule Poolex.Callers.Impl.ErlangQueueTest do
       |> Impl.remove_by_pid(caller_1_pid)
 
     assert Impl.to_list(state) == [caller_2, caller_2]
+
+    # Remove by reference
+    state =
+      state
+      |> Impl.add(caller_1)
+      |> Impl.remove_by_reference(caller_2.reference)
+
+    assert Impl.to_list(state) == [caller_1]
   end
 
   defp gen_caller(pid, tag \\ make_ref()) do
-    {pid, tag}
+    %Poolex.Caller{
+      from: {pid, tag},
+      reference: make_ref()
+    }
   end
 end

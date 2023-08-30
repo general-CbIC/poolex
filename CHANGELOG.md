@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2023-08-30
+
+### Changed
+
+#### Breaking changes
+
+- Option `:timeout` renamed to `:checkout_timeout`.
+  - Reason: This option configures only the waiting time for `worker` from the pool, not the task's work time. This naming should be more understandable on the call site.
+
+    ```elixir
+    # Before
+    Poolex.run(:my_awesome_pool, fn worker -> some_work(worker) end, timeout: 10_000)
+
+    # After
+    Poolex.run(:my_awesome_pool, fn worker -> some_work(worker) end, checkout_timeout: 10_000)
+    ```
+
+- `Poolex.run/3` returns tuple `{:error, :checkout_timeout}` instead of `:all_workers_are_busy`.
+  - Reason: It is easier to understand the uniform format of the response from the function: `{:ok, result}` or `{:error, reason}`.
+- `Poolex.caller()` type replaced with struct defined in `Poolex.Caller.t()`.
+  - Reason: We need to save unique caller references.
+- `Poolex.run!/3` was removed in favor of `Poolex.run/3`. The new unified function returns `{:ok, result}` or `{:error, :checkout_timeout}` and not handles runtime errors anymore.
+  - Reason: We should not catch errors in the caller process. The caller process itself must choose how to handle exceptions and exit signals.
+
+### Fixed
+
+- Fixed a bug when workers get stuck in `busy` status after checkout timeout.
+
 ## [0.7.6] - 2023-08-03
 
 ### Fixed
@@ -205,7 +233,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.7.5...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/general-CbIC/poolex/compare/v0.7.6...v0.8.0
+[0.7.6]: https://github.com/general-CbIC/poolex/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/general-CbIC/poolex/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/general-CbIC/poolex/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/general-CbIC/poolex/compare/v0.7.2...v0.7.3

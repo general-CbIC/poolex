@@ -4,7 +4,7 @@
 [![hex.pm version](https://img.shields.io/hexpm/v/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/poolex/)
 [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
-<!-- [![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex) -->
+[![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
@@ -79,7 +79,7 @@ Supervisor.start_link(children, strategy: :one_for_one)
 Then you can execute any code on the workers with `run/3`:
 
 ```elixir
-iex> Poolex.run(:worker_pool, &(is_pid?(&1)), timeout: 1_000)
+iex> Poolex.run(:worker_pool, &(is_pid?(&1)), checkout_timeout: 1_000)
 {:ok, true}
 ```
 
