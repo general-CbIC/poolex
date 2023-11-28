@@ -31,6 +31,7 @@ defmodule Poolex.MixProject do
   defp deps do
     [
       {:telemetry, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"},
       # Development dependencies
       {:credo, ">= 0.0.0", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
