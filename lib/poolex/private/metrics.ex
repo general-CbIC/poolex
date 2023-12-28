@@ -16,16 +16,32 @@ defmodule Poolex.Private.Metrics do
     )
   end
 
-  @spec start_poller(Poolex.pool_id()) :: GenServer.on_start()
-  def start_poller(pool_id) do
-    name = :"#{pool_id}_metrics_poller"
+  @spec start_poller(list(Poolex.poolex_option())) :: GenServer.on_start()
+  def start_poller(opts) do
+    pool_id = Keyword.fetch!(opts, :pool_id)
+    measurements = collect_measurements(opts)
 
-    :telemetry_poller.start_link(
-      measurements: [
+    if measurements == [] do
+      :ok
+    else
+      :telemetry_poller.start_link(
+        measurements: measurements,
+        period: :timer.seconds(1),
+        name: :"#{pool_id}_metrics_poller"
+      )
+    end
+  end
+
+  @spec collect_measurements(list(Poolex.poolex_option())) :: list()
+  defp collect_measurements(opts) do
+    pool_id = Keyword.fetch!(opts, :pool_id)
+
+    if Keyword.get(opts, :pool_size_metrics, false) do
+      [
         {Poolex.Private.Metrics, :dispatch_pool_size_metrics, [pool_id]}
-      ],
-      period: :timer.seconds(1),
-      name: name
-    )
+      ]
+    else
+      []
+    end
   end
 end
