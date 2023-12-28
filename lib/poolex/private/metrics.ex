@@ -3,6 +3,9 @@ defmodule Poolex.Private.Metrics do
   Functions for dispatching metrics.
   """
 
+  @doc """
+  Dispatches metrics with current count of idle workers.
+  """
   @spec dispatch_pool_size_metrics(Poolex.pool_id()) :: :ok
   def dispatch_pool_size_metrics(pool_id) do
     debug_info = Poolex.get_debug_info(pool_id)
@@ -16,6 +19,9 @@ defmodule Poolex.Private.Metrics do
     )
   end
 
+  @doc """
+  Starts a telemetry poller for dispatching metrics.
+  """
   @spec start_poller(list(Poolex.poolex_option())) :: GenServer.on_start()
   def start_poller(opts) do
     pool_id = Keyword.fetch!(opts, :pool_id)

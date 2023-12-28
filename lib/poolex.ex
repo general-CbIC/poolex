@@ -30,10 +30,10 @@ defmodule Poolex do
   alias Poolex.Private.BusyWorkers
   alias Poolex.Private.DebugInfo
   alias Poolex.Private.IdleWorkers
+  alias Poolex.Private.Metrics
   alias Poolex.Private.Monitoring
   alias Poolex.Private.State
   alias Poolex.Private.WaitingCallers
-  alias Poolex.Private.Metrics
 
   @default_checkout_timeout :timer.seconds(5)
   @poolex_options_table """
