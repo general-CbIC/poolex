@@ -30,6 +30,7 @@ defmodule Poolex do
   alias Poolex.Private.BusyWorkers
   alias Poolex.Private.DebugInfo
   alias Poolex.Private.IdleWorkers
+  alias Poolex.Private.Metrics
   alias Poolex.Private.Monitoring
   alias Poolex.Private.State
   alias Poolex.Private.WaitingCallers
@@ -47,6 +48,7 @@ defmodule Poolex do
   | `busy_workers_impl`    | Module that describes how to work with busy workers  | `SomeBusyWorkersImpl` | `Poolex.Workers.Impl.List`        |
   | `idle_workers_impl`    | Module that describes how to work with idle workers  | `SomeIdleWorkersImpl` | `Poolex.Workers.Impl.List`        |
   | `waiting_callers_impl` | Module that describes how to work with callers queue | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
+  | `pool_size_metrics`    | Whether to dispatch pool size metrics                | `true`                | `false`                           |
   """
 
   @typedoc """
@@ -66,6 +68,7 @@ defmodule Poolex do
           | {:busy_workers_impl, module()}
           | {:idle_workers_impl, module()}
           | {:waiting_callers_impl, module()}
+          | {:pool_size_metrics, boolean()}
 
   @typedoc """
   Process id of `worker`.
@@ -290,7 +293,14 @@ defmodule Poolex do
       |> BusyWorkers.init(busy_workers_impl)
       |> WaitingCallers.init(waiting_callers_impl)
 
-    {:ok, state}
+    {:ok, state, {:continue, opts}}
+  end
+
+  @impl GenServer
+  def handle_continue(opts, state) do
+    Metrics.start_poller(opts)
+
+    {:noreply, state}
   end
 
   @spec start_workers(non_neg_integer(), State.t(), Monitoring.monitor_id()) :: [pid]

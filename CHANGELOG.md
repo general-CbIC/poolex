@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Implemented regular sending of metrics via `telemetry`:
+  - `idle_workers_count`.
+
+  To send these metrics, you must add init param pool_size_metrics: true when starting the pool.
+
+  You can handle events by adding something like this:
+
+  ```elixir
+  :telemetry.attach(
+    "my-lovely-pool-size-metrics",
+    [:poolex, :metrics, :pool_size],
+    &MyApp.handle_event/4,
+    nil
+  )
+  ```
+
+  More about using `telemetry` [here](https://hexdocs.pm/telemetry/readme.html).
+
 ## [0.8.0] - 2023-08-30
 
 ### Changed
