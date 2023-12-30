@@ -1,5 +1,7 @@
 defmodule PoolexTest do
   use ExUnit.Case, async: false
+  import PoolHelpers
+
   doctest Poolex
 
   describe "debug info" do
@@ -579,36 +581,5 @@ defmodule PoolexTest do
       assert elem(message_3, 2) == :process
       assert elem(message_3, 3) == pool_pid
     end
-  end
-
-  defp start_pool(options) do
-    pool_name =
-      1..10
-      |> Enum.map(fn _ -> Enum.random(?a..?z) end)
-      |> to_string()
-      |> String.to_atom()
-
-    options = Keyword.put(options, :pool_id, pool_name)
-    {:ok, _pid} = start_supervised({Poolex, options})
-
-    pool_name
-  end
-
-  defp launch_long_task(pool_id, delay \\ :timer.seconds(4)) do
-    launch_long_tasks(pool_id, 1, delay)
-  end
-
-  defp launch_long_tasks(pool_id, count, delay \\ :timer.seconds(4)) do
-    for _i <- 1..count do
-      spawn(fn ->
-        Poolex.run(
-          pool_id,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, delay}) end,
-          checkout_timeout: 100
-        )
-      end)
-    end
-
-    :timer.sleep(10)
   end
 end
