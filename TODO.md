@@ -9,7 +9,7 @@ Using metrics, we see that typically, our application uses 10-20 processes, and 
 ### Metrics to be implemented
 
 - [ ] Pool size
-  - [ ] Idle workers count
+  - [x] Idle workers count
   - [ ] Busy workers count
   - [ ] Is max_overflow used?
   - [ ] Maximum count of "overflowed" workers
