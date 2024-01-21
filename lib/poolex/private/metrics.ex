@@ -13,7 +13,8 @@ defmodule Poolex.Private.Metrics do
     :telemetry.execute(
       [:poolex, :metrics, :pool_size],
       %{
-        idle_workers_count: debug_info.idle_workers_count
+        idle_workers_count: debug_info.idle_workers_count,
+        busy_workers_count: debug_info.busy_workers_count
       },
       %{pool_id: pool_id}
     )

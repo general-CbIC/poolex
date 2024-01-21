@@ -11,7 +11,7 @@ defmodule PoolexMetricsTest do
 
     assert_telemetry_event(
       [:poolex, :metrics, :pool_size],
-      %{idle_workers_count: 5},
+      %{idle_workers_count: 5, busy_workers_count: 0},
       %{pool_id: ^pool_id}
     )
 
