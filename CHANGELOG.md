@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Implemented regular sending of metrics via `telemetry`:
-  - `idle_workers_count`.
+  - `idle_workers_count`;
+  - `busy_workers_count`.
 
   To send these metrics, you must add init param pool_size_metrics: true when starting the pool.
 
