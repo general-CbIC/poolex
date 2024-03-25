@@ -14,7 +14,8 @@ defmodule Poolex.Private.Metrics do
       [:poolex, :metrics, :pool_size],
       %{
         idle_workers_count: debug_info.idle_workers_count,
-        busy_workers_count: debug_info.busy_workers_count
+        busy_workers_count: debug_info.busy_workers_count,
+        overflowed: debug_info.overflow > 0
       },
       %{pool_id: pool_id}
     )
