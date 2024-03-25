@@ -7,11 +7,17 @@ defmodule PoolexMetricsTest do
 
   @tag telemetry_events: [[:poolex, :metrics, :pool_size]]
   test "pool size metrics" do
-    pool_id = start_pool(worker_module: SomeWorker, workers_count: 5, pool_size_metrics: true)
+    pool_id =
+      start_pool(
+        worker_module: SomeWorker,
+        workers_count: 5,
+        pool_size_metrics: true,
+        max_overflow: 5
+      )
 
     assert_telemetry_event(
       [:poolex, :metrics, :pool_size],
-      %{idle_workers_count: 5, busy_workers_count: 0},
+      %{idle_workers_count: 5, busy_workers_count: 0, overflowed: false},
       %{pool_id: ^pool_id}
     )
 
@@ -21,7 +27,19 @@ defmodule PoolexMetricsTest do
 
     assert_telemetry_event(
       [:poolex, :metrics, :pool_size],
-      %{idle_workers_count: 4},
+      %{idle_workers_count: 4, busy_workers_count: 1, overflowed: false},
+      %{pool_id: ^pool_id}
+    )
+
+    Enum.each(1..5, fn _ ->
+      launch_long_task(pool_id)
+    end)
+
+    Metrics.dispatch_pool_size_metrics(pool_id)
+
+    assert_telemetry_event(
+      [:poolex, :metrics, :pool_size],
+      %{idle_workers_count: 0, busy_workers_count: 6, overflowed: true},
       %{pool_id: ^pool_id}
     )
   end
