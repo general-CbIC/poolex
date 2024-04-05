@@ -1,0 +1,24 @@
+# Working with metrics
+
+You can quickly analyze and optimize your pool's production settings with the metrics presented by the library.
+
+## Pool size metrics
+
+The Poolex library presents **an idle/busy worker count metric**. These metrics help estimate a pool load and the number of workers used.
+
+Also, there is **an overflow metric**. It shows how long pools are forced to use additional workers.
+
+You can handle them by using `:telemetry.attach/4`:
+
+```elixir
+:telemetry.attach(
+  "my-lovely-pool-size-metrics",
+  [:poolex, :metrics, :pool_size],
+  &MyApp.handle_event/4,
+  nil
+)
+```
+
+For example, your application can write metrics to the console: [PoolexExample.MetricsHandler](https://github.com/general-CbIC/poolex/blob/develop/examples/poolex_example/lib/poolex_example/metrics_handler.ex).
+
+More about using `telemetry` [here](https://hexdocs.pm/telemetry/readme.html).

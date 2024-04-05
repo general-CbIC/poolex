@@ -57,12 +57,13 @@ defmodule Poolex.MixProject do
     [
       main: "readme",
       extras: [
-        "docs/CONTRIBUTING.md",
-        "docs/guides/workers-and-callers-implementations.md",
+        "README.md",
+        "docs/guides/getting-started.cheatmd",
         "docs/guides/migration-from-poolboy.cheatmd",
         "docs/guides/example-of-use.cheatmd",
-        "docs/guides/getting-started.cheatmd",
-        "README.md"
+        "docs/guides/pool-metrics.cheatmd",
+        "docs/guides/workers-and-callers-implementations.md",
+        "docs/CONTRIBUTING.md"
       ],
       groups_for_extras: [
         Guides: Path.wildcard("docs/guides/*md")

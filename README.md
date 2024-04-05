@@ -43,6 +43,8 @@ With `poolex` you can:
   - [Defining the worker](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
   - [Configuring Poolex](https://hexdocs.pm/poolex/example-of-use.html#configuring-poolex)
   - [Using Poolex](https://hexdocs.pm/poolex/example-of-use.html#using-poolex)
+- [Working with metrics](https://hexdocs.pm/poolex/pool-metrics.html)
+  - [Pool size metrics](https://hexdocs.pm/poolex/pool-metrics.html#pool-size-metrics)
 - [Workers and callers implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html)
   - [Callers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#callers)
   - [Workers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#workers)
