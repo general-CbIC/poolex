@@ -30,8 +30,8 @@ defmodule Poolex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:telemetry, "~> 1.0", optional: true},
-      {:telemetry_poller, "~> 1.0", optional: true},
+      {:telemetry, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"},
       # Development dependencies
       {:credo, ">= 0.0.0", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
