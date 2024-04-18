@@ -15,11 +15,15 @@ defmodule Poolex.Private.Metrics do
       %{
         idle_workers_count: debug_info.idle_workers_count,
         busy_workers_count: debug_info.busy_workers_count,
-        overflowed: debug_info.overflow > 0
+        overflowed: convert_overflow_to_number(debug_info.overflow > 0)
       },
       %{pool_id: pool_id}
     )
   end
+
+  @spec convert_overflow_to_number(boolean()) :: integer()
+  defp convert_overflow_to_number(true), do: 1
+  defp convert_overflow_to_number(false), do: 0
 
   @doc """
   Starts a telemetry poller for dispatching metrics.

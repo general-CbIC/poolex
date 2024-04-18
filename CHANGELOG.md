@@ -7,27 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+#### Breaking changes
+
+- Minimum required Elixir version changed to 1.11
+- Minimum required OTP version changed to 24
+
 ### Added
 
-- Implemented regular sending of metrics via `telemetry`:
-  - `idle_workers_count`;
-  - `busy_workers_count`;
-  - `overflowed`.
-
-  To send these metrics, you must add init param pool_size_metrics: true when starting the pool.
-
-  You can handle events by adding something like this:
-
-  ```elixir
-  :telemetry.attach(
-    "my-lovely-pool-size-metrics",
-    [:poolex, :metrics, :pool_size],
-    &MyApp.handle_event/4,
-    nil
-  )
-  ```
-
-  More about using `telemetry` [here](https://hexdocs.pm/telemetry/readme.html).
+- Added the ability to send pool size metrics with built-in PromEx support. [Working with metrics guide](https://hexdocs.pm/poolex/pool-metrics.html).
 
 ## [0.8.0] - 2023-08-30
 

@@ -30,6 +30,7 @@ defmodule Poolex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:prom_ex, "~> 1.0", optional: true},
       {:telemetry, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       # Development dependencies

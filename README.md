@@ -24,12 +24,12 @@ With `poolex` you can:
   
 </details>
 
-## Requirements
+## Poolex/Elixir/OTP versions compatibility table
 
-| Requirement | Version |
-|-------------|---------|
-| Erlang/OTP  | >= 22   |
-| Elixir      | >= 1.7  |
+| Poolex   | Erlang/OTP | Elixir  |
+|----------|------------|---------|
+| < 0.9.0  | >= 22      | >= 1.7  |
+| >= 0.9.0 | >= 24      | >= 1.11 |
 
 ## Table of Contents
 
