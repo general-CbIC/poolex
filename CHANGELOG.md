@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+#### Breaking changes
+
+- Minimum required Elixir version changed to 1.11
+- Minimum required OTP version changed to 24
+
 ### Added
 
 - Added the ability to send pool size metrics with built-in PromEx support. [Working with metrics guide](https://hexdocs.pm/poolex/pool-metrics.html).
