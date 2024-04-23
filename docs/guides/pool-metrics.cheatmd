@@ -22,3 +22,38 @@ You can handle them by using `:telemetry.attach/4`:
 For example, your application can write metrics to the console: [PoolexExample.MetricsHandler](https://github.com/general-CbIC/poolex/blob/develop/examples/poolex_example/lib/poolex_example/metrics_handler.ex).
 
 More about using `telemetry` [here](https://hexdocs.pm/telemetry/readme.html).
+
+## Integration with PromEx
+
+There is a built-in plugin that works with the [PromEx library](https://github.com/akoutmos/prom_ex).
+
+To use this plugin, you need to add `:prom_ex` to your dependencies in `mix.exs`:
+
+```elixir
+defp deps do
+  [
+    {:prom_ex, "~> 1.0"}
+  ]
+end
+```
+
+Then you need to add this plugin to plugins list in your `PromEx` configuration:
+
+```elixir
+defmodule MyCoolApp.PromEx do
+  use PromEx, otp_app: :my_cool_app
+
+  @impl PromEx
+  def plugins do
+    [
+      Poolex.PromEx
+    ]
+  end
+end
+```
+
+After installation, poolex metrics will be added to your application metrics.
+
+TODO: add some screenshots
+
+Additional information about `PromEx` installation and configuration can be found in the `PromEx` documentation: <https://hexdocs.pm/prom_ex/readme.html#installation>.
