@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "0.8.0"
+      version: "0.9.0"
     ]
   end
 
@@ -30,10 +30,13 @@ defmodule Poolex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:telemetry, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"},
+      # Development dependencies
       {:credo, ">= 0.0.0", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
       {:doctor, ">= 0.0.0", only: [:dev], runtime: false},
-      {:ex_check, "~> 0.15.0", only: [:dev], runtime: false},
+      {:ex_check, "~> 0.16.0", only: [:dev], runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false},
       {:makeup_diff, ">= 0.0.0", only: [:dev], runtime: false}
     ]
@@ -54,12 +57,13 @@ defmodule Poolex.MixProject do
     [
       main: "readme",
       extras: [
-        "docs/CONTRIBUTING.md",
-        "docs/guides/workers-and-callers-implementations.md",
+        "README.md",
+        "docs/guides/getting-started.cheatmd",
         "docs/guides/migration-from-poolboy.cheatmd",
         "docs/guides/example-of-use.cheatmd",
-        "docs/guides/getting-started.cheatmd",
-        "README.md"
+        "docs/guides/pool-metrics.cheatmd",
+        "docs/guides/workers-and-callers-implementations.md",
+        "docs/CONTRIBUTING.md"
       ],
       groups_for_extras: [
         Guides: Path.wildcard("docs/guides/*md")

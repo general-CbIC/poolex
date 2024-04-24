@@ -21,8 +21,9 @@ defmodule PoolexExample.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:poolex, path: "../.."},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false}
+      {:telemetry, "~> 1.0"}
     ]
   end
 end
