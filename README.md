@@ -8,6 +8,17 @@
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
+## Table of Contents
+
+- [Poolex](#poolex)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Guides](#guides)
+  - [Contributions](#contributions)
+
 ## Features
 
 With `poolex` you can:
@@ -31,26 +42,6 @@ With `poolex` you can:
 | Erlang/OTP  | >= 22   |
 | Elixir      | >= 1.7  |
 
-## Table of Contents
-
-- [Installation](#installation)
-- [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
-  - [Starting pool of workers](https://hexdocs.pm/poolex/getting-started.html#starting-pool-of-workers)
-  - [Poolex configuration options](https://hexdocs.pm/poolex/getting-started.html#starting-pool-of-workers)
-  - [Working with the pool](https://hexdocs.pm/poolex/getting-started.html#working-with-the-pool)
-- [Migration from `:poolboy`](https://hexdocs.pm/poolex/migration-from-poolboy.html)
-- [Example of use](https://hexdocs.pm/poolex/example-of-use.html)
-  - [Defining the worker](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
-  - [Configuring Poolex](https://hexdocs.pm/poolex/example-of-use.html#configuring-poolex)
-  - [Using Poolex](https://hexdocs.pm/poolex/example-of-use.html#using-poolex)
-<!-- [Working with metrics](https://hexdocs.pm/poolex/pool-metrics.html)
-  - [Pool size metrics](https://hexdocs.pm/poolex/pool-metrics.html#pool-size-metrics) -->
-- [Workers and callers implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html)
-  - [Callers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#callers)
-  - [Workers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#workers)
-  - [Writing custom implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#writing-custom-implementations)
-- [Contributions](#contributions)
-
 ## Installation
 
 Add `:poolex` to your list of dependencies in `mix.exs`:
@@ -58,7 +49,7 @@ Add `:poolex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:poolex, "~> 0.8.0"}
+    {:poolex, "~> 0.9.0"}
   ]
 end
 ```
@@ -86,6 +77,25 @@ iex> Poolex.run(:worker_pool, &(is_pid?(&1)), checkout_timeout: 1_000)
 ```
 
 A detailed description of the available configuration or examples of use can be found in [documentation](https://hexdocs.pm/poolex/getting-started.html).
+
+## Guides
+
+- [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
+  - [Starting pool of workers](https://hexdocs.pm/poolex/getting-started.html#starting-pool-of-workers)
+  - [Poolex configuration options](https://hexdocs.pm/poolex/getting-started.html#starting-pool-of-workers)
+  - [Working with the pool](https://hexdocs.pm/poolex/getting-started.html#working-with-the-pool)
+- [Migration from `:poolboy`](https://hexdocs.pm/poolex/migration-from-poolboy.html)
+- [Example of use](https://hexdocs.pm/poolex/example-of-use.html)
+  - [Defining the worker](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
+  - [Configuring Poolex](https://hexdocs.pm/poolex/example-of-use.html#configuring-poolex)
+  - [Using Poolex](https://hexdocs.pm/poolex/example-of-use.html#using-poolex)
+- [Working with metrics](https://hexdocs.pm/poolex/pool-metrics.html)
+  - [Pool size metrics](https://hexdocs.pm/poolex/pool-metrics.html#pool-size-metrics)
+  - [Integration with PromEx](https://hexdocs.pm/poolex/pool-metrics.html#integration-with-promex)
+- [Workers and callers implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html)
+  - [Callers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#callers)
+  - [Workers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#workers)
+  - [Writing custom implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#writing-custom-implementations)
 
 ## Contributions
 
