@@ -15,7 +15,8 @@
   tools: [
     ## curated tools may be disabled (e.g. the check for compilation warnings)
     {:sobelow, false},
-    {:mix_audit, false}
+    {:mix_audit, false},
+    {:gettext, false}
 
     ## ...or have command & args adjusted (e.g. enable skip comments for sobelow)
     # {:sobelow, "mix sobelow --exit --skip"},
