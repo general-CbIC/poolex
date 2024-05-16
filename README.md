@@ -25,6 +25,7 @@ With `poolex` you can:
 
 - Launch multiple pools of workers and then access the free ones from anywhere in the application.
 - Configure the pool to run additional temporary workers if the load increases.
+- Analyze and optimize your pool's production settings using metrics.
 - Use your implementations to define worker and caller processes access logic.
 
 <details>
