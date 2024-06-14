@@ -285,7 +285,7 @@ defmodule Poolex do
         worker_start_fun: worker_start_fun
       }
 
-    initial_workers_pids = start_workers(workers_count, state, monitor_id)
+    initial_workers_pids = start_workers(workers_count, state)
 
     state =
       state
@@ -303,20 +303,20 @@ defmodule Poolex do
     {:noreply, state}
   end
 
-  @spec start_workers(non_neg_integer(), State.t(), Monitoring.monitor_id()) :: [pid]
-  defp start_workers(0, _state, _monitor_id) do
+  @spec start_workers(non_neg_integer(), State.t()) :: [pid]
+  defp start_workers(0, _state) do
     []
   end
 
-  defp start_workers(workers_count, _state, _monitor_id) when workers_count < 0 do
+  defp start_workers(workers_count, _state) when workers_count < 0 do
     msg = "workers_count must be non negative number, received: #{inspect(workers_count)}"
     raise ArgumentError, msg
   end
 
-  defp start_workers(workers_count, state, monitor_id) do
+  defp start_workers(workers_count, state) do
     Enum.map(1..workers_count, fn _ ->
       {:ok, worker_pid} = start_worker(state)
-      Monitoring.add(monitor_id, worker_pid, :worker)
+      Monitoring.add(state.monitor_id, worker_pid, :worker)
 
       worker_pid
     end)
