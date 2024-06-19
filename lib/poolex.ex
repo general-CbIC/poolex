@@ -253,6 +253,18 @@ defmodule Poolex do
     GenServer.call(pool_id, :get_debug_info)
   end
 
+  @spec scale_idle_workers(pool_id(), non_neg_integer()) :: :ok
+  def scale_idle_workers(_pool_id, target_workers_count) when target_workers_count < 0 do
+    message =
+      "target_workers_count must be non negative number, received: #{inspect(target_workers_count)}"
+
+    raise ArgumentError, message
+  end
+
+  def scale_idle_workers(pool_id, target_workers_count) do
+    GenServer.cast(pool_id, {:scale_idle_workers, target_workers_count})
+  end
+
   @impl GenServer
   def init(opts) do
     Process.flag(:trap_exit, true)
