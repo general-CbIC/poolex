@@ -253,16 +253,19 @@ defmodule Poolex do
     GenServer.call(pool_id, :get_debug_info)
   end
 
-  @spec scale_idle_workers(pool_id(), non_neg_integer()) :: :ok
-  def scale_idle_workers(_pool_id, target_workers_count) when target_workers_count < 0 do
-    message =
-      "target_workers_count must be non negative number, received: #{inspect(target_workers_count)}"
+  @doc """
+  Adds some idle workers to existing pool.
+  """
+  @spec add_idle_workers!(pool_id(), pos_integer()) :: :ok | no_return()
+  def add_idle_workers!(_pool_id, workers_count) when workers_count < 1 do
+    message = "workers_count must be positive number, received: #{inspect(workers_count)}"
 
     raise ArgumentError, message
   end
 
-  def scale_idle_workers(pool_id, target_workers_count) do
-    GenServer.cast(pool_id, {:scale_idle_workers, target_workers_count})
+  def add_idle_workers!(pool_id, workers_count)
+      when is_atom(pool_id) and is_integer(workers_count) do
+    GenServer.call(pool_id, {:add_idle_workers, workers_count})
   end
 
   @impl GenServer
@@ -397,6 +400,18 @@ defmodule Poolex do
     }
 
     {:reply, debug_info, state}
+  end
+
+  @impl GenServer
+  def handle_call({:add_idle_workers, workers_count}, _from, %State{} = state) do
+    new_state =
+      workers_count
+      |> start_workers(state)
+      |> Enum.reduce(state, fn worker, acc_state ->
+        IdleWorkers.add(acc_state, worker)
+      end)
+
+    {:reply, :ok, new_state}
   end
 
   @impl GenServer
