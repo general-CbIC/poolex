@@ -379,7 +379,7 @@ defmodule Poolex do
     {:reply, state, state}
   end
 
-  def handle_call(:get_debug_info, _form, %State{} = state) do
+  def handle_call(:get_debug_info, _from, %State{} = state) do
     debug_info = %DebugInfo{
       busy_workers_count: BusyWorkers.count(state),
       busy_workers_impl: state.busy_workers_impl,
