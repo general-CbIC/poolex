@@ -253,6 +253,21 @@ defmodule Poolex do
     GenServer.call(pool_id, :get_debug_info)
   end
 
+  @doc """
+  Adds some idle workers to existing pool.
+  """
+  @spec add_idle_workers!(pool_id(), pos_integer()) :: :ok | no_return()
+  def add_idle_workers!(_pool_id, workers_count) when workers_count < 1 do
+    message = "workers_count must be positive number, received: #{inspect(workers_count)}"
+
+    raise ArgumentError, message
+  end
+
+  def add_idle_workers!(pool_id, workers_count)
+      when is_atom(pool_id) and is_integer(workers_count) do
+    GenServer.call(pool_id, {:add_idle_workers, workers_count})
+  end
+
   @impl GenServer
   def init(opts) do
     Process.flag(:trap_exit, true)
@@ -285,7 +300,7 @@ defmodule Poolex do
         worker_start_fun: worker_start_fun
       }
 
-    initial_workers_pids = start_workers(workers_count, state, monitor_id)
+    initial_workers_pids = start_workers(workers_count, state)
 
     state =
       state
@@ -303,20 +318,20 @@ defmodule Poolex do
     {:noreply, state}
   end
 
-  @spec start_workers(non_neg_integer(), State.t(), Monitoring.monitor_id()) :: [pid]
-  defp start_workers(0, _state, _monitor_id) do
+  @spec start_workers(non_neg_integer(), State.t()) :: [pid]
+  defp start_workers(0, _state) do
     []
   end
 
-  defp start_workers(workers_count, _state, _monitor_id) when workers_count < 0 do
+  defp start_workers(workers_count, _state) when workers_count < 0 do
     msg = "workers_count must be non negative number, received: #{inspect(workers_count)}"
     raise ArgumentError, msg
   end
 
-  defp start_workers(workers_count, state, monitor_id) do
+  defp start_workers(workers_count, state) do
     Enum.map(1..workers_count, fn _ ->
       {:ok, worker_pid} = start_worker(state)
-      Monitoring.add(monitor_id, worker_pid, :worker)
+      Monitoring.add(state.monitor_id, worker_pid, :worker)
 
       worker_pid
     end)
@@ -367,7 +382,7 @@ defmodule Poolex do
     {:reply, state, state}
   end
 
-  def handle_call(:get_debug_info, _form, %State{} = state) do
+  def handle_call(:get_debug_info, _from, %State{} = state) do
     debug_info = %DebugInfo{
       busy_workers_count: BusyWorkers.count(state),
       busy_workers_impl: state.busy_workers_impl,
@@ -385,6 +400,18 @@ defmodule Poolex do
     }
 
     {:reply, debug_info, state}
+  end
+
+  @impl GenServer
+  def handle_call({:add_idle_workers, workers_count}, _from, %State{} = state) do
+    new_state =
+      workers_count
+      |> start_workers(state)
+      |> Enum.reduce(state, fn worker, acc_state ->
+        IdleWorkers.add(acc_state, worker)
+      end)
+
+    {:reply, :ok, new_state}
   end
 
   @impl GenServer
