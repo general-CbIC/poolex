@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added function `add_idle_workers!/2` for adding some idle workers to the initialized pool in runtime.
+
+### Changed
+
+- Refactored private `start_workers` function. It no longer accepts monitor_id as it already is in the state.
+
 ## [0.9.0] - 2024-04-24
 
 ### Added
