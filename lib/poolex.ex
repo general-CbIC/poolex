@@ -268,6 +268,22 @@ defmodule Poolex do
     GenServer.call(pool_id, {:add_idle_workers, workers_count})
   end
 
+  @doc """
+  Removes some idle workers from existing pool.
+  If the number of workers to remove is greater than the number of idle workers, all idle workers will be removed.
+  """
+  @spec remove_idle_workers!(pool_id(), pos_integer()) :: :ok | no_return()
+  def remove_idle_workers!(_pool_id, workers_count) when workers_count < 1 do
+    message = "workers_count must be positive number, received: #{inspect(workers_count)}"
+
+    raise ArgumentError, message
+  end
+
+  def remove_idle_workers!(pool_id, workers_count)
+      when is_atom(pool_id) and is_integer(workers_count) do
+    GenServer.call(pool_id, {:remove_idle_workers, workers_count})
+  end
+
   @impl GenServer
   def init(opts) do
     Process.flag(:trap_exit, true)
@@ -409,6 +425,19 @@ defmodule Poolex do
       |> start_workers(state)
       |> Enum.reduce(state, fn worker, acc_state ->
         IdleWorkers.add(acc_state, worker)
+      end)
+
+    {:reply, :ok, new_state}
+  end
+
+  @impl GenServer
+  def handle_call({:remove_idle_workers, workers_count}, _from, %State{} = state) do
+    new_state =
+      state
+      |> IdleWorkers.to_list()
+      |> Enum.take(workers_count)
+      |> Enum.reduce(state, fn worker, acc_state ->
+        IdleWorkers.remove(acc_state, worker)
       end)
 
     {:reply, :ok, new_state}

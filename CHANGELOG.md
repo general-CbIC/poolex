@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added function `add_idle_workers!/2` for adding some idle workers to the initialized pool in runtime.
+- Added functions `add_idle_workers!/2` and `remove_idle_workers!/2` for changing count of idle workers in runtime.
 
 ### Changed
 
