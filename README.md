@@ -25,15 +25,13 @@ With `poolex` you can:
 
 - Launch multiple pools of workers and then access the free ones from anywhere in the application.
 - Configure the pool to run additional temporary workers if the load increases.
+- Analyze and optimize your pool's production settings using metrics.
 - Use your implementations to define worker and caller processes access logic.
 
-<details>
-  <summary>Why `poolex` instead of `poolboy`?</summary>
+**Why `poolex` instead of `poolboy`?**
   
 - `poolex` is written in Elixir. This library is much more convenient to use in Elixir projects.
 - `poolboy` is a great library, but not actively maintained :crying_cat_face:![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
-  
-</details>
 
 ## Requirements
 
@@ -49,7 +47,7 @@ Add `:poolex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:poolex, "~> 0.9.0"}
+    {:poolex, "~> 0.10.0"}
   ]
 end
 ```

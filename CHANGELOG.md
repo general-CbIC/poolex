@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2024-08-26
+
+### Added
+
+- Added functions `add_idle_workers!/2` and `remove_idle_workers!/2` for changing count of idle workers in runtime.
+
+### Changed
+
+- Refactored private `start_workers` function. It no longer accepts monitor_id as it already is in the state.
+- Updated `telemetry` dependency.
+
 ## [0.9.0] - 2024-04-24
 
 ### Added
@@ -239,7 +250,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.9.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/general-CbIC/poolex/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/general-CbIC/poolex/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/general-CbIC/poolex/compare/v0.7.6...v0.8.0
 [0.7.6]: https://github.com/general-CbIC/poolex/compare/v0.7.5...v0.7.6

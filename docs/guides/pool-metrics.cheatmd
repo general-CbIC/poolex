@@ -8,6 +8,18 @@ The Poolex library presents **an idle/busy worker count metric**. These metrics 
 
 Also, there is **an overflow metric**. It shows how long pools are forced to use additional workers.
 
+To enable pool size metrics, you need to set the pool_size_metrics parameter to true on the pool initialization:
+
+```elixir
+children = [
+  {Poolex, 
+    pool_id: :worker_pool,
+    worker_module: SomeWorker,
+    workers_count: 5,
+    pool_size_metrics: true}
+]
+```
+
 You can handle them by using `:telemetry.attach/4`:
 
 ```elixir
