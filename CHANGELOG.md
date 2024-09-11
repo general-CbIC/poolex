@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Monitoring implementation now uses `Agent` instead of `:ets`. It's needed to be more flexible in pool naming.
+- The `pool_id` can now be any valid `GenServer.name()`. For example, `{:global, :biba}` or `{:via, Registry, {MyRegistry, "boba"}}`.
 
 ## [0.10.0] - 2024-08-26
 
