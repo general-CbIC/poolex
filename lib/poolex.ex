@@ -302,13 +302,13 @@ defmodule Poolex do
     waiting_callers_impl =
       Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
-    {:ok, monitor_id} = Monitoring.init(pool_id)
+    {:ok, monitor_pid} = Monitoring.init()
     {:ok, supervisor} = Poolex.Private.Supervisor.start_link()
 
     state =
       %State{
         max_overflow: max_overflow,
-        monitor_id: monitor_id,
+        monitor_pid: monitor_pid,
         pool_id: pool_id,
         supervisor: supervisor,
         worker_args: worker_args,
@@ -347,7 +347,7 @@ defmodule Poolex do
   defp start_workers(workers_count, state) do
     Enum.map(1..workers_count, fn _ ->
       {:ok, worker_pid} = start_worker(state)
-      Monitoring.add(state.monitor_id, worker_pid, :worker)
+      Monitoring.add(state.monitor_pid, worker_pid, :worker)
 
       worker_pid
     end)
@@ -373,13 +373,13 @@ defmodule Poolex do
       if state.overflow < state.max_overflow do
         {:ok, new_worker} = start_worker(state)
 
-        Monitoring.add(state.monitor_id, new_worker, :worker)
+        Monitoring.add(state.monitor_pid, new_worker, :worker)
 
         state = BusyWorkers.add(state, new_worker)
 
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
-        Monitoring.add(state.monitor_id, from_pid, :waiting_caller)
+        Monitoring.add(state.monitor_pid, from_pid, :waiting_caller)
 
         state =
           WaitingCallers.add(state, %Poolex.Caller{reference: caller_reference, from: caller})
@@ -464,7 +464,7 @@ defmodule Poolex do
         {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
         %State{} = state
       ) do
-    case Monitoring.remove(state.monitor_id, monitoring_reference) do
+    case Monitoring.remove(state.monitor_pid, monitoring_reference) do
       :worker ->
         {:noreply, handle_down_worker(state, dead_process_pid)}
 
@@ -512,13 +512,13 @@ defmodule Poolex do
       else
         {:ok, new_worker} = start_worker(state)
 
-        Monitoring.add(state.monitor_id, new_worker, :worker)
+        Monitoring.add(state.monitor_pid, new_worker, :worker)
 
         IdleWorkers.add(state, new_worker)
       end
     else
       {:ok, new_worker} = start_worker(state)
-      Monitoring.add(state.monitor_id, new_worker, :worker)
+      Monitoring.add(state.monitor_pid, new_worker, :worker)
 
       state
       |> BusyWorkers.add(new_worker)
@@ -534,7 +534,7 @@ defmodule Poolex do
   @impl GenServer
   def terminate(reason, %State{} = state) do
     DynamicSupervisor.stop(state.supervisor, reason)
-    Monitoring.stop(state.monitor_id)
+    Monitoring.stop(state.monitor_pid)
 
     :ok
   end
