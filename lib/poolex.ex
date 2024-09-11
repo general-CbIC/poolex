@@ -52,9 +52,10 @@ defmodule Poolex do
   """
 
   @typedoc """
-  Any atom naming your pool, e.g. `:my_pool`.
+  Any valid GenServer's name. It may be an atom like `:some_pool` or a tuple {:via, Registry, {MyApp.Registry, "pool"}
+  if you want to use Registry.
   """
-  @type pool_id() :: atom()
+  @type pool_id() :: GenServer.name()
   @typedoc """
   #{@poolex_options_table}
   """
