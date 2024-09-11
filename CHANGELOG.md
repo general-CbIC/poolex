@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Monitoring implementation now uses `Agent` instead of `:ets`. It's needed to be more flexible in pool naming.
+
 ## [0.10.0] - 2024-08-26
 
 ### Added
