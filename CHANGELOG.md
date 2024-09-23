@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2024-09-23
+
+### Changed
+
+- Monitoring implementation now uses `Agent` instead of `:ets`. It's needed to be more flexible in pool naming.
+- The `pool_id` can now be any valid `GenServer.name()`. For example, `{:global, :biba}` or `{:via, Registry, {MyRegistry, "boba"}}`.
+
 ## [0.10.0] - 2024-08-26
 
 ### Added
@@ -250,7 +257,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v0.10.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/general-CbIC/poolex/compare/v0.10.0...v1.0.0
 [0.10.0]: https://github.com/general-CbIC/poolex/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/general-CbIC/poolex/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/general-CbIC/poolex/compare/v0.7.6...v0.8.0

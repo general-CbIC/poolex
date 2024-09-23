@@ -527,6 +527,18 @@ defmodule PoolexTest do
                    {Poolex, :start_link,
                     [[pool_id: :test_pool, worker_module: SomeWorker, workers_count: 5]]}
                }
+
+      assert Poolex.child_spec(
+               pool_id: {:global, :biba},
+               worker_module: SomeWorker,
+               workers_count: 10
+             ) ==
+               %{
+                 id: {:global, :biba},
+                 start:
+                   {Poolex, :start_link,
+                    [[pool_id: {:global, :biba}, worker_module: SomeWorker, workers_count: 10]]}
+               }
     end
   end
 
@@ -644,6 +656,40 @@ defmodule PoolexTest do
       assert_raise(ArgumentError, fn ->
         Poolex.remove_idle_workers!(pool_name, 0)
       end)
+    end
+  end
+
+  describe "using GenServer.name() naming" do
+    test "works with {:global, term()}" do
+      ExUnit.Callbacks.start_supervised(
+        {Poolex,
+         [
+           pool_id: {:global, :biba},
+           worker_module: SomeWorker,
+           workers_count: 5
+         ]}
+      )
+
+      state = Poolex.get_state({:global, :biba})
+
+      assert state.pool_id == {:global, :biba}
+
+      assert {:ok, true} == Poolex.run({:global, :biba}, &is_pid/1)
+    end
+
+    test "works with Registry" do
+      ExUnit.Callbacks.start_supervised({Registry, [keys: :unique, name: TestRegistry]})
+      name = {:via, Registry, {TestRegistry, "pool"}}
+
+      ExUnit.Callbacks.start_supervised(
+        {Poolex, [pool_id: name, worker_module: SomeWorker, workers_count: 5]}
+      )
+
+      state = Poolex.get_state(name)
+
+      assert state.pool_id == name
+
+      assert {:ok, true} == Poolex.run(name, &is_pid/1)
     end
   end
 end
