@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added [adobe/elixir-styler](https://github.com/adobe/elixir-styler) to project.
+
 ## [1.0.0] - 2024-09-23
 
 ### Changed
