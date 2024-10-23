@@ -48,8 +48,7 @@ defmodule Poolex.MetricsCase do
             Enum.each(Map.get(groups, name, []), fn metric ->
               send(
                 self,
-                {:metric, metric.name, Map.get(measurements, metric.measurement),
-                 extract_tags(metric, metadata)}
+                {:metric, metric.name, Map.get(measurements, metric.measurement), extract_tags(metric, metadata)}
               )
             end)
           end

@@ -1,10 +1,11 @@
 defmodule PoolexTest do
   use ExUnit.Case, async: false
+
   import PoolHelpers
 
-  doctest Poolex
-
   alias Poolex.Private.DebugInfo
+
+  doctest Poolex
 
   describe "debug info" do
     test "valid after initialization" do
@@ -202,12 +203,9 @@ defmodule PoolexTest do
     test "works on callers" do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
 
-      1..10
-      |> Enum.each(fn _ ->
+      Enum.each(1..10, fn _ ->
         spawn(fn ->
-          Poolex.run(pool_name, fn pid ->
-            GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
-          end)
+          Poolex.run(pool_name, fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end)
         end)
       end)
 
@@ -523,21 +521,13 @@ defmodule PoolexTest do
       assert Poolex.child_spec(pool_id: :test_pool, worker_module: SomeWorker, workers_count: 5) ==
                %{
                  id: :test_pool,
-                 start:
-                   {Poolex, :start_link,
-                    [[pool_id: :test_pool, worker_module: SomeWorker, workers_count: 5]]}
+                 start: {Poolex, :start_link, [[pool_id: :test_pool, worker_module: SomeWorker, workers_count: 5]]}
                }
 
-      assert Poolex.child_spec(
-               pool_id: {:global, :biba},
-               worker_module: SomeWorker,
-               workers_count: 10
-             ) ==
+      assert Poolex.child_spec(pool_id: {:global, :biba}, worker_module: SomeWorker, workers_count: 10) ==
                %{
                  id: {:global, :biba},
-                 start:
-                   {Poolex, :start_link,
-                    [[pool_id: {:global, :biba}, worker_module: SomeWorker, workers_count: 10]]}
+                 start: {Poolex, :start_link, [[pool_id: {:global, :biba}, worker_module: SomeWorker, workers_count: 10]]}
                }
     end
   end
@@ -681,9 +671,7 @@ defmodule PoolexTest do
       ExUnit.Callbacks.start_supervised({Registry, [keys: :unique, name: TestRegistry]})
       name = {:via, Registry, {TestRegistry, "pool"}}
 
-      ExUnit.Callbacks.start_supervised(
-        {Poolex, [pool_id: name, worker_module: SomeWorker, workers_count: 5]}
-      )
+      ExUnit.Callbacks.start_supervised({Poolex, [pool_id: name, worker_module: SomeWorker, workers_count: 5]})
 
       state = Poolex.get_state(name)
 

@@ -195,8 +195,7 @@ defmodule Poolex do
     try do
       GenServer.call(pool_id, {:get_idle_worker, caller_reference}, checkout_timeout)
     catch
-      :exit,
-      {:timeout, {GenServer, :call, [_pool_id, {:get_idle_worker, ^caller_reference}, _timeout]}} ->
+      :exit, {:timeout, {GenServer, :call, [_pool_id, {:get_idle_worker, ^caller_reference}, _timeout]}} ->
         {:error, :checkout_timeout}
     after
       GenServer.cast(pool_id, {:cancel_waiting, caller_reference})
@@ -264,8 +263,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def add_idle_workers!(pool_id, workers_count)
-      when is_atom(pool_id) and is_integer(workers_count) do
+  def add_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
     GenServer.call(pool_id, {:add_idle_workers, workers_count})
   end
 
@@ -280,8 +278,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def remove_idle_workers!(pool_id, workers_count)
-      when is_atom(pool_id) and is_integer(workers_count) do
+  def remove_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
     GenServer.call(pool_id, {:remove_idle_workers, workers_count})
   end
 
@@ -461,10 +458,7 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_info(
-        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
-        %State{} = state
-      ) do
+  def handle_info({:DOWN, monitoring_reference, _process, dead_process_pid, _reason}, %State{} = state) do
     case Monitoring.remove(state.monitor_pid, monitoring_reference) do
       :worker ->
         {:noreply, handle_down_worker(state, dead_process_pid)}
