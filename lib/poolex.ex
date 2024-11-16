@@ -95,7 +95,7 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.Private.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
+      iex> %Poolex.Private.State{worker_module: worker_module} = :sys.get_state(:my_pool)
       iex> worker_module
       Agent
   """
@@ -119,7 +119,7 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start_link(pool_id: :other_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.Private.State{worker_module: worker_module} = Poolex.get_state(:other_pool)
+      iex> %Poolex.Private.State{worker_module: worker_module} = :sys.get_state(:other_pool)
       iex> worker_module
       Agent
   """
@@ -204,23 +204,10 @@ defmodule Poolex do
     end
   end
 
-  @doc """
-  Returns current state of started pool.
-
-  Primarily needed to help with debugging. **Avoid using this function in production.**
-
-  ## Examples
-
-      iex> Poolex.start(pool_id: :my_pool_2, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> state = %Poolex.Private.State{} = Poolex.get_state(:my_pool_2)
-      iex> state.worker_module
-      Agent
-      iex> is_pid(state.supervisor)
-      true
-  """
-  @spec get_state(pool_id()) :: State.t()
-  def get_state(pool_id) do
-    GenServer.call(pool_id, :get_state)
+  @deprecated "Use :sys.get_state/1 instead"
+  @doc false
+  def get_state(name) do
+    :sys.get_state(name)
   end
 
   @doc """
@@ -385,10 +372,6 @@ defmodule Poolex do
 
       {:reply, {:ok, idle_worker_pid}, state}
     end
-  end
-
-  def handle_call(:get_state, _from, state) do
-    {:reply, state, state}
   end
 
   def handle_call(:get_debug_info, _from, %State{} = state) do

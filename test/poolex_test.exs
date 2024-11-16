@@ -537,7 +537,7 @@ defmodule PoolexTest do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
       pool_pid = Process.whereis(pool_name)
 
-      state = Poolex.get_state(pool_name)
+      state = :sys.get_state(pool_name)
 
       supervisor_pid = state.supervisor
       {:ok, worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
@@ -559,7 +559,7 @@ defmodule PoolexTest do
       pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
       pool_pid = Process.whereis(pool_name)
 
-      state = Poolex.get_state(pool_name)
+      state = :sys.get_state(pool_name)
 
       supervisor_pid = state.supervisor
       {:ok, worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
@@ -660,7 +660,7 @@ defmodule PoolexTest do
          ]}
       )
 
-      state = Poolex.get_state({:global, :biba})
+      state = :sys.get_state({:global, :biba})
 
       assert state.pool_id == {:global, :biba}
 
@@ -673,7 +673,7 @@ defmodule PoolexTest do
 
       ExUnit.Callbacks.start_supervised({Poolex, [pool_id: name, worker_module: SomeWorker, workers_count: 5]})
 
-      state = Poolex.get_state(name)
+      state = :sys.get_state(name)
 
       assert state.pool_id == name
 
