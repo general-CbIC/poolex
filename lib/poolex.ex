@@ -320,8 +320,12 @@ defmodule Poolex do
   end
 
   @spec start_workers(non_neg_integer(), State.t()) :: {[pid], State.t()}
-  defp start_workers(workers_count, state) when is_integer(workers_count) and workers_count >= 0 do
-    Enum.map_reduce(1..workers_count//1, state, fn _iterator, state ->
+  defp start_workers(0, state) do
+    {[], state}
+  end
+
+  defp start_workers(workers_count, state) when is_integer(workers_count) and workers_count >= 1 do
+    Enum.map_reduce(1..workers_count, state, fn _iterator, state ->
       {:ok, worker_pid} = start_worker(state)
       state = Monitoring.add(state, worker_pid, :worker)
       {worker_pid, state}
@@ -353,16 +357,17 @@ defmodule Poolex do
       if state.overflow < state.max_overflow do
         {:ok, new_worker} = start_worker(state)
 
-        state = Monitoring.add(state, new_worker, :worker)
-
-        state = BusyWorkers.add(state, new_worker)
+        state = 
+            state
+            |> Monitoring.add(new_worker, :worker)
+            |> BusyWorkers.add(new_worker)
 
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
-        state = Monitoring.add(state, from_pid, :waiting_caller)
-
-        state =
-          WaitingCallers.add(state, %Poolex.Caller{reference: caller_reference, from: caller})
+        state = 
+            state
+            |> Monitoring.add(from_pid, :waiting_caller)
+            |> WaitingCallers.add(%Poolex.Caller{reference: caller_reference, from: caller})
 
         {:noreply, state}
       end
@@ -485,16 +490,18 @@ defmodule Poolex do
       else
         {:ok, new_worker} = start_worker(state)
 
-        state = Monitoring.add(state, new_worker, :worker)
-
-        IdleWorkers.add(state, new_worker)
+        state = 
+            state
+            |> Monitoring.add(new_worker, :worker)
+            |> IdleWorkers.add(new_worker)
       end
     else
       {:ok, new_worker} = start_worker(state)
-      state = Monitoring.add(state, new_worker, :worker)
-
-      state
-      |> BusyWorkers.add(new_worker)
+      
+      state = 
+          state
+          |> Monitoring.add(new_worker, :worker)
+          |> BusyWorkers.add(new_worker)
       |> provide_worker_to_waiting_caller(new_worker)
     end
   end
