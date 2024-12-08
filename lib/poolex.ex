@@ -357,17 +357,17 @@ defmodule Poolex do
       if state.overflow < state.max_overflow do
         {:ok, new_worker} = start_worker(state)
 
-        state = 
-            state
-            |> Monitoring.add(new_worker, :worker)
-            |> BusyWorkers.add(new_worker)
+        state =
+          state
+          |> Monitoring.add(new_worker, :worker)
+          |> BusyWorkers.add(new_worker)
 
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
-        state = 
-            state
-            |> Monitoring.add(from_pid, :waiting_caller)
-            |> WaitingCallers.add(%Poolex.Caller{reference: caller_reference, from: caller})
+        state =
+          state
+          |> Monitoring.add(from_pid, :waiting_caller)
+          |> WaitingCallers.add(%Poolex.Caller{reference: caller_reference, from: caller})
 
         {:noreply, state}
       end
@@ -490,18 +490,16 @@ defmodule Poolex do
       else
         {:ok, new_worker} = start_worker(state)
 
-        state = 
-            state
-            |> Monitoring.add(new_worker, :worker)
-            |> IdleWorkers.add(new_worker)
+        state
+        |> Monitoring.add(new_worker, :worker)
+        |> IdleWorkers.add(new_worker)
       end
     else
       {:ok, new_worker} = start_worker(state)
-      
-      state = 
-          state
-          |> Monitoring.add(new_worker, :worker)
-          |> BusyWorkers.add(new_worker)
+
+      state
+      |> Monitoring.add(new_worker, :worker)
+      |> BusyWorkers.add(new_worker)
       |> provide_worker_to_waiting_caller(new_worker)
     end
   end
