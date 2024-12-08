@@ -68,7 +68,8 @@ defmodule Poolex.MixProject do
       ],
       groups_for_extras: [
         Guides: Path.wildcard("docs/guides/*md")
-      ]
+      ],
+      skip_undefined_reference_warnings_on: ["Poolex.Private.State"]
     ]
   end
 end
