@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2024-12-08
+
+### Added
+
+- Added [adobe/elixir-styler](https://github.com/adobe/elixir-styler) to project.
+
+### Changed
+
+- Monitoring implemetation has been optimized by using plain map instead of `Agent` process.
+- Refactored `State` struct by adding list of `@enforced_keys`. ([Details](https://hexdocs.pm/elixir/structs.html#default-values-and-required-keys))
+- Poolex processes now have higher priority. ([Details](https://www.erlang.org/doc/apps/erts/erlang.html#process_flag_priority))
+
+### Deprecated
+
+- `Poolex.get_state/1` deprecated in favor `:sys.get_state/1`.
+
 ## [1.0.0] - 2024-09-23
 
 ### Changed
@@ -257,7 +273,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/general-CbIC/poolex/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/general-CbIC/poolex/compare/v0.10.0...v1.0.0
 [0.10.0]: https://github.com/general-CbIC/poolex/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/general-CbIC/poolex/compare/v0.8.0...v0.9.0

@@ -17,10 +17,7 @@ defmodule Poolex.Private.IdleWorkers do
 
   @doc false
   @spec remove(State.t(), Poolex.worker()) :: State.t()
-  def remove(
-        %State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state,
-        worker
-      ) do
+  def remove(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state, worker) do
     %State{state | idle_workers_state: impl.remove(idle_workers_state, worker)}
   end
 

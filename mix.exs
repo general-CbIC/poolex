@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "1.0.0"
+      version: "1.1.0"
     ]
   end
 
@@ -33,12 +33,13 @@ defmodule Poolex.MixProject do
       {:telemetry, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       # Development dependencies
-      {:credo, "1.7.7", only: [:dev], runtime: false},
+      {:credo, "1.7.10", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
       {:doctor, ">= 0.0.0", only: [:dev], runtime: false},
       {:ex_check, "~> 0.16.0", only: [:dev], runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false},
-      {:makeup_diff, ">= 0.0.0", only: [:dev], runtime: false}
+      {:makeup_diff, ">= 0.0.0", only: [:dev], runtime: false},
+      {:styler, "~> 1.1", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -67,7 +68,8 @@ defmodule Poolex.MixProject do
       ],
       groups_for_extras: [
         Guides: Path.wildcard("docs/guides/*md")
-      ]
+      ],
+      skip_undefined_reference_warnings_on: ["Poolex.Private.State"]
     ]
   end
 end

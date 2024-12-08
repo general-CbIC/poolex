@@ -85,6 +85,8 @@ defmodule Poolex do
   """
   @type run_option() :: {:checkout_timeout, timeout()}
 
+  @spawn_opts [priority: :high]
+
   @doc """
   Starts a Poolex process without links (outside of a supervision tree).
 
@@ -93,14 +95,14 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.Private.State{worker_module: worker_module} = Poolex.get_state(:my_pool)
+      iex> %Poolex.Private.State{worker_module: worker_module} = :sys.get_state(:my_pool)
       iex> worker_module
       Agent
   """
   @spec start(list(poolex_option())) :: GenServer.on_start()
   def start(opts) do
     pool_id = Keyword.fetch!(opts, :pool_id)
-    GenServer.start(__MODULE__, opts, name: pool_id)
+    GenServer.start(__MODULE__, opts, name: pool_id, spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -117,14 +119,14 @@ defmodule Poolex do
   ## Examples
 
       iex> Poolex.start_link(pool_id: :other_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> %Poolex.Private.State{worker_module: worker_module} = Poolex.get_state(:other_pool)
+      iex> %Poolex.Private.State{worker_module: worker_module} = :sys.get_state(:other_pool)
       iex> worker_module
       Agent
   """
   @spec start_link(list(poolex_option())) :: GenServer.on_start()
   def start_link(opts) do
     pool_id = Keyword.fetch!(opts, :pool_id)
-    GenServer.start_link(__MODULE__, opts, name: pool_id)
+    GenServer.start_link(__MODULE__, opts, name: pool_id, spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -195,31 +197,17 @@ defmodule Poolex do
     try do
       GenServer.call(pool_id, {:get_idle_worker, caller_reference}, checkout_timeout)
     catch
-      :exit,
-      {:timeout, {GenServer, :call, [_pool_id, {:get_idle_worker, ^caller_reference}, _timeout]}} ->
+      :exit, {:timeout, {GenServer, :call, [_pool_id, {:get_idle_worker, ^caller_reference}, _timeout]}} ->
         {:error, :checkout_timeout}
     after
       GenServer.cast(pool_id, {:cancel_waiting, caller_reference})
     end
   end
 
-  @doc """
-  Returns current state of started pool.
-
-  Primarily needed to help with debugging. **Avoid using this function in production.**
-
-  ## Examples
-
-      iex> Poolex.start(pool_id: :my_pool_2, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
-      iex> state = %Poolex.Private.State{} = Poolex.get_state(:my_pool_2)
-      iex> state.worker_module
-      Agent
-      iex> is_pid(state.supervisor)
-      true
-  """
-  @spec get_state(pool_id()) :: State.t()
-  def get_state(pool_id) do
-    GenServer.call(pool_id, :get_state)
+  @deprecated "Use :sys.get_state/1 instead"
+  @doc false
+  def get_state(name) do
+    :sys.get_state(name)
   end
 
   @doc """
@@ -264,8 +252,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def add_idle_workers!(pool_id, workers_count)
-      when is_atom(pool_id) and is_integer(workers_count) do
+  def add_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
     GenServer.call(pool_id, {:add_idle_workers, workers_count})
   end
 
@@ -280,8 +267,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def remove_idle_workers!(pool_id, workers_count)
-      when is_atom(pool_id) and is_integer(workers_count) do
+  def remove_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
     GenServer.call(pool_id, {:remove_idle_workers, workers_count})
   end
 
@@ -303,13 +289,11 @@ defmodule Poolex do
     waiting_callers_impl =
       Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
-    {:ok, monitor_pid} = Monitoring.init()
     {:ok, supervisor} = Poolex.Private.Supervisor.start_link()
 
     state =
       %State{
         max_overflow: max_overflow,
-        monitor_pid: monitor_pid,
         pool_id: pool_id,
         supervisor: supervisor,
         worker_args: worker_args,
@@ -317,7 +301,7 @@ defmodule Poolex do
         worker_start_fun: worker_start_fun
       }
 
-    initial_workers_pids = start_workers(workers_count, state)
+    {initial_workers_pids, state} = start_workers(workers_count, state)
 
     state =
       state
@@ -335,23 +319,22 @@ defmodule Poolex do
     {:noreply, state}
   end
 
-  @spec start_workers(non_neg_integer(), State.t()) :: [pid]
-  defp start_workers(0, _state) do
-    []
+  @spec start_workers(non_neg_integer(), State.t()) :: {[pid], State.t()}
+  defp start_workers(0, state) do
+    {[], state}
   end
 
-  defp start_workers(workers_count, _state) when workers_count < 0 do
-    msg = "workers_count must be non negative number, received: #{inspect(workers_count)}"
-    raise ArgumentError, msg
-  end
-
-  defp start_workers(workers_count, state) do
-    Enum.map(1..workers_count, fn _ ->
+  defp start_workers(workers_count, state) when is_integer(workers_count) and workers_count >= 1 do
+    Enum.map_reduce(1..workers_count, state, fn _iterator, state ->
       {:ok, worker_pid} = start_worker(state)
-      Monitoring.add(state.monitor_pid, worker_pid, :worker)
-
-      worker_pid
+      state = Monitoring.add(state, worker_pid, :worker)
+      {worker_pid, state}
     end)
+  end
+
+  defp start_workers(workers_count, _state) do
+    msg = "workers_count must be non negative integer, received: #{inspect(workers_count)}"
+    raise ArgumentError, msg
   end
 
   @spec start_worker(State.t()) :: {:ok, pid()}
@@ -374,16 +357,17 @@ defmodule Poolex do
       if state.overflow < state.max_overflow do
         {:ok, new_worker} = start_worker(state)
 
-        Monitoring.add(state.monitor_pid, new_worker, :worker)
-
-        state = BusyWorkers.add(state, new_worker)
+        state =
+          state
+          |> Monitoring.add(new_worker, :worker)
+          |> BusyWorkers.add(new_worker)
 
         {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
       else
-        Monitoring.add(state.monitor_pid, from_pid, :waiting_caller)
-
         state =
-          WaitingCallers.add(state, %Poolex.Caller{reference: caller_reference, from: caller})
+          state
+          |> Monitoring.add(from_pid, :waiting_caller)
+          |> WaitingCallers.add(%Poolex.Caller{reference: caller_reference, from: caller})
 
         {:noreply, state}
       end
@@ -393,10 +377,6 @@ defmodule Poolex do
 
       {:reply, {:ok, idle_worker_pid}, state}
     end
-  end
-
-  def handle_call(:get_state, _from, state) do
-    {:reply, state, state}
   end
 
   def handle_call(:get_debug_info, _from, %State{} = state) do
@@ -421,14 +401,14 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_call({:add_idle_workers, workers_count}, _from, %State{} = state) do
-    new_state =
-      workers_count
-      |> start_workers(state)
-      |> Enum.reduce(state, fn worker, acc_state ->
+    {workers, state} = start_workers(workers_count, state)
+
+    state =
+      Enum.reduce(workers, state, fn worker, acc_state ->
         IdleWorkers.add(acc_state, worker)
       end)
 
-    {:reply, :ok, new_state}
+    {:reply, :ok, state}
   end
 
   @impl GenServer
@@ -461,15 +441,12 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_info(
-        {:DOWN, monitoring_reference, _process, dead_process_pid, _reason},
-        %State{} = state
-      ) do
-    case Monitoring.remove(state.monitor_pid, monitoring_reference) do
-      :worker ->
+  def handle_info({:DOWN, monitoring_reference, _process, dead_process_pid, _reason}, %State{} = state) do
+    case Monitoring.remove(state, monitoring_reference) do
+      {:worker, state} ->
         {:noreply, handle_down_worker(state, dead_process_pid)}
 
-      :waiting_caller ->
+      {:waiting_caller, state} ->
         {:noreply, handle_down_waiting_caller(state, dead_process_pid)}
     end
   end
@@ -513,15 +490,15 @@ defmodule Poolex do
       else
         {:ok, new_worker} = start_worker(state)
 
-        Monitoring.add(state.monitor_pid, new_worker, :worker)
-
-        IdleWorkers.add(state, new_worker)
+        state
+        |> Monitoring.add(new_worker, :worker)
+        |> IdleWorkers.add(new_worker)
       end
     else
       {:ok, new_worker} = start_worker(state)
-      Monitoring.add(state.monitor_pid, new_worker, :worker)
 
       state
+      |> Monitoring.add(new_worker, :worker)
       |> BusyWorkers.add(new_worker)
       |> provide_worker_to_waiting_caller(new_worker)
     end
@@ -535,7 +512,6 @@ defmodule Poolex do
   @impl GenServer
   def terminate(reason, %State{} = state) do
     DynamicSupervisor.stop(state.supervisor, reason)
-    Monitoring.stop(state.monitor_pid)
 
     :ok
   end
