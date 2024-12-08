@@ -15,13 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Monitoring implemetation has been optimized by using plain map instead of `Agent` process.
-- Refactored `State` struct by adding list of `@enforced_keys`. ([Details](https://hexdocs.pm/elixir/structs.html#default-values-and-required-keys))
+- Monitoring implementation has been optimized by using a plain map instead of the `Agent` process.
+- Refactored `State` struct by adding a list of `@enforced_keys`. ([Details](https://hexdocs.pm/elixir/structs.html#default-values-and-required-keys))
 - Poolex processes now have higher priority. ([Details](https://www.erlang.org/doc/apps/erts/erlang.html#process_flag_priority))
 
 ### Deprecated
 
-- `Poolex.get_state/1` deprecated in favor `:sys.get_state/1`.
+- `Poolex.get_state/1` deprecated in favor of `:sys.get_state/1`.
 
 ## [1.0.0] - 2024-09-23
 
