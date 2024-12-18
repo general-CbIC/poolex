@@ -7,11 +7,11 @@
 [![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
 [![Chat on Matrix](https://matrix.to/img/matrix-badge.svg?style=flat)](https://matrix.to/#/#poolex:gitter.im)
 
-<img alt="Poolex logo" src="assets/poolex.png" width="200" height="200" align="right"/>
-
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
 ## Table of Contents
+
+<img alt="Poolex logo" src="assets/poolex.png" width="200" height="200" style="margin-right: 10px;" align="right"/>
 
 - [Poolex](#poolex)
   - [Table of Contents](#table-of-contents)
