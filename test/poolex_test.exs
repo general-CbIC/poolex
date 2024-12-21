@@ -38,15 +38,15 @@ defmodule PoolexTest do
       assert debug_info.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
     end
 
-    test "valid configured implementations" do
+    test "valid configured implementations", %{pool_options: pool_options} do
       pool_name =
-        start_pool(
-          worker_module: SomeWorker,
-          workers_count: 10,
+        pool_options
+        |> Keyword.merge(
           busy_workers_impl: SomeBusyWorkersImpl,
           idle_workers_impl: SomeIdleWorkersImpl,
           waiting_callers_impl: SomeWaitingCallersImpl
         )
+        |> start_pool()
 
       debug_info = Poolex.get_debug_info(pool_name)
 

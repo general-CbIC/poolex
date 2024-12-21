@@ -5,8 +5,7 @@ defmodule PoolHelpers do
 
   @spec start_pool(list(Poolex.poolex_option())) :: Poolex.pool_id()
   def start_pool(options) do
-    {pool_name, options} = Keyword.pop(options, :pool_id)
-    pool_name = pool_name || generate_pool_name()
+    pool_name = Keyword.get(options, :pool_id, generate_pool_name())
 
     options = Keyword.put(options, :pool_id, pool_name)
     {:ok, _pid} = ExUnit.Callbacks.start_supervised({Poolex, options})
