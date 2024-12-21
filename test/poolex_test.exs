@@ -336,8 +336,11 @@ defmodule PoolexTest do
   end
 
   describe "timeouts" do
-    test "when caller waits too long" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "when caller waits too long", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.put(:workers_count, 1)
+        |> start_pool()
 
       launch_long_task(pool_name)
 
@@ -368,8 +371,12 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 0
     end
 
-    test "run/3 returns error on checkout timeout" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "run/3 returns error on checkout timeout", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.put(:workers_count, 1)
+        |> start_pool()
+
       launch_long_task(pool_name)
 
       result =
@@ -389,8 +396,12 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 0
     end
 
-    test "handle worker's timeout" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "handle worker's timeout", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.put(:workers_count, 1)
+        |> start_pool()
+
       delay = 100
 
       assert {:ok, :some_result} =
@@ -406,9 +417,14 @@ defmodule PoolexTest do
                )
     end
 
-    test "worker not hangs in busy status after checkout timeout" do
+    test "worker not hangs in busy status after checkout timeout", %{pool_options: pool_options} do
       test_pid = self()
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+
+      pool_name =
+        pool_options
+        |> Keyword.put(:workers_count, 1)
+        |> start_pool()
+
       delay = 100
 
       process_1 =
