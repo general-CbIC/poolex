@@ -548,6 +548,12 @@ defmodule PoolexTest do
                  id: id,
                  start: {Poolex, :start_link, [pool_options]}
                }
+
+      assert Poolex.child_spec(worker_module: SomeWorker, workers_count: 5) ==
+               %{
+                 id: SomeWorker,
+                 start: {Poolex, :start_link, [[worker_module: SomeWorker, workers_count: 5]]}
+               }
     end
   end
 
