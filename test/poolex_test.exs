@@ -102,8 +102,11 @@ defmodule PoolexTest do
   end
 
   describe "run/2" do
-    test "updates agent's state" do
-      pool_name = start_pool(worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 1)
+    test "updates agent's state", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.merge(worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 1)
+        |> start_pool()
 
       Poolex.run(pool_name, fn pid -> Agent.update(pid, fn _state -> 1 end) end)
 
@@ -112,15 +115,15 @@ defmodule PoolexTest do
       assert 1 == Agent.get(agent_pid, fn state -> state end)
     end
 
-    test "get result from custom worker" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 2)
+    test "get result from custom worker", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       result = Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
       assert result == {:ok, :some_result}
     end
 
-    test "test waiting queue" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 5)
+    test "test waiting queue", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       result =
         1..20
