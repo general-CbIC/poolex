@@ -589,9 +589,13 @@ defmodule PoolexTest do
   end
 
   describe "terminate process" do
-    test "workers stop before the pool with reason :normal" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
-      pool_pid = Process.whereis(pool_name)
+    test "workers stop before the pool with reason :normal", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.put(:workers_count, 1)
+        |> start_pool()
+
+      pool_pid = GenServer.whereis(pool_name)
 
       state = :sys.get_state(pool_name)
 
@@ -611,9 +615,13 @@ defmodule PoolexTest do
       assert message_3 == {:DOWN, pool_monitor_ref, :process, pool_pid, :normal}
     end
 
-    test "workers stop before the pool with reason :exit" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
-      pool_pid = Process.whereis(pool_name)
+    test "workers stop before the pool with reason :exit", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.put(:workers_count, 1)
+        |> start_pool()
+
+      pool_pid = GenServer.whereis(pool_name)
 
       state = :sys.get_state(pool_name)
 
