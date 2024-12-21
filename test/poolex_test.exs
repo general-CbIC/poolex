@@ -577,17 +577,13 @@ defmodule PoolexTest do
   end
 
   describe "child_spec" do
-    test "child_spec/1" do
-      assert Poolex.child_spec(pool_id: :test_pool, worker_module: SomeWorker, workers_count: 5) ==
-               %{
-                 id: :test_pool,
-                 start: {Poolex, :start_link, [[pool_id: :test_pool, worker_module: SomeWorker, workers_count: 5]]}
-               }
+    test "child_spec/1", %{pool_options: pool_options} do
+      id = Keyword.fetch!(pool_options, :pool_id)
 
-      assert Poolex.child_spec(pool_id: {:global, :biba}, worker_module: SomeWorker, workers_count: 10) ==
+      assert Poolex.child_spec(pool_options) ==
                %{
-                 id: {:global, :biba},
-                 start: {Poolex, :start_link, [[pool_id: {:global, :biba}, worker_module: SomeWorker, workers_count: 10]]}
+                 id: id,
+                 start: {Poolex, :start_link, [pool_options]}
                }
     end
   end
