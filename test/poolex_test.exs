@@ -1,5 +1,16 @@
 defmodule PoolexTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case,
+    parameterize: [
+      %{pool_options: [pool_id: SomeWorker, worker_module: SomeWorker, workers_count: 5]},
+      %{pool_options: [pool_id: {:global, SomeWorker}, worker_module: SomeWorker, workers_count: 5]},
+      %{
+        pool_options: [
+          pool_id: {:via, Registry, {PoolexTestRegistry, "some_pool"}},
+          worker_module: SomeWorker,
+          workers_count: 5
+        ]
+      }
+    ]
 
   import PoolHelpers
 
@@ -8,10 +19,8 @@ defmodule PoolexTest do
   doctest Poolex
 
   describe "debug info" do
-    test "valid after initialization" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "valid after initialization", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       debug_info = Poolex.get_debug_info(pool_name)
 
@@ -23,8 +32,8 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_impl == Poolex.Workers.Impl.List
       assert debug_info.max_overflow == 0
       assert Enum.count(debug_info.idle_workers_pids) == 5
-      assert debug_info.worker_module == Agent
-      assert debug_info.worker_args == [initial_fun]
+      assert debug_info.worker_module == SomeWorker
+      assert debug_info.worker_args == []
       assert debug_info.waiting_callers == []
       assert debug_info.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
     end
