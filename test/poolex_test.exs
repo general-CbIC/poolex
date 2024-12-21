@@ -474,8 +474,11 @@ defmodule PoolexTest do
   end
 
   describe "overflow" do
-    test "create new workers when possible" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1, max_overflow: 5)
+    test "create new workers when possible", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 1, max_overflow: 5)
+        |> start_pool()
 
       launch_long_tasks(pool_name, 5)
 
@@ -485,8 +488,12 @@ defmodule PoolexTest do
       assert debug_info.overflow == 4
     end
 
-    test "return error when max count of workers reached" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "return error when max count of workers reached", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.put(:workers_count, 1)
+        |> start_pool()
+
       launch_long_task(pool_name)
 
       result =
@@ -505,8 +512,11 @@ defmodule PoolexTest do
       assert debug_info.overflow == 0
     end
 
-    test "all workers running over the limit are turned off after use" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1, max_overflow: 2)
+    test "all workers running over the limit are turned off after use", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 1, max_overflow: 2)
+        |> start_pool()
 
       launch_long_task(pool_name)
 
@@ -522,8 +532,12 @@ defmodule PoolexTest do
       assert debug_info.overflow == 0
     end
 
-    test "allows workers_count: 0" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 0, max_overflow: 2)
+    test "allows workers_count: 0", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 0, max_overflow: 2)
+        |> start_pool()
+
       debug_info = Poolex.get_debug_info(pool_name)
 
       assert debug_info.idle_workers_count == 0
