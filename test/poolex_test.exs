@@ -16,7 +16,7 @@ defmodule PoolexTest do
 
   alias Poolex.Private.DebugInfo
 
-  setup do
+  setup_all do
     if Version.match?(System.version(), ">= 1.18.0") do
       []
     else
