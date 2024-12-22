@@ -674,30 +674,24 @@ defmodule PoolexTest do
   end
 
   describe "remove_idle_workers!/2" do
-    test "removes idle workers from pool" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "removes idle workers from pool", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       assert %DebugInfo{idle_workers_count: 5} = Poolex.get_debug_info(pool_name)
       assert :ok = Poolex.remove_idle_workers!(pool_name, 2)
       assert %DebugInfo{idle_workers_count: 3} = Poolex.get_debug_info(pool_name)
     end
 
-    test "removes all idle workers when argument is bigger than idle_workers count" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 3)
+    test "removes all idle workers when argument is bigger than idle_workers count", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 3) |> start_pool()
 
       assert %DebugInfo{idle_workers_count: 3} = Poolex.get_debug_info(pool_name)
       assert :ok = Poolex.remove_idle_workers!(pool_name, 5)
       assert %DebugInfo{idle_workers_count: 0} = Poolex.get_debug_info(pool_name)
     end
 
-    test "raises error on non positive workers_count" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "raises error on non positive workers_count", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       assert_raise(ArgumentError, fn ->
         Poolex.remove_idle_workers!(pool_name, -1)
