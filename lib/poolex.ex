@@ -55,7 +55,7 @@ defmodule Poolex do
   Any valid GenServer's name. It may be an atom like `:some_pool` or a tuple {:via, Registry, {MyApp.Registry, "pool"}
   if you want to use Registry.
   """
-  @type pool_id() :: GenServer.name()
+  @type pool_id() :: GenServer.name() | pid()
   @typedoc """
   #{@poolex_options_table}
   """

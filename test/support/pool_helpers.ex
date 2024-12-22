@@ -5,19 +5,9 @@ defmodule PoolHelpers do
 
   @spec start_pool(list(Poolex.poolex_option())) :: Poolex.pool_id()
   def start_pool(options) do
-    pool_name = Keyword.get(options, :pool_id, generate_pool_name())
-
-    options = Keyword.put(options, :pool_id, pool_name)
     {:ok, _pid} = ExUnit.Callbacks.start_supervised({Poolex, options})
 
-    pool_name
-  end
-
-  defp generate_pool_name do
-    1..10
-    |> Enum.map(fn _ -> Enum.random(?a..?z) end)
-    |> to_string()
-    |> String.to_atom()
+    Keyword.fetch!(options, :pool_id)
   end
 
   @spec launch_long_task(Poolex.pool_id(), timeout()) :: :ok
