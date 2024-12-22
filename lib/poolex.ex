@@ -252,7 +252,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def add_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
+  def add_idle_workers!(pool_id, workers_count) when is_integer(workers_count) do
     GenServer.call(pool_id, {:add_idle_workers, workers_count})
   end
 
@@ -267,7 +267,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def remove_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
+  def remove_idle_workers!(pool_id, workers_count) when is_integer(workers_count) do
     GenServer.call(pool_id, {:remove_idle_workers, workers_count})
   end
 

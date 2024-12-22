@@ -652,20 +652,16 @@ defmodule PoolexTest do
   end
 
   describe "add_idle_workers!/2" do
-    test "adds idle workers to pool" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "adds idle workers to pool", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       assert %DebugInfo{idle_workers_count: 5} = Poolex.get_debug_info(pool_name)
       assert :ok = Poolex.add_idle_workers!(pool_name, 5)
       assert %DebugInfo{idle_workers_count: 10} = Poolex.get_debug_info(pool_name)
     end
 
-    test "raises error on non positive workers_count" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "raises error on non positive workers_count", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       assert_raise(ArgumentError, fn ->
         Poolex.add_idle_workers!(pool_name, -1)
