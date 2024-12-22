@@ -16,6 +16,14 @@ defmodule PoolexTest do
 
   alias Poolex.Private.DebugInfo
 
+  setup do
+    if Version.match?(System.version(), ">= 1.18.0") do
+      []
+    else
+      [pool_options: [pool_id: SomeWorker, worker_module: SomeWorker, workers_count: 5]]
+    end
+  end
+
   doctest Poolex
 
   describe "debug info" do
