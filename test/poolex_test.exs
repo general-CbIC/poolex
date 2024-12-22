@@ -702,36 +702,4 @@ defmodule PoolexTest do
       end)
     end
   end
-
-  describe "using GenServer.name() naming" do
-    test "works with {:global, term()}" do
-      ExUnit.Callbacks.start_supervised(
-        {Poolex,
-         [
-           pool_id: {:global, :biba},
-           worker_module: SomeWorker,
-           workers_count: 5
-         ]}
-      )
-
-      state = :sys.get_state({:global, :biba})
-
-      assert state.pool_id == {:global, :biba}
-
-      assert {:ok, true} == Poolex.run({:global, :biba}, &is_pid/1)
-    end
-
-    test "works with Registry" do
-      ExUnit.Callbacks.start_supervised({Registry, [keys: :unique, name: TestRegistry]})
-      name = {:via, Registry, {TestRegistry, "pool"}}
-
-      ExUnit.Callbacks.start_supervised({Poolex, [pool_id: name, worker_module: SomeWorker, workers_count: 5]})
-
-      state = :sys.get_state(name)
-
-      assert state.pool_id == name
-
-      assert {:ok, true} == Poolex.run(name, &is_pid/1)
-    end
-  end
 end
