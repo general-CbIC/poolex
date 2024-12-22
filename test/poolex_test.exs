@@ -143,10 +143,7 @@ defmodule PoolexTest do
 
   describe "restarting terminated processes" do
     test "works on idle workers", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       [some_worker_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
 
@@ -161,10 +158,7 @@ defmodule PoolexTest do
     end
 
     test "works on busy workers", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       test_process = self()
 
@@ -192,10 +186,7 @@ defmodule PoolexTest do
     end
 
     test "restart busy workers when pending callers", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       launch_long_tasks(pool_name, 2)
 
@@ -219,10 +210,7 @@ defmodule PoolexTest do
     end
 
     test "works on callers", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       Enum.each(1..10, fn _ ->
         spawn(fn ->
@@ -258,10 +246,7 @@ defmodule PoolexTest do
     end
 
     test "release busy worker when caller dies", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 2)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 2) |> start_pool()
 
       caller =
         spawn(fn ->
@@ -288,10 +273,7 @@ defmodule PoolexTest do
     end
 
     test "release busy worker when caller dies (overflow case)", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.merge(workers_count: 0, max_overflow: 2)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.merge(workers_count: 0, max_overflow: 2) |> start_pool()
 
       caller =
         spawn(fn ->
@@ -318,10 +300,7 @@ defmodule PoolexTest do
     end
 
     test "runtime errors", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       catch_exit(Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_raise) end))
 
@@ -337,10 +316,7 @@ defmodule PoolexTest do
 
   describe "timeouts" do
     test "when caller waits too long", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       launch_long_task(pool_name)
 
@@ -372,10 +348,7 @@ defmodule PoolexTest do
     end
 
     test "run/3 returns error on checkout timeout", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       launch_long_task(pool_name)
 
@@ -397,10 +370,7 @@ defmodule PoolexTest do
     end
 
     test "handle worker's timeout", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       delay = 100
 
@@ -420,10 +390,7 @@ defmodule PoolexTest do
     test "worker not hangs in busy status after checkout timeout", %{pool_options: pool_options} do
       test_pid = self()
 
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       delay = 100
 
@@ -475,10 +442,7 @@ defmodule PoolexTest do
 
   describe "overflow" do
     test "create new workers when possible", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.merge(workers_count: 1, max_overflow: 5)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.merge(workers_count: 1, max_overflow: 5) |> start_pool()
 
       launch_long_tasks(pool_name, 5)
 
@@ -489,10 +453,7 @@ defmodule PoolexTest do
     end
 
     test "return error when max count of workers reached", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       launch_long_task(pool_name)
 
@@ -513,10 +474,7 @@ defmodule PoolexTest do
     end
 
     test "all workers running over the limit are turned off after use", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.merge(workers_count: 1, max_overflow: 2)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.merge(workers_count: 1, max_overflow: 2) |> start_pool()
 
       launch_long_task(pool_name)
 
@@ -533,10 +491,7 @@ defmodule PoolexTest do
     end
 
     test "allows workers_count: 0", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.merge(workers_count: 0, max_overflow: 2)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.merge(workers_count: 0, max_overflow: 2) |> start_pool()
 
       debug_info = Poolex.get_debug_info(pool_name)
 
@@ -590,10 +545,7 @@ defmodule PoolexTest do
 
   describe "terminate process" do
     test "workers stop before the pool with reason :normal", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       pool_pid = GenServer.whereis(pool_name)
 
@@ -616,10 +568,7 @@ defmodule PoolexTest do
     end
 
     test "workers stop before the pool with reason :exit", %{pool_options: pool_options} do
-      pool_name =
-        pool_options
-        |> Keyword.put(:workers_count, 1)
-        |> start_pool()
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       pool_pid = GenServer.whereis(pool_name)
 
