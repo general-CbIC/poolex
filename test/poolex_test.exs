@@ -1,17 +1,34 @@
 defmodule PoolexTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case,
+    parameterize: [
+      %{pool_options: [pool_id: SomeWorker, worker_module: SomeWorker, workers_count: 5]},
+      %{pool_options: [pool_id: {:global, SomeWorker}, worker_module: SomeWorker, workers_count: 5]},
+      %{
+        pool_options: [
+          pool_id: {:via, Registry, {PoolexTestRegistry, "some_pool"}},
+          worker_module: SomeWorker,
+          workers_count: 5
+        ]
+      }
+    ]
 
   import PoolHelpers
 
   alias Poolex.Private.DebugInfo
 
+  setup_all do
+    if Version.match?(System.version(), ">= 1.18.0") do
+      []
+    else
+      [pool_options: [pool_id: SomeWorker, worker_module: SomeWorker, workers_count: 5]]
+    end
+  end
+
   doctest Poolex
 
   describe "debug info" do
-    test "valid after initialization" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "valid after initialization", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       debug_info = Poolex.get_debug_info(pool_name)
 
@@ -23,21 +40,21 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_impl == Poolex.Workers.Impl.List
       assert debug_info.max_overflow == 0
       assert Enum.count(debug_info.idle_workers_pids) == 5
-      assert debug_info.worker_module == Agent
-      assert debug_info.worker_args == [initial_fun]
+      assert debug_info.worker_module == SomeWorker
+      assert debug_info.worker_args == []
       assert debug_info.waiting_callers == []
       assert debug_info.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
     end
 
-    test "valid configured implementations" do
+    test "valid configured implementations", %{pool_options: pool_options} do
       pool_name =
-        start_pool(
-          worker_module: SomeWorker,
-          workers_count: 10,
+        pool_options
+        |> Keyword.merge(
           busy_workers_impl: SomeBusyWorkersImpl,
           idle_workers_impl: SomeIdleWorkersImpl,
           waiting_callers_impl: SomeWaitingCallersImpl
         )
+        |> start_pool()
 
       debug_info = Poolex.get_debug_info(pool_name)
 
@@ -46,11 +63,10 @@ defmodule PoolexTest do
       assert debug_info.waiting_callers_impl == SomeWaitingCallersImpl
     end
 
-    test "valid after using the worker" do
-      initial_fun = fn -> 0 end
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "valid after using the worker", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
-      {:ok, 0} = Poolex.run(pool_name, fn pid -> Agent.get(pid, & &1) end)
+      assert {:ok, :some_result} = Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
 
       debug_info = Poolex.get_debug_info(pool_name)
 
@@ -59,14 +75,13 @@ defmodule PoolexTest do
       assert Enum.empty?(debug_info.busy_workers_pids)
       assert debug_info.idle_workers_count == 5
       assert Enum.count(debug_info.idle_workers_pids) == 5
-      assert debug_info.worker_module == Agent
-      assert debug_info.worker_args == [initial_fun]
+      assert debug_info.worker_module == SomeWorker
+      assert debug_info.worker_args == []
       assert debug_info.waiting_callers == []
     end
 
-    test "valid after holding some workers" do
-      initial_fun = fn -> 0 end
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "valid after holding some workers", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       test_process = self()
 
@@ -88,15 +103,18 @@ defmodule PoolexTest do
       assert Enum.count(debug_info.busy_workers_pids) == 1
       assert debug_info.idle_workers_count == 4
       assert Enum.count(debug_info.idle_workers_pids) == 4
-      assert debug_info.worker_module == Agent
-      assert debug_info.worker_args == [initial_fun]
+      assert debug_info.worker_module == SomeWorker
+      assert debug_info.worker_args == []
       assert debug_info.waiting_callers == []
     end
   end
 
   describe "run/2" do
-    test "updates agent's state" do
-      pool_name = start_pool(worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 1)
+    test "updates agent's state", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.merge(worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 1)
+        |> start_pool()
 
       Poolex.run(pool_name, fn pid -> Agent.update(pid, fn _state -> 1 end) end)
 
@@ -105,15 +123,15 @@ defmodule PoolexTest do
       assert 1 == Agent.get(agent_pid, fn state -> state end)
     end
 
-    test "get result from custom worker" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 2)
+    test "get result from custom worker", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       result = Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
       assert result == {:ok, :some_result}
     end
 
-    test "test waiting queue" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 5)
+    test "test waiting queue", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       result =
         1..20
@@ -132,23 +150,23 @@ defmodule PoolexTest do
   end
 
   describe "restarting terminated processes" do
-    test "works on idle workers" do
-      pool_name = start_pool(worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 1)
+    test "works on idle workers", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
-      [agent_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
+      [some_worker_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
 
-      Process.exit(agent_pid, :kill)
+      Process.exit(some_worker_pid, :kill)
 
       # To be sure that DOWN message will be handed
       :timer.sleep(1)
 
-      [new_agent_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
+      [new_worker_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
 
-      assert agent_pid != new_agent_pid
+      assert some_worker_pid != new_worker_pid
     end
 
-    test "works on busy workers" do
-      pool_name = start_pool(worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 1)
+    test "works on busy workers", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       test_process = self()
 
@@ -163,22 +181,21 @@ defmodule PoolexTest do
         _message -> nil
       end
 
-      [agent_pid] = Poolex.get_debug_info(pool_name).busy_workers_pids
+      [some_worker_pid] = Poolex.get_debug_info(pool_name).busy_workers_pids
 
-      Process.exit(agent_pid, :kill)
+      Process.exit(some_worker_pid, :kill)
 
       # To be sure that DOWN message will be handed
       :timer.sleep(1)
 
-      [new_agent_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
+      [new_worker_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
 
-      assert agent_pid != new_agent_pid
+      assert some_worker_pid != new_worker_pid
     end
 
-    test "restart busy workers when pending callers" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "restart busy workers when pending callers", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
-      # test_process = self()
       launch_long_tasks(pool_name, 2)
 
       debug_info = Poolex.get_debug_info(pool_name)
@@ -200,8 +217,8 @@ defmodule PoolexTest do
       assert busy_worker_pid != new_worker_pid
     end
 
-    test "works on callers" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "works on callers", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       Enum.each(1..10, fn _ ->
         spawn(fn ->
@@ -236,8 +253,8 @@ defmodule PoolexTest do
              end)
     end
 
-    test "release busy worker when caller dies" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 2)
+    test "release busy worker when caller dies", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 2) |> start_pool()
 
       caller =
         spawn(fn ->
@@ -263,8 +280,8 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 2
     end
 
-    test "release busy worker when caller dies (overflow case)" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 0, max_overflow: 2)
+    test "release busy worker when caller dies (overflow case)", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.merge(workers_count: 0, max_overflow: 2) |> start_pool()
 
       caller =
         spawn(fn ->
@@ -290,8 +307,8 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 0
     end
 
-    test "runtime errors" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "runtime errors", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       catch_exit(Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_raise) end))
 
@@ -306,8 +323,8 @@ defmodule PoolexTest do
   end
 
   describe "timeouts" do
-    test "when caller waits too long" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "when caller waits too long", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
       launch_long_task(pool_name)
 
@@ -338,8 +355,9 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 0
     end
 
-    test "run/3 returns error on checkout timeout" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "run/3 returns error on checkout timeout", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
       launch_long_task(pool_name)
 
       result =
@@ -359,8 +377,9 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 0
     end
 
-    test "handle worker's timeout" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "handle worker's timeout", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
       delay = 100
 
       assert {:ok, :some_result} =
@@ -376,9 +395,11 @@ defmodule PoolexTest do
                )
     end
 
-    test "worker not hangs in busy status after checkout timeout" do
+    test "worker not hangs in busy status after checkout timeout", %{pool_options: pool_options} do
       test_pid = self()
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
       delay = 100
 
       process_1 =
@@ -428,8 +449,8 @@ defmodule PoolexTest do
   end
 
   describe "overflow" do
-    test "create new workers when possible" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1, max_overflow: 5)
+    test "create new workers when possible", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.merge(workers_count: 1, max_overflow: 5) |> start_pool()
 
       launch_long_tasks(pool_name, 5)
 
@@ -439,8 +460,9 @@ defmodule PoolexTest do
       assert debug_info.overflow == 4
     end
 
-    test "return error when max count of workers reached" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
+    test "return error when max count of workers reached", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
       launch_long_task(pool_name)
 
       result =
@@ -459,8 +481,8 @@ defmodule PoolexTest do
       assert debug_info.overflow == 0
     end
 
-    test "all workers running over the limit are turned off after use" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1, max_overflow: 2)
+    test "all workers running over the limit are turned off after use", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.merge(workers_count: 1, max_overflow: 2) |> start_pool()
 
       launch_long_task(pool_name)
 
@@ -476,8 +498,9 @@ defmodule PoolexTest do
       assert debug_info.overflow == 0
     end
 
-    test "allows workers_count: 0" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 0, max_overflow: 2)
+    test "allows workers_count: 0", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.merge(workers_count: 0, max_overflow: 2) |> start_pool()
+
       debug_info = Poolex.get_debug_info(pool_name)
 
       assert debug_info.idle_workers_count == 0
@@ -517,25 +540,22 @@ defmodule PoolexTest do
   end
 
   describe "child_spec" do
-    test "child_spec/1" do
-      assert Poolex.child_spec(pool_id: :test_pool, worker_module: SomeWorker, workers_count: 5) ==
-               %{
-                 id: :test_pool,
-                 start: {Poolex, :start_link, [[pool_id: :test_pool, worker_module: SomeWorker, workers_count: 5]]}
-               }
+    test "child_spec/1", %{pool_options: pool_options} do
+      id = Keyword.fetch!(pool_options, :pool_id)
 
-      assert Poolex.child_spec(pool_id: {:global, :biba}, worker_module: SomeWorker, workers_count: 10) ==
+      assert Poolex.child_spec(pool_options) ==
                %{
-                 id: {:global, :biba},
-                 start: {Poolex, :start_link, [[pool_id: {:global, :biba}, worker_module: SomeWorker, workers_count: 10]]}
+                 id: id,
+                 start: {Poolex, :start_link, [pool_options]}
                }
     end
   end
 
   describe "terminate process" do
-    test "workers stop before the pool with reason :normal" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
-      pool_pid = Process.whereis(pool_name)
+    test "workers stop before the pool with reason :normal", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
+      pool_pid = GenServer.whereis(pool_name)
 
       state = :sys.get_state(pool_name)
 
@@ -555,9 +575,10 @@ defmodule PoolexTest do
       assert message_3 == {:DOWN, pool_monitor_ref, :process, pool_pid, :normal}
     end
 
-    test "workers stop before the pool with reason :exit" do
-      pool_name = start_pool(worker_module: SomeWorker, workers_count: 1)
-      pool_pid = Process.whereis(pool_name)
+    test "workers stop before the pool with reason :exit", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
+      pool_pid = GenServer.whereis(pool_name)
 
       state = :sys.get_state(pool_name)
 
@@ -588,20 +609,16 @@ defmodule PoolexTest do
   end
 
   describe "add_idle_workers!/2" do
-    test "adds idle workers to pool" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "adds idle workers to pool", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       assert %DebugInfo{idle_workers_count: 5} = Poolex.get_debug_info(pool_name)
       assert :ok = Poolex.add_idle_workers!(pool_name, 5)
       assert %DebugInfo{idle_workers_count: 10} = Poolex.get_debug_info(pool_name)
     end
 
-    test "raises error on non positive workers_count" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "raises error on non positive workers_count", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       assert_raise(ArgumentError, fn ->
         Poolex.add_idle_workers!(pool_name, -1)
@@ -614,30 +631,24 @@ defmodule PoolexTest do
   end
 
   describe "remove_idle_workers!/2" do
-    test "removes idle workers from pool" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "removes idle workers from pool", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       assert %DebugInfo{idle_workers_count: 5} = Poolex.get_debug_info(pool_name)
       assert :ok = Poolex.remove_idle_workers!(pool_name, 2)
       assert %DebugInfo{idle_workers_count: 3} = Poolex.get_debug_info(pool_name)
     end
 
-    test "removes all idle workers when argument is bigger than idle_workers count" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 3)
+    test "removes all idle workers when argument is bigger than idle_workers count", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 3) |> start_pool()
 
       assert %DebugInfo{idle_workers_count: 3} = Poolex.get_debug_info(pool_name)
       assert :ok = Poolex.remove_idle_workers!(pool_name, 5)
       assert %DebugInfo{idle_workers_count: 0} = Poolex.get_debug_info(pool_name)
     end
 
-    test "raises error on non positive workers_count" do
-      initial_fun = fn -> 0 end
-
-      pool_name = start_pool(worker_module: Agent, worker_args: [initial_fun], workers_count: 5)
+    test "raises error on non positive workers_count", %{pool_options: pool_options} do
+      pool_name = start_pool(pool_options)
 
       assert_raise(ArgumentError, fn ->
         Poolex.remove_idle_workers!(pool_name, -1)
@@ -646,38 +657,6 @@ defmodule PoolexTest do
       assert_raise(ArgumentError, fn ->
         Poolex.remove_idle_workers!(pool_name, 0)
       end)
-    end
-  end
-
-  describe "using GenServer.name() naming" do
-    test "works with {:global, term()}" do
-      ExUnit.Callbacks.start_supervised(
-        {Poolex,
-         [
-           pool_id: {:global, :biba},
-           worker_module: SomeWorker,
-           workers_count: 5
-         ]}
-      )
-
-      state = :sys.get_state({:global, :biba})
-
-      assert state.pool_id == {:global, :biba}
-
-      assert {:ok, true} == Poolex.run({:global, :biba}, &is_pid/1)
-    end
-
-    test "works with Registry" do
-      ExUnit.Callbacks.start_supervised({Registry, [keys: :unique, name: TestRegistry]})
-      name = {:via, Registry, {TestRegistry, "pool"}}
-
-      ExUnit.Callbacks.start_supervised({Poolex, [pool_id: name, worker_module: SomeWorker, workers_count: 5]})
-
-      state = :sys.get_state(name)
-
-      assert state.pool_id == name
-
-      assert {:ok, true} == Poolex.run(name, &is_pid/1)
     end
   end
 end

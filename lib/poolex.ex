@@ -55,7 +55,7 @@ defmodule Poolex do
   Any valid GenServer's name. It may be an atom like `:some_pool` or a tuple {:via, Registry, {MyApp.Registry, "pool"}
   if you want to use Registry.
   """
-  @type pool_id() :: GenServer.name()
+  @type pool_id() :: GenServer.name() | pid()
   @typedoc """
   #{@poolex_options_table}
   """
@@ -252,7 +252,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def add_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
+  def add_idle_workers!(pool_id, workers_count) when is_integer(workers_count) do
     GenServer.call(pool_id, {:add_idle_workers, workers_count})
   end
 
@@ -267,7 +267,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def remove_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
+  def remove_idle_workers!(pool_id, workers_count) when is_integer(workers_count) do
     GenServer.call(pool_id, {:remove_idle_workers, workers_count})
   end
 

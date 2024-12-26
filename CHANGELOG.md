@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added Elixir 1.18.* support to CI.
 
+### Changed
+
+- Refactored tests with new [ExUnit parameterize feature](https://hexdocs.pm/ex_unit/1.18.0/ExUnit.Case.html#module-parameterized-tests).
+
+### Fixed
+
+- The functions `Poolex.add_idle_workers!/2` and `Poolex.remove_idle_workers!/2` now accept any value of type `GenServer.name()` as their first argument, instead of only `atom()`.
+
 ## [1.1.0] - 2024-12-08
 
 ### Added
