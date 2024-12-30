@@ -33,7 +33,7 @@ defmodule Poolex.MixProject do
       {:telemetry, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       # Development dependencies
-      {:credo, "1.7.10", only: [:dev], runtime: false},
+      {:credo, "1.7.11", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
       {:doctor, ">= 0.0.0", only: [:dev], runtime: false},
       {:ex_check, "~> 0.16.0", only: [:dev], runtime: false},
