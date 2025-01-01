@@ -101,8 +101,7 @@ defmodule Poolex do
   """
   @spec start(list(poolex_option())) :: GenServer.on_start()
   def start(opts) do
-    pool_id = Keyword.fetch!(opts, :pool_id)
-    GenServer.start(__MODULE__, opts, name: pool_id, spawn_opt: @spawn_opts)
+    GenServer.start(__MODULE__, opts, name: get_pool_id(opts), spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -125,8 +124,7 @@ defmodule Poolex do
   """
   @spec start_link(list(poolex_option())) :: GenServer.on_start()
   def start_link(opts) do
-    pool_id = Keyword.fetch!(opts, :pool_id)
-    GenServer.start_link(__MODULE__, opts, name: pool_id, spawn_opt: @spawn_opts)
+    GenServer.start_link(__MODULE__, opts, name: get_pool_id(opts), spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -148,8 +146,7 @@ defmodule Poolex do
   """
   @spec child_spec(list(poolex_option())) :: Supervisor.child_spec()
   def child_spec(opts) do
-    pool_id = Keyword.fetch!(opts, :pool_id)
-    %{id: pool_id, start: {Poolex, :start_link, [opts]}}
+    %{id: get_pool_id(opts), start: {Poolex, :start_link, [opts]}}
   end
 
   @doc """
@@ -310,6 +307,14 @@ defmodule Poolex do
       |> WaitingCallers.init(waiting_callers_impl)
 
     {:ok, state, {:continue, opts}}
+  end
+
+  @spec get_pool_id(list(poolex_option())) :: pool_id()
+  defp get_pool_id(options) do
+    case Keyword.get(options, :pool_id) do
+      nil -> Keyword.fetch!(options, :worker_module)
+      pool_id -> pool_id
+    end
   end
 
   @impl GenServer
