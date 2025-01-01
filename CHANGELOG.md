@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Refactored tests with new [ExUnit parameterize feature](https://hexdocs.pm/ex_unit/1.18.0/ExUnit.Case.html#module-parameterized-tests).
+- `:pool_id` is not required init option anymore. For now it is equal to `worker_module` option value.
 
 ### Fixed
 
