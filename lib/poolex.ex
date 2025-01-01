@@ -272,7 +272,7 @@ defmodule Poolex do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    pool_id = Keyword.fetch!(opts, :pool_id)
+    pool_id = get_pool_id(opts)
     worker_module = Keyword.fetch!(opts, :worker_module)
     workers_count = Keyword.fetch!(opts, :workers_count)
 
@@ -309,8 +309,11 @@ defmodule Poolex do
     {:ok, state, {:continue, opts}}
   end
 
+  @doc """
+  Returns pool identifier from initialization options.
+  """
   @spec get_pool_id(list(poolex_option())) :: pool_id()
-  defp get_pool_id(options) do
+  def get_pool_id(options) do
     case Keyword.get(options, :pool_id) do
       nil -> Keyword.fetch!(options, :worker_module)
       pool_id -> pool_id
