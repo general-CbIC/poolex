@@ -43,7 +43,7 @@ def init(_args) do
 -      max_overflow: 50
 -    )
 +    {Poolex,
-+      pool_id: :some_pool,
++      pool_id: {:local, :some_pool},
 +      worker_module: MyApp.SomeWorker,
 +      workers_count: 100,
 +      max_overflow: 50}
@@ -59,12 +59,12 @@ Use `run/3`.
 Be careful, unlike `:poolboy.transaction`, `Poolex.run` returns `{:ok, result}`.
 
 ```diff
--  :poolboy.transaction(
+-  result = :poolboy.transaction(
 -    :some_pool,
 -    fn pid -> some_function(pid) end,
 -    :timer.seconds(10)
 -  )
-+  Poolex.run(
++  {:ok, result} = Poolex.run(
 +    :some_pool,
 +    fn pid -> some_function(pid) end,
 +    checkout_timeout: :timer.seconds(10)

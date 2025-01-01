@@ -39,7 +39,7 @@ defmodule Poolex do
   @poolex_options_table """
   | Option                 | Description                                          | Example               | Default value                     |
   |------------------------|------------------------------------------------------|-----------------------|-----------------------------------|
-  | `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | **option is required**            |
+  | `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | `worker_module` value             |
   | `worker_module`        | Name of module that implements our worker            | `MyApp.Worker`        | **option is required**            |
   | `workers_count`        | How many workers should be running in the pool       | `5`                   | **option is required**            |
   | `max_overflow`         | How many workers can be created over the limit       | `2`                   | `0`                               |
@@ -137,9 +137,9 @@ defmodule Poolex do
   ## Examples
 
       children = [
-        Poolex.child_spec(pool_id: :worker_pool_1, worker_module: SomeWorker, workers_count: 5),
+        Poolex.child_spec(worker_module: SomeWorker, workers_count: 5),
         # or in another way
-        {Poolex, pool_id: :worker_pool_2, worker_module: SomeOtherWorker, workers_count: 5}
+        {Poolex, worker_module: SomeOtherWorker, workers_count: 5}
       ]
 
       Supervisor.start_link(children, strategy: :one_for_one)

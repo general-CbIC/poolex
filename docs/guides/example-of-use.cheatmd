@@ -38,7 +38,6 @@ defmodule PoolexExample.Application do
   def start(_type, _args) do
     children = [
       {Poolex,
-       pool_id: :worker_pool,
        worker_module: PoolexExample.Worker,
        workers_count: 5,
        max_overflow: 2}
@@ -66,7 +65,7 @@ defmodule PoolexExample.Test do
   defp async_call_square_root(i) do
     Task.async(fn ->
       Poolex.run(
-        :worker_pool,
+        PoolexExample.Worker,
         fn pid ->
           # Let's wrap the genserver call in a try-catch block. This allows us to trap any exceptions
           # that might be thrown and return the worker to Poolex in a clean manner. It also allows

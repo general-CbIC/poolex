@@ -13,7 +13,6 @@ To enable pool size metrics, you need to set the pool_size_metrics parameter to 
 ```elixir
 children = [
   {Poolex, 
-    pool_id: :worker_pool,
     worker_module: SomeWorker,
     workers_count: 5,
     pool_size_metrics: true}

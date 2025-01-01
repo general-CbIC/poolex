@@ -5,7 +5,7 @@
 To start a pool you can use either `start/1` or `start_link/1`.
 
 ```elixir
-Poolex.start_link(pool_id: :my_pool, worker_module: SomeWorker, workers_count: 10)
+Poolex.start_link(worker_module: SomeWorker, workers_count: 10)
 ```
 
 In general, you should place it into your Supervision tree for fault tolerance.
@@ -13,7 +13,6 @@ In general, you should place it into your Supervision tree for fault tolerance.
 ```elixir
 children = [
   {Poolex,
-  pool_id: :my_pool,
   worker_module: SomeWorker,
   workers_count: 10,
   max_overflow: 10}
@@ -22,13 +21,11 @@ children = [
 Supervisor.start_link(children, strategy: :one_for_one)
 ```
 
-The second argument should contain a set of options for starting the pool.
-
 ## Poolex configuration options
 
 | Option                 | Description                                          | Example               | Default value                     |
 |------------------------|------------------------------------------------------|-----------------------|-------------------------|
-| `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | **option is required**               |
+| `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | `worker_module` value                    |
 | `worker_module`        | Name of module that implements our worker            | `MyApp.Worker`        | **option is required**               |
 | `workers_count`        | How many workers should be running in the pool       | `5`                   | **option is required**               |
 | `max_overflow`         | How many workers can be created over the limit       | `2`                   | `0`                      |
@@ -51,7 +48,7 @@ The third argument contains run options. Currently, there is only one `checkout_
 
 ```elixir
 iex> Poolex.start_link(pool_id: :agent_pool, worker_module: Agent, worker_args: [fn -> 5 end], workers_count: 1)
-iex> Poolex.run(:agent_pool, fn pid -> Agent.get(pid, &(&1)) end)
+iex> Poolex.run(:agent_pool, fn pid -> Agent.get(pid, &(&1)) end, checkout_timeout: 5_000)
 {:ok, 5}
 ```
 

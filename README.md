@@ -9,6 +9,9 @@
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
+> [!IMPORTANT]  
+> Documentation on GitHub corresponds to the current branch. For stable versions' docs see [Hexdocs](https://hexdocs.pm/poolex/).
+
 ## Table of Contents
 
 <img alt="Poolex logo" src="assets/poolex.png" width="200" height="200" style="margin-right: 10px;" align="right"/>
@@ -61,8 +64,7 @@ In the most typical use of Poolex, you only need to start a pool of workers as a
 
 ```elixir
 children = [
-  {Poolex, 
-    pool_id: :worker_pool,
+  {Poolex,
     worker_module: SomeWorker,
     workers_count: 5}
 ]
@@ -73,7 +75,7 @@ Supervisor.start_link(children, strategy: :one_for_one)
 Then you can execute any code on the workers with `run/3`:
 
 ```elixir
-iex> Poolex.run(:worker_pool, &(is_pid?(&1)), checkout_timeout: 1_000)
+iex> Poolex.run(SomeWorker, &(is_pid?(&1)), checkout_timeout: 1_000)
 {:ok, true}
 ```
 
