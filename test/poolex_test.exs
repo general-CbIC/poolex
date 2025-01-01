@@ -1,6 +1,7 @@
 defmodule PoolexTest do
   use ExUnit.Case,
     parameterize: [
+      %{pool_options: [worker_module: SomeWorker, workers_count: 5]},
       %{pool_options: [pool_id: SomeWorker, worker_module: SomeWorker, workers_count: 5]},
       %{pool_options: [pool_id: {:global, SomeWorker}, worker_module: SomeWorker, workers_count: 5]},
       %{
@@ -541,12 +542,18 @@ defmodule PoolexTest do
 
   describe "child_spec" do
     test "child_spec/1", %{pool_options: pool_options} do
-      id = Keyword.fetch!(pool_options, :pool_id)
+      id = Poolex.get_pool_id(pool_options)
 
       assert Poolex.child_spec(pool_options) ==
                %{
                  id: id,
                  start: {Poolex, :start_link, [pool_options]}
+               }
+
+      assert Poolex.child_spec(worker_module: SomeWorker, workers_count: 5) ==
+               %{
+                 id: SomeWorker,
+                 start: {Poolex, :start_link, [[worker_module: SomeWorker, workers_count: 5]]}
                }
     end
   end

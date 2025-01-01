@@ -7,7 +7,7 @@ defmodule PoolHelpers do
   def start_pool(options) do
     {:ok, _pid} = ExUnit.Callbacks.start_supervised({Poolex, options})
 
-    Keyword.fetch!(options, :pool_id)
+    Poolex.get_pool_id(options)
   end
 
   @spec launch_long_task(Poolex.pool_id(), timeout()) :: :ok

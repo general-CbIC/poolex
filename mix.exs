@@ -45,12 +45,14 @@ defmodule Poolex.MixProject do
 
   defp package do
     [
+      files: ~w(lib mix.exs LICENSE),
       licenses: ["MIT"],
       links: %{
         "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md",
         "GitHub" => "https://github.com/general-CbIC/poolex",
         "Sponsor" => "https://github.com/sponsors/general-CbIC"
-      }
+      },
+      maintainers: ["Aleksandr Sysoev"]
     ]
   end
 
