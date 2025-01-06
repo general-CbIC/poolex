@@ -18,7 +18,7 @@ Poolex is a library for managing pools of workers. Inspired by [poolboy](https:/
 - [Poolex](#poolex)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
-  - [Compatibility table](#compatibility-table)
+  - [Requirements](#requirements)
   - [Installation](#installation)
   - [Usage](#usage)
   - [Guides](#guides)
@@ -38,12 +38,12 @@ With `poolex` you can:
 - `poolex` is written in Elixir. This library is much more convenient to use in Elixir projects.
 - `poolboy` is a great library, but not actively maintained :crying_cat_face:![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
 
-## Compatibility table
+## Requirements
 
-| Poolex   | Erlang/OTP | Elixir |
-|----------|------------|--------|
-| <= 1.1.0 | >= 22.0    | >= 1.7 |
-| >= 1.2.0 | >= 22.0    | >= 1.8 |
+| Requirement | Version |
+|-------------|---------|
+| Erlang/OTP  | >= 22   |
+| Elixir      | >= 1.7  |
 
 ## Installation
 

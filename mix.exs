@@ -7,7 +7,7 @@ defmodule Poolex.MixProject do
       deps: deps(),
       description: "The library for managing pools of workers.",
       docs: docs(),
-      elixir: "~> 1.8",
+      elixir: "~> 1.7",
       elixirc_options: [
         warnings_as_errors: true
       ],
