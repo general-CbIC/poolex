@@ -151,6 +151,7 @@ defmodule PoolexTest do
   end
 
   describe "restarting terminated processes" do
+    @describetag capture_log: true
     test "works on idle workers", %{pool_options: pool_options} do
       pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
@@ -559,6 +560,7 @@ defmodule PoolexTest do
   end
 
   describe "terminate process" do
+    @describetag capture_log: true
     test "workers stop before the pool with reason :normal", %{pool_options: pool_options} do
       pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
