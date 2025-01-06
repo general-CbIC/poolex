@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Functions `Poolex.add_idle_workers!/2` and `Poolex.remove_idle_workers!/2` now accept any value of type `GenServer.name()` as their first argument, instead of only `atom()`.
+- Supressed Supervisor's error logs in tests.
+  
 
 ## [1.1.0] - 2024-12-08
 
