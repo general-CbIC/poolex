@@ -13,7 +13,7 @@ Poolex is a library for managing pools of workers. Inspired by [poolboy](https:/
 
 ## Table of Contents
 
-<img alt="Poolex logo" src="assets/poolex.png" width="250" height="250" align="right"/>
+<img alt="Poolex logo" src="https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/poolex.png" width="250" height="250" align="right"/>
 
 - [Poolex](#poolex)
   - [Table of Contents](#table-of-contents)
