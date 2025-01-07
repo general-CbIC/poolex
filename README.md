@@ -5,11 +5,15 @@
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/poolex/)
 [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
 [![Total Download](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
-[![Chat on Matrix](https://matrix.to/img/matrix-badge.svg?style=flat)](https://matrix.to/#/#poolex:gitter.im)
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
+> [!IMPORTANT]  
+> Documentation on GitHub corresponds to the current branch. For stable versions' docs see [Hexdocs](https://hexdocs.pm/poolex/).
+
 ## Table of Contents
+
+<img alt="Poolex logo" src="https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/poolex.png" width="250" height="250" align="right"/>
 
 - [Poolex](#poolex)
   - [Table of Contents](#table-of-contents)
@@ -59,8 +63,7 @@ In the most typical use of Poolex, you only need to start a pool of workers as a
 
 ```elixir
 children = [
-  {Poolex, 
-    pool_id: :worker_pool,
+  {Poolex,
     worker_module: SomeWorker,
     workers_count: 5}
 ]
@@ -71,7 +74,7 @@ Supervisor.start_link(children, strategy: :one_for_one)
 Then you can execute any code on the workers with `run/3`:
 
 ```elixir
-iex> Poolex.run(:worker_pool, &(is_pid?(&1)), checkout_timeout: 1_000)
+iex> Poolex.run(SomeWorker, &(is_pid?(&1)), checkout_timeout: 1_000)
 {:ok, true}
 ```
 

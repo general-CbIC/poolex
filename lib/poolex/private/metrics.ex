@@ -30,7 +30,7 @@ defmodule Poolex.Private.Metrics do
   """
   @spec start_poller(list(Poolex.poolex_option())) :: GenServer.on_start()
   def start_poller(opts) do
-    pool_id = Keyword.fetch!(opts, :pool_id)
+    pool_id = Poolex.get_pool_id(opts)
     measurements = collect_measurements(opts)
 
     if measurements == [] do
@@ -46,7 +46,7 @@ defmodule Poolex.Private.Metrics do
 
   @spec collect_measurements(list(Poolex.poolex_option())) :: list()
   defp collect_measurements(opts) do
-    pool_id = Keyword.fetch!(opts, :pool_id)
+    pool_id = Poolex.get_pool_id(opts)
 
     if Keyword.get(opts, :pool_size_metrics, false) do
       [

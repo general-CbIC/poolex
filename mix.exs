@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "1.1.0"
+      version: "1.2.0"
     ]
   end
 
@@ -33,7 +33,7 @@ defmodule Poolex.MixProject do
       {:telemetry, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       # Development dependencies
-      {:credo, "1.7.10", only: [:dev], runtime: false},
+      {:credo, "1.7.11", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
       {:doctor, ">= 0.0.0", only: [:dev], runtime: false},
       {:ex_check, "~> 0.16.0", only: [:dev], runtime: false},
@@ -45,18 +45,21 @@ defmodule Poolex.MixProject do
 
   defp package do
     [
+      files: ~w(lib mix.exs LICENSE),
       licenses: ["MIT"],
       links: %{
         "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md",
         "GitHub" => "https://github.com/general-CbIC/poolex",
         "Sponsor" => "https://github.com/sponsors/general-CbIC"
-      }
+      },
+      maintainers: ["Aleksandr Sysoev"]
     ]
   end
 
   defp docs do
     [
       main: "readme",
+      logo: "assets/poolex.png",
       extras: [
         "README.md",
         "docs/guides/getting-started.cheatmd",

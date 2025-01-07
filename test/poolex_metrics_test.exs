@@ -7,13 +7,15 @@ defmodule PoolexMetricsTest do
 
   @tag telemetry_events: [[:poolex, :metrics, :pool_size]]
   test "pool size metrics" do
-    pool_id =
-      start_pool(
-        worker_module: SomeWorker,
-        workers_count: 5,
-        pool_size_metrics: true,
-        max_overflow: 5
-      )
+    pool_id = SomeWorker
+
+    start_pool(
+      pool_id: pool_id,
+      worker_module: SomeWorker,
+      workers_count: 5,
+      pool_size_metrics: true,
+      max_overflow: 5
+    )
 
     assert_telemetry_event(
       [:poolex, :metrics, :pool_size],

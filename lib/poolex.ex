@@ -39,7 +39,7 @@ defmodule Poolex do
   @poolex_options_table """
   | Option                 | Description                                          | Example               | Default value                     |
   |------------------------|------------------------------------------------------|-----------------------|-----------------------------------|
-  | `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | **option is required**            |
+  | `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | `worker_module` value             |
   | `worker_module`        | Name of module that implements our worker            | `MyApp.Worker`        | **option is required**            |
   | `workers_count`        | How many workers should be running in the pool       | `5`                   | **option is required**            |
   | `max_overflow`         | How many workers can be created over the limit       | `2`                   | `0`                               |
@@ -55,7 +55,7 @@ defmodule Poolex do
   Any valid GenServer's name. It may be an atom like `:some_pool` or a tuple {:via, Registry, {MyApp.Registry, "pool"}
   if you want to use Registry.
   """
-  @type pool_id() :: GenServer.name()
+  @type pool_id() :: GenServer.name() | pid()
   @typedoc """
   #{@poolex_options_table}
   """
@@ -101,8 +101,7 @@ defmodule Poolex do
   """
   @spec start(list(poolex_option())) :: GenServer.on_start()
   def start(opts) do
-    pool_id = Keyword.fetch!(opts, :pool_id)
-    GenServer.start(__MODULE__, opts, name: pool_id, spawn_opt: @spawn_opts)
+    GenServer.start(__MODULE__, opts, name: get_pool_id(opts), spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -125,8 +124,7 @@ defmodule Poolex do
   """
   @spec start_link(list(poolex_option())) :: GenServer.on_start()
   def start_link(opts) do
-    pool_id = Keyword.fetch!(opts, :pool_id)
-    GenServer.start_link(__MODULE__, opts, name: pool_id, spawn_opt: @spawn_opts)
+    GenServer.start_link(__MODULE__, opts, name: get_pool_id(opts), spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -139,17 +137,16 @@ defmodule Poolex do
   ## Examples
 
       children = [
-        Poolex.child_spec(pool_id: :worker_pool_1, worker_module: SomeWorker, workers_count: 5),
+        Poolex.child_spec(worker_module: SomeWorker, workers_count: 5),
         # or in another way
-        {Poolex, pool_id: :worker_pool_2, worker_module: SomeOtherWorker, workers_count: 5}
+        {Poolex, worker_module: SomeOtherWorker, workers_count: 5}
       ]
 
       Supervisor.start_link(children, strategy: :one_for_one)
   """
   @spec child_spec(list(poolex_option())) :: Supervisor.child_spec()
   def child_spec(opts) do
-    pool_id = Keyword.fetch!(opts, :pool_id)
-    %{id: pool_id, start: {Poolex, :start_link, [opts]}}
+    %{id: get_pool_id(opts), start: {Poolex, :start_link, [opts]}}
   end
 
   @doc """
@@ -252,7 +249,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def add_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
+  def add_idle_workers!(pool_id, workers_count) when is_integer(workers_count) do
     GenServer.call(pool_id, {:add_idle_workers, workers_count})
   end
 
@@ -267,7 +264,7 @@ defmodule Poolex do
     raise ArgumentError, message
   end
 
-  def remove_idle_workers!(pool_id, workers_count) when is_atom(pool_id) and is_integer(workers_count) do
+  def remove_idle_workers!(pool_id, workers_count) when is_integer(workers_count) do
     GenServer.call(pool_id, {:remove_idle_workers, workers_count})
   end
 
@@ -275,7 +272,7 @@ defmodule Poolex do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    pool_id = Keyword.fetch!(opts, :pool_id)
+    pool_id = get_pool_id(opts)
     worker_module = Keyword.fetch!(opts, :worker_module)
     workers_count = Keyword.fetch!(opts, :workers_count)
 
@@ -310,6 +307,17 @@ defmodule Poolex do
       |> WaitingCallers.init(waiting_callers_impl)
 
     {:ok, state, {:continue, opts}}
+  end
+
+  @doc """
+  Returns pool identifier from initialization options.
+  """
+  @spec get_pool_id(list(poolex_option())) :: pool_id()
+  def get_pool_id(options) do
+    case Keyword.get(options, :pool_id) do
+      nil -> Keyword.fetch!(options, :worker_module)
+      pool_id -> pool_id
+    end
   end
 
   @impl GenServer

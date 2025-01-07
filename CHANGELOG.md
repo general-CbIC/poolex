@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-01-07
+
+### Added
+
+- Added Elixir 1.18.* support to CI.
+
+### Changed
+
+- Refactored tests with new [ExUnit parameterize feature](https://hexdocs.pm/ex_unit/1.18.0/ExUnit.Case.html#module-parameterized-tests).
+- `:pool_id` is not required init option anymore. For now it is equal to `worker_module` option value.
+
+### Fixed
+
+- Functions `Poolex.add_idle_workers!/2` and `Poolex.remove_idle_workers!/2` now accept any value of type `GenServer.name()` as their first argument, instead of only `atom()`.
+- Supressed Supervisor's error logs in tests.
+  
+
 ## [1.1.0] - 2024-12-08
 
 ### Added
@@ -15,13 +32,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Monitoring implemetation has been optimized by using plain map instead of `Agent` process.
-- Refactored `State` struct by adding list of `@enforced_keys`. ([Details](https://hexdocs.pm/elixir/structs.html#default-values-and-required-keys))
+- Monitoring implementation has been optimized by using a plain map instead of the `Agent` process.
+- Refactored `State` struct by adding a list of `@enforced_keys`. ([Details](https://hexdocs.pm/elixir/structs.html#default-values-and-required-keys))
 - Poolex processes now have higher priority. ([Details](https://www.erlang.org/doc/apps/erts/erlang.html#process_flag_priority))
 
 ### Deprecated
 
-- `Poolex.get_state/1` deprecated in favor `:sys.get_state/1`.
+- `Poolex.get_state/1` deprecated in favor of `:sys.get_state/1`.
 
 ## [1.0.0] - 2024-09-23
 
@@ -273,7 +290,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.1.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/general-CbIC/poolex/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/general-CbIC/poolex/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/general-CbIC/poolex/compare/v0.10.0...v1.0.0
 [0.10.0]: https://github.com/general-CbIC/poolex/compare/v0.9.0...v0.10.0
