@@ -59,7 +59,7 @@ defmodule Poolex.MixProject do
   defp docs do
     [
       main: "readme",
-      logo: "assets/poolex.png",
+      logo: "assets/poolex.jpeg",
       extras: [
         "README.md",
         "docs/guides/getting-started.cheatmd",
