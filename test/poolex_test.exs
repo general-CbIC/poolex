@@ -599,11 +599,16 @@ defmodule PoolexTest do
       worker_monitor_ref = Process.monitor(worker_pid)
 
       Process.exit(pool_pid, :exit)
-      :timer.sleep(20)
 
-      {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
+      :timer.sleep(30)
 
-      assert message_1 == {:DOWN, worker_monitor_ref, :process, worker_pid, :shutdown}
+      assert {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
+
+      assert elem(message_1, 0) == :DOWN
+      assert elem(message_1, 1) == worker_monitor_ref
+      assert elem(message_1, 2) == :process
+      assert elem(message_1, 3) == worker_pid
+      assert elem(message_1, 4) == :shutdown
 
       assert elem(message_2, 0) == :DOWN
       assert elem(message_2, 1) == supervisor_monitor_ref
