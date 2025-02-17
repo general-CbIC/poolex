@@ -352,6 +352,8 @@ defmodule Poolex do
       start: {state.worker_module, state.worker_start_fun, state.worker_args},
       restart: :temporary
     })
+  rescue
+    _ -> {:error, :start_worker_failed}
   end
 
   @spec stop_worker(Supervisor.supervisor(), pid()) :: :ok | {:error, :not_found}

@@ -714,4 +714,12 @@ defmodule PoolexTest do
       end)
     end
   end
+
+  describe "handle errors on workers launch" do
+    test "raises RuntimeError on pool initialization", %{pool_options: pool_options} do
+      assert_raise(RuntimeError, fn ->
+        pool_options |> Keyword.put(:worker_module, :not_existing_module) |> start_pool()
+      end)
+    end
+  end
 end
