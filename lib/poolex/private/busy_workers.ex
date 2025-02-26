@@ -6,13 +6,13 @@ defmodule Poolex.Private.BusyWorkers do
   @doc false
   @spec init(State.t(), busy_workers_impl :: module()) :: State.t()
   def init(%State{} = state, impl) do
-    %State{state | busy_workers_impl: impl, busy_workers_state: impl.init()}
+    %{state | busy_workers_impl: impl, busy_workers_state: impl.init()}
   end
 
   @doc false
   @spec add(State.t(), Poolex.worker()) :: State.t()
   def add(%State{busy_workers_impl: impl, busy_workers_state: busy_workers_state} = state, worker) do
-    %State{state | busy_workers_state: impl.add(busy_workers_state, worker)}
+    %{state | busy_workers_state: impl.add(busy_workers_state, worker)}
   end
 
   @doc false
@@ -24,7 +24,7 @@ defmodule Poolex.Private.BusyWorkers do
   @doc false
   @spec remove(State.t(), Poolex.worker()) :: State.t()
   def remove(%State{busy_workers_impl: impl, busy_workers_state: busy_workers_state} = state, worker) do
-    %State{state | busy_workers_state: impl.remove(busy_workers_state, worker)}
+    %{state | busy_workers_state: impl.remove(busy_workers_state, worker)}
   end
 
   @doc false
