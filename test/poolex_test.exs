@@ -272,6 +272,8 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 1
 
+      [busy_worker_pid] = debug_info.busy_workers_pids
+
       Process.exit(caller, :kill)
 
       :timer.sleep(10)
@@ -280,6 +282,11 @@ defmodule PoolexTest do
 
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_count == 2
+
+      # Busy worker should be restarted if caller dies
+      refute Enum.any?(debug_info.idle_workers_pids, fn pid ->
+               pid == busy_worker_pid
+             end)
     end
 
     test "release busy worker when caller dies (overflow case)", %{pool_options: pool_options} do
