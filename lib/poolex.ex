@@ -413,7 +413,14 @@ defmodule Poolex do
 
     state =
       Enum.reduce(workers, state, fn worker, acc_state ->
-        IdleWorkers.add(acc_state, worker)
+        if WaitingCallers.empty?(acc_state) do
+          IdleWorkers.add(acc_state, worker)
+        else
+          acc_state
+          |> Monitoring.add(worker, :worker)
+          |> BusyWorkers.add(worker)
+          |> provide_worker_to_waiting_caller(worker)
+        end
       end)
 
     {:reply, :ok, state}
