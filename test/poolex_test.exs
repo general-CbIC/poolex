@@ -648,6 +648,7 @@ defmodule PoolexTest do
         Process.send(test_process, nil, [])
 
         Poolex.run(pool_name, fn _pid ->
+          Process.send(test_process, :started_work, [])
           :timer.sleep(:timer.seconds(5))
         end)
       end)
@@ -660,6 +661,7 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_count == 0
       assert Enum.count(debug_info.waiting_callers) == 1
+      refute_received :started_work
 
       assert :ok = Poolex.add_idle_workers!(pool_name, 1)
 
@@ -667,6 +669,7 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 0
       assert Enum.empty?(debug_info.waiting_callers)
+      assert_receive :started_work, 1000
     end
 
     test "raises error on non positive workers_count", %{pool_options: pool_options} do
