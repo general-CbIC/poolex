@@ -413,7 +413,14 @@ defmodule Poolex do
 
     state =
       Enum.reduce(workers, state, fn worker, acc_state ->
-        IdleWorkers.add(acc_state, worker)
+        if WaitingCallers.empty?(acc_state) do
+          IdleWorkers.add(acc_state, worker)
+        else
+          acc_state
+          |> Monitoring.add(worker, :worker)
+          |> BusyWorkers.add(worker)
+          |> provide_worker_to_waiting_caller(worker)
+        end
       end)
 
     {:reply, :ok, state}
@@ -441,6 +448,12 @@ defmodule Poolex do
       new_state = provide_worker_to_waiting_caller(state, worker)
       {:noreply, new_state}
     end
+  end
+
+  @impl GenServer
+  def handle_cast({:stop_worker, worker_pid}, %State{} = state) do
+    stop_worker(state.supervisor, worker_pid)
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -532,7 +545,9 @@ defmodule Poolex do
 
       receive do
         {:DOWN, ^reference, :process, ^caller, _reason} ->
-          GenServer.cast(pool_id, {:release_busy_worker, worker})
+          # Send message to stop worker if caller is dead
+          # After that worker will be restarted
+          GenServer.cast(pool_id, {:stop_worker, worker})
       end
     end)
   end

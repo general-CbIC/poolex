@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "1.2.0"
+      version: "1.2.1"
     ]
   end
 
@@ -59,7 +59,7 @@ defmodule Poolex.MixProject do
   defp docs do
     [
       main: "readme",
-      logo: "assets/poolex.png",
+      logo: "assets/poolex.jpeg",
       extras: [
         "README.md",
         "docs/guides/getting-started.cheatmd",

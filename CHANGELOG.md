@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2025-04-06
+
+### Fixed
+
+- Now the `busy_worker` will be restarted after the `caller's` death. Read more in [issue](https://github.com/general-CbIC/poolex/issues/114).
+- The function `add_idle_workers!/2` now provides new workers to waiting callers if they exist. Read more in [issue](https://github.com/general-CbIC/poolex/issues/122).
+
 ## [1.2.0] - 2025-01-07
 
 ### Added
@@ -23,7 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Functions `Poolex.add_idle_workers!/2` and `Poolex.remove_idle_workers!/2` now accept any value of type `GenServer.name()` as their first argument, instead of only `atom()`.
 - Supressed Supervisor's error logs in tests.
   
-
 ## [1.1.0] - 2024-12-08
 
 ### Added
@@ -290,7 +296,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.2.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/general-CbIC/poolex/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/general-CbIC/poolex/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/general-CbIC/poolex/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/general-CbIC/poolex/compare/v0.10.0...v1.0.0

@@ -272,6 +272,8 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 1
 
+      [busy_worker_pid] = debug_info.busy_workers_pids
+
       Process.exit(caller, :kill)
 
       :timer.sleep(10)
@@ -280,6 +282,12 @@ defmodule PoolexTest do
 
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_count == 2
+
+      # Busy worker should be restarted if caller dies
+      # NOTE: may be I should write a test using :do_some_work_with_delay
+      refute Enum.any?(debug_info.idle_workers_pids, fn pid ->
+               pid == busy_worker_pid
+             end)
     end
 
     test "release busy worker when caller dies (overflow case)", %{pool_options: pool_options} do
@@ -599,11 +607,16 @@ defmodule PoolexTest do
       worker_monitor_ref = Process.monitor(worker_pid)
 
       Process.exit(pool_pid, :exit)
-      :timer.sleep(20)
 
-      {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
+      :timer.sleep(30)
 
-      assert message_1 == {:DOWN, worker_monitor_ref, :process, worker_pid, :shutdown}
+      assert {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
+
+      assert elem(message_1, 0) == :DOWN
+      assert elem(message_1, 1) == worker_monitor_ref
+      assert elem(message_1, 2) == :process
+      assert elem(message_1, 3) == worker_pid
+      assert elem(message_1, 4) == :shutdown
 
       assert elem(message_2, 0) == :DOWN
       assert elem(message_2, 1) == supervisor_monitor_ref
@@ -624,6 +637,39 @@ defmodule PoolexTest do
       assert %DebugInfo{idle_workers_count: 5} = Poolex.get_debug_info(pool_name)
       assert :ok = Poolex.add_idle_workers!(pool_name, 5)
       assert %DebugInfo{idle_workers_count: 10} = Poolex.get_debug_info(pool_name)
+    end
+
+    test "provides new workers to waiting callers", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 0) |> start_pool()
+
+      test_process = self()
+
+      spawn(fn ->
+        Process.send(test_process, nil, [])
+
+        Poolex.run(pool_name, fn _pid ->
+          Process.send(test_process, :started_work, [])
+          :timer.sleep(:timer.seconds(5))
+        end)
+      end)
+
+      receive do
+        _message -> nil
+      end
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_count == 0
+      assert Enum.count(debug_info.waiting_callers) == 1
+      refute_received :started_work
+
+      assert :ok = Poolex.add_idle_workers!(pool_name, 1)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.idle_workers_count == 0
+      assert Enum.empty?(debug_info.waiting_callers)
+      assert_receive :started_work, 1000
     end
 
     test "raises error on non positive workers_count", %{pool_options: pool_options} do
