@@ -284,6 +284,7 @@ defmodule PoolexTest do
       assert debug_info.idle_workers_count == 2
 
       # Busy worker should be restarted if caller dies
+      # NOTE: may be I should write a test using :do_some_work_with_delay
       refute Enum.any?(debug_info.idle_workers_pids, fn pid ->
                pid == busy_worker_pid
              end)
@@ -636,6 +637,39 @@ defmodule PoolexTest do
       assert %DebugInfo{idle_workers_count: 5} = Poolex.get_debug_info(pool_name)
       assert :ok = Poolex.add_idle_workers!(pool_name, 5)
       assert %DebugInfo{idle_workers_count: 10} = Poolex.get_debug_info(pool_name)
+    end
+
+    test "provides new workers to waiting callers", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 0) |> start_pool()
+
+      test_process = self()
+
+      spawn(fn ->
+        Process.send(test_process, nil, [])
+
+        Poolex.run(pool_name, fn _pid ->
+          Process.send(test_process, :started_work, [])
+          :timer.sleep(:timer.seconds(5))
+        end)
+      end)
+
+      receive do
+        _message -> nil
+      end
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_count == 0
+      assert Enum.count(debug_info.waiting_callers) == 1
+      refute_received :started_work
+
+      assert :ok = Poolex.add_idle_workers!(pool_name, 1)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.idle_workers_count == 0
+      assert Enum.empty?(debug_info.waiting_callers)
+      assert_receive :started_work, 1000
     end
 
     test "raises error on non positive workers_count", %{pool_options: pool_options} do
