@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Now the `busy_worker` will be restarted after the `caller's` death. Read more in [issue](https://github.com/general-CbIC/poolex/issues/114).
+- The function `add_idle_workers!/2` now provides new workers to waiting callers if they exist. Read more in [issue](https://github.com/general-CbIC/poolex/issues/122).
 
 ## [1.2.0] - 2025-01-07
 
