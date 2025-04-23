@@ -18,6 +18,7 @@ defmodule Poolex.Private.State do
               [
                 busy_workers_impl: nil,
                 busy_workers_state: nil,
+                failed_to_start_workers_count: 0,
                 idle_workers_impl: nil,
                 idle_workers_state: nil,
                 monitors: %{},
@@ -29,6 +30,7 @@ defmodule Poolex.Private.State do
   @type t() :: %__MODULE__{
           busy_workers_impl: module(),
           busy_workers_state: nil | Poolex.Workers.Behaviour.state(),
+          failed_to_start_workers_count: non_neg_integer(),
           idle_workers_impl: module(),
           idle_workers_state: nil | Poolex.Workers.Behaviour.state(),
           max_overflow: non_neg_integer(),

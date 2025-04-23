@@ -35,6 +35,8 @@ defmodule Poolex do
   alias Poolex.Private.State
   alias Poolex.Private.WaitingCallers
 
+  require Logger
+
   @default_checkout_timeout :timer.seconds(5)
   @poolex_options_table """
   | Option                 | Description                                          | Example               | Default value                     |
@@ -333,10 +335,16 @@ defmodule Poolex do
   end
 
   defp start_workers(workers_count, state) when is_integer(workers_count) and workers_count >= 1 do
-    Enum.map_reduce(1..workers_count, state, fn _iterator, state ->
-      {:ok, worker_pid} = start_worker(state)
-      state = Monitoring.add(state, worker_pid, :worker)
-      {worker_pid, state}
+    Enum.reduce(1..workers_count, {[], state}, fn _iterator, {workers_pids, state} ->
+      case start_worker(state) do
+        {:ok, worker_pid} ->
+          state = Monitoring.add(state, worker_pid, :worker)
+          {[worker_pid | workers_pids], state}
+
+        {:error, :failed_to_start_worker} ->
+          state = %{state | failed_to_start_workers_count: state.failed_to_start_workers_count + 1}
+          {workers_pids, state}
+      end
     end)
   end
 
@@ -345,15 +353,20 @@ defmodule Poolex do
     raise ArgumentError, msg
   end
 
-  @spec start_worker(State.t()) :: {:ok, pid()}
+  @spec start_worker(State.t()) :: {:ok, pid()} | {:error, :failed_to_start_worker}
   defp start_worker(%State{} = state) do
-    DynamicSupervisor.start_child(state.supervisor, %{
-      id: make_ref(),
-      start: {state.worker_module, state.worker_start_fun, state.worker_args},
-      restart: :temporary
-    })
-  rescue
-    _ -> {:error, :start_worker_failed}
+    case DynamicSupervisor.start_child(state.supervisor, %{
+           id: make_ref(),
+           start: {state.worker_module, state.worker_start_fun, state.worker_args},
+           restart: :temporary
+         }) do
+      {:ok, pid} ->
+        {:ok, pid}
+
+      {:error, reason} ->
+        Logger.error("[Poolex] Failed to start worker. Reason: #{inspect(reason)}")
+        {:error, :failed_to_start_worker}
+    end
   end
 
   @spec stop_worker(Supervisor.supervisor(), pid()) :: :ok | {:error, :not_found}

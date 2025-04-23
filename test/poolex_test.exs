@@ -16,6 +16,7 @@ defmodule PoolexTest do
   import PoolHelpers
 
   alias Poolex.Private.DebugInfo
+  alias Poolex.Private.State
 
   setup_all do
     if Version.match?(System.version(), ">= 1.18.0") do
@@ -716,10 +717,18 @@ defmodule PoolexTest do
   end
 
   describe "handle errors on workers launch" do
-    test "raises RuntimeError on pool initialization", %{pool_options: pool_options} do
-      assert_raise(RuntimeError, fn ->
-        pool_options |> Keyword.put(:worker_module, :not_existing_module) |> start_pool()
-      end)
+    test "while starting the pool", %{pool_options: pool_options} do
+      {:ok, control_agent} = Agent.start_link(fn -> 3 end)
+
+      pool_name =
+        pool_options
+        |> Keyword.merge(worker_module: SomeUnstableWorker, worker_args: [[control_agent: control_agent]])
+        |> start_pool()
+
+      state = %State{} = :sys.get_state(pool_name)
+
+      dbg(state)
+      assert state.failed_to_start_workers_count == 2
     end
   end
 end
