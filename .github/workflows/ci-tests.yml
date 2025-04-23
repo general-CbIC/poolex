@@ -51,12 +51,13 @@ jobs:
         run: |
           mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
           echo "mix_hash=$mix_hash" >> $GITHUB_ENV
-      - name: Cache PLT files
+      - name: Cache PLT files and deps
         uses: actions/cache@v4
         with:
           path: |
             _build/dev/*.plt
             _build/dev/*.plt.hash
+            deps/
           key: plt-cache-${{ env.mix_hash }}
           restore-keys: |
             plt-cache-
