@@ -16,14 +16,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: '1.7'
-            otp: '22'
-          - elixir: '1.8'
-            otp: '22'
-          - elixir: '1.9'
-            otp: '22'
-          - elixir: '1.10'
-            otp: '23'
           - elixir: '1.11'
             otp: '24'
           - elixir: '1.12'
@@ -72,6 +64,6 @@ jobs:
         uses: erlef/setup-beam@v1
         with:
           otp-version: '27'
-          elixir-version: '1.17'
+          elixir-version: '1.18'
       - run: mix do deps.get, compile
       - run: mix check
