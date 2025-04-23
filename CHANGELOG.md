@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Due to the deprecation of support ubuntu 20.04 on GitHub Actions (read more [here](https://github.com/actions/runner-images/issues/11101)), bumped minimum required versions of Elixir to `~> 1.11` and Erlang/OTP to `~> 24`.
+
 ## [1.2.1] - 2025-04-06
 
 ### Fixed
