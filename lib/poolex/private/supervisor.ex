@@ -10,6 +10,6 @@ defmodule Poolex.Private.Supervisor do
 
   @doc false
   def init(_arg) do
-    DynamicSupervisor.init(strategy: :one_for_one, max_restarts: 0)
+    DynamicSupervisor.init(strategy: :one_for_one)
   end
 end
