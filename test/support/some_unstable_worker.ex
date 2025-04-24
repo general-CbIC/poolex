@@ -18,8 +18,6 @@ defmodule SomeUnstableWorker do
          0 -> {false, 0}
          value -> {true, value - 1}
        end) do
-      Agent.update(control_agent, fn value -> value - 1 end)
-
       {:ok, nil}
     else
       {:error, :failed}
