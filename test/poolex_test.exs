@@ -716,6 +716,7 @@ defmodule PoolexTest do
   end
 
   describe "handle errors on workers launch" do
+    @describetag capture_log: true
     test "while starting the pool", %{pool_options: pool_options} do
       {:ok, control_agent} = Agent.start_link(fn -> 3 end)
 
