@@ -38,6 +38,10 @@ defmodule Poolex do
   require Logger
 
   @default_checkout_timeout :timer.seconds(5)
+
+  # Interval between retry attempts for workers that failed to start (1 second by default)
+  @default_failed_workers_retry_interval :timer.seconds(1)
+
   @poolex_options_table """
   | Option                 | Description                                          | Example               | Default value                     |
   |------------------------|------------------------------------------------------|-----------------------|-----------------------------------|
@@ -51,6 +55,7 @@ defmodule Poolex do
   | `idle_workers_impl`    | Module that describes how to work with idle workers  | `SomeIdleWorkersImpl` | `Poolex.Workers.Impl.List`        |
   | `waiting_callers_impl` | Module that describes how to work with callers queue | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
   | `pool_size_metrics`    | Whether to dispatch pool size metrics                | `true`                | `false`                           |
+  | `failed_workers_retry_interval` | Interval in milliseconds between retry attempts for failed workers | `5_000`               | `1_000`                           |
   """
 
   @typedoc """
@@ -72,6 +77,7 @@ defmodule Poolex do
           | {:idle_workers_impl, module()}
           | {:waiting_callers_impl, module()}
           | {:pool_size_metrics, boolean()}
+          | {:failed_workers_retry_interval, timeout()}
 
   @typedoc """
   Process id of `worker`.
@@ -326,6 +332,11 @@ defmodule Poolex do
   def handle_continue(opts, state) do
     Metrics.start_poller(opts)
 
+    failed_workers_retry_interval =
+      Keyword.get(opts, :failed_workers_retry_interval, @default_failed_workers_retry_interval)
+
+    state = schedule_retry_failed_workers(state, failed_workers_retry_interval)
+
     {:noreply, state}
   end
 
@@ -487,6 +498,22 @@ defmodule Poolex do
     end
   end
 
+  @impl GenServer
+  def handle_info(:retry_failed_workers, %{failed_workers_retry_interval: retry_interval} = state) do
+    # Try to start workers that failed to initialize
+    state =
+      if state.failed_to_start_workers_count > 0 do
+        retry_failed_workers(state)
+      else
+        state
+      end
+
+    # Schedule next check
+    state = schedule_retry_failed_workers(state, retry_interval)
+
+    {:noreply, state}
+  end
+
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
     if BusyWorkers.member?(state, worker) do
@@ -563,6 +590,39 @@ defmodule Poolex do
           # Send message to stop worker if caller is dead
           # After that worker will be restarted
           GenServer.cast(pool_id, {:stop_worker, worker})
+      end
+    end)
+  end
+
+  @spec schedule_retry_failed_workers(State.t(), timeout()) :: State.t()
+  defp schedule_retry_failed_workers(state, retry_interval) do
+    Process.send_after(self(), :retry_failed_workers, retry_interval)
+    %{state | failed_workers_retry_interval: retry_interval}
+  end
+
+  @spec retry_failed_workers(State.t()) :: State.t()
+  defp retry_failed_workers(%State{} = state) do
+    workers_to_retry = state.failed_to_start_workers_count
+
+    Logger.info("[Poolex] Attempting to restart #{workers_to_retry} failed workers")
+
+    # Reset the failed workers counter
+    state = %{state | failed_to_start_workers_count: 0}
+
+    # Start the specified number of workers
+    {workers, updated_state} = start_workers(workers_to_retry, state)
+
+    # Add successfully started workers to the pool
+    Enum.reduce(workers, updated_state, fn worker, acc_state ->
+      if WaitingCallers.empty?(acc_state) do
+        # If there are no waiting callers, add to idle workers list
+        IdleWorkers.add(acc_state, worker)
+      else
+        # If there are waiting callers, give them the worker
+        acc_state
+        |> Monitoring.add(worker, :worker)
+        |> BusyWorkers.add(worker)
+        |> provide_worker_to_waiting_caller(worker)
       end
     end)
   end

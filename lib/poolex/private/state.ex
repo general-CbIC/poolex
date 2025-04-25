@@ -23,6 +23,7 @@ defmodule Poolex.Private.State do
                 idle_workers_state: nil,
                 monitors: %{},
                 overflow: 0,
+                failed_workers_retry_interval: nil,
                 waiting_callers_impl: nil,
                 waiting_callers_state: nil
               ]
@@ -37,6 +38,7 @@ defmodule Poolex.Private.State do
           monitors: %{reference() => Poolex.Private.Monitoring.kind_of_process()},
           overflow: non_neg_integer(),
           pool_id: Poolex.pool_id(),
+          failed_workers_retry_interval: timeout() | nil,
           supervisor: pid(),
           waiting_callers_impl: module(),
           waiting_callers_state: nil | Poolex.Callers.Behaviour.state(),
