@@ -224,6 +224,7 @@ defmodule Poolex do
 
       * `busy_workers_count` - how many workers are busy right now.
       * `busy_workers_pids` - list of busy workers.
+      * `failed_to_start_workers_count` - how many workers failed to start.
       * `idle_workers_count` - how many workers are ready to work.
       * `idle_workers_pids` - list of idle workers.
       * `max_overflow` - how many workers can be created over the limit.
@@ -294,10 +295,14 @@ defmodule Poolex do
     waiting_callers_impl =
       Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
+    failed_workers_retry_interval =
+      Keyword.get(opts, :failed_workers_retry_interval, @default_failed_workers_retry_interval)
+
     {:ok, supervisor} = Poolex.Private.Supervisor.start_link()
 
     state =
       %State{
+        failed_workers_retry_interval: failed_workers_retry_interval,
         max_overflow: max_overflow,
         pool_id: pool_id,
         supervisor: supervisor,
@@ -332,10 +337,7 @@ defmodule Poolex do
   def handle_continue(opts, state) do
     Metrics.start_poller(opts)
 
-    failed_workers_retry_interval =
-      Keyword.get(opts, :failed_workers_retry_interval, @default_failed_workers_retry_interval)
-
-    state = schedule_retry_failed_workers(state, failed_workers_retry_interval)
+    state = schedule_retry_failed_workers(state, state.failed_workers_retry_interval)
 
     {:noreply, state}
   end
@@ -418,6 +420,7 @@ defmodule Poolex do
       busy_workers_count: BusyWorkers.count(state),
       busy_workers_impl: state.busy_workers_impl,
       busy_workers_pids: BusyWorkers.to_list(state),
+      failed_to_start_workers_count: state.failed_to_start_workers_count,
       idle_workers_count: IdleWorkers.count(state),
       idle_workers_impl: state.idle_workers_impl,
       idle_workers_pids: IdleWorkers.to_list(state),

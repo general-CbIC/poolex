@@ -6,6 +6,7 @@ defmodule Poolex.Private.State do
   """
 
   @enforce_keys [
+    :failed_workers_retry_interval,
     :max_overflow,
     :pool_id,
     :supervisor,
@@ -23,7 +24,6 @@ defmodule Poolex.Private.State do
                 idle_workers_state: nil,
                 monitors: %{},
                 overflow: 0,
-                failed_workers_retry_interval: nil,
                 waiting_callers_impl: nil,
                 waiting_callers_state: nil
               ]
@@ -32,13 +32,13 @@ defmodule Poolex.Private.State do
           busy_workers_impl: module(),
           busy_workers_state: nil | Poolex.Workers.Behaviour.state(),
           failed_to_start_workers_count: non_neg_integer(),
+          failed_workers_retry_interval: timeout() | nil,
           idle_workers_impl: module(),
           idle_workers_state: nil | Poolex.Workers.Behaviour.state(),
           max_overflow: non_neg_integer(),
           monitors: %{reference() => Poolex.Private.Monitoring.kind_of_process()},
           overflow: non_neg_integer(),
           pool_id: Poolex.pool_id(),
-          failed_workers_retry_interval: timeout() | nil,
           supervisor: pid(),
           waiting_callers_impl: module(),
           waiting_callers_state: nil | Poolex.Callers.Behaviour.state(),

@@ -16,7 +16,6 @@ defmodule PoolexTest do
   import PoolHelpers
 
   alias Poolex.Private.DebugInfo
-  alias Poolex.Private.State
 
   setup_all do
     if Version.match?(System.version(), ">= 1.18.0") do
@@ -722,13 +721,25 @@ defmodule PoolexTest do
 
       pool_name =
         pool_options
-        |> Keyword.merge(worker_module: SomeUnstableWorker, worker_args: [[control_agent: control_agent]])
+        |> Keyword.merge(
+          worker_module: SomeUnstableWorker,
+          worker_args: [[control_agent: control_agent]],
+          failed_workers_retry_interval: 100
+        )
         |> start_pool()
 
-      state = %State{} = :sys.get_state(pool_name)
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.failed_to_start_workers_count == 2
+      assert debug_info.idle_workers_count == 3
 
-      dbg(state)
-      assert state.failed_to_start_workers_count == 2
+      # Increase the agent value to allow the remaining workers to start
+      Agent.update(control_agent, fn _ -> 2 end)
+
+      :timer.sleep(150)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.failed_to_start_workers_count == 0
+      assert debug_info.idle_workers_count == 5
     end
   end
 end
