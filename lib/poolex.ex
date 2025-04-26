@@ -22,7 +22,7 @@ defmodule Poolex do
   {:ok, true}
   ```
 
-  Fore more information see [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
+  For more information see [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
   """
 
   use GenServer, shutdown: :infinity
