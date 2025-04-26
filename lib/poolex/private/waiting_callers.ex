@@ -6,13 +6,13 @@ defmodule Poolex.Private.WaitingCallers do
   @doc false
   @spec init(State.t(), waiting_callers_impl :: module()) :: State.t()
   def init(%State{} = state, impl) do
-    %State{state | waiting_callers_impl: impl, waiting_callers_state: impl.init()}
+    %{state | waiting_callers_impl: impl, waiting_callers_state: impl.init()}
   end
 
   @doc false
   @spec add(State.t(), Poolex.Caller.t()) :: State.t()
   def add(%State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state, caller) do
-    %State{state | waiting_callers_state: impl.add(waiting_callers_state, caller)}
+    %{state | waiting_callers_state: impl.add(waiting_callers_state, caller)}
   end
 
   @doc false
@@ -26,7 +26,7 @@ defmodule Poolex.Private.WaitingCallers do
   def pop(%State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state) do
     case impl.pop(waiting_callers_state) do
       {caller, new_waiting_callers_state} ->
-        {caller, %State{state | waiting_callers_state: new_waiting_callers_state}}
+        {caller, %{state | waiting_callers_state: new_waiting_callers_state}}
 
       :empty ->
         :empty
@@ -36,7 +36,7 @@ defmodule Poolex.Private.WaitingCallers do
   @doc false
   @spec remove_by_pid(State.t(), caller_pid :: pid()) :: State.t()
   def remove_by_pid(%State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state, caller) do
-    %State{state | waiting_callers_state: impl.remove_by_pid(waiting_callers_state, caller)}
+    %{state | waiting_callers_state: impl.remove_by_pid(waiting_callers_state, caller)}
   end
 
   @doc false
@@ -45,7 +45,7 @@ defmodule Poolex.Private.WaitingCallers do
         %State{waiting_callers_impl: impl, waiting_callers_state: waiting_callers_state} = state,
         reference
       ) do
-    %State{
+    %{
       state
       | waiting_callers_state: impl.remove_by_reference(waiting_callers_state, reference)
     }

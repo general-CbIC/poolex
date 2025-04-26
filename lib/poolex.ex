@@ -37,10 +37,10 @@ defmodule Poolex do
 
   require Logger
 
-  @default_checkout_timeout :timer.seconds(5)
+  @default_checkout_timeout to_timeout(second: 5)
 
   # Interval between retry attempts for workers that failed to start (1 second by default)
-  @default_failed_workers_retry_interval :timer.seconds(1)
+  @default_failed_workers_retry_interval to_timeout(second: 1)
 
   @poolex_options_table """
   | Option                          | Description                                                        | Example               | Default value                     |
@@ -359,7 +359,7 @@ defmodule Poolex do
           |> Monitoring.add(new_worker, :worker)
           |> BusyWorkers.add(new_worker)
 
-        {:reply, {:ok, new_worker}, %State{state | overflow: state.overflow + 1}}
+        {:reply, {:ok, new_worker}, %{state | overflow: state.overflow + 1}}
       else
         state =
           state
@@ -513,7 +513,7 @@ defmodule Poolex do
 
     if WaitingCallers.empty?(state) do
       if state.overflow > 0 do
-        %State{state | overflow: state.overflow - 1}
+        %{state | overflow: state.overflow - 1}
       else
         {:ok, new_worker} = start_worker(state)
 
