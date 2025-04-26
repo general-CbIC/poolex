@@ -8,7 +8,7 @@ defmodule Poolex.Private.Metrics do
   """
   @spec dispatch_pool_size_metrics(Poolex.pool_id()) :: :ok
   def dispatch_pool_size_metrics(pool_id) do
-    debug_info = Poolex.get_debug_info(pool_id)
+    debug_info = Poolex.Private.DebugInfo.get_debug_info(pool_id)
 
     :telemetry.execute(
       [:poolex, :metrics, :pool_size],

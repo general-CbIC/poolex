@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Function `get_debug_info/1` moved from `Poolex` to `Poolex.Private.DebugInfo` (according to the [issue](https://github.com/general-CbIC/poolex/issues/140)).
+
 ## [1.3.0] - 2025-04-26
 
 ### Added
