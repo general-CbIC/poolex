@@ -7,7 +7,7 @@ defmodule Poolex.MixProject do
       deps: deps(),
       description: "The library for managing pools of workers.",
       docs: docs(),
-      elixir: "~> 1.7",
+      elixir: "~> 1.11",
       elixirc_options: [
         warnings_as_errors: true
       ],
@@ -15,13 +15,15 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "1.2.1"
+      version: "1.3.0"
     ]
   end
 
   # Run "mix help compile.app" to learn about applications.
   def application do
-    []
+    [
+      extra_applications: [:logger]
+    ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -33,7 +35,7 @@ defmodule Poolex.MixProject do
       {:telemetry, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       # Development dependencies
-      {:credo, "1.7.11", only: [:dev], runtime: false},
+      {:credo, "1.7.12", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
       {:doctor, ">= 0.0.0", only: [:dev], runtime: false},
       {:ex_check, "~> 0.16.0", only: [:dev], runtime: false},

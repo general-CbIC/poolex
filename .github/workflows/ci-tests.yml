@@ -10,20 +10,12 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - elixir: '1.7'
-            otp: '22'
-          - elixir: '1.8'
-            otp: '22'
-          - elixir: '1.9'
-            otp: '22'
-          - elixir: '1.10'
-            otp: '23'
           - elixir: '1.11'
             otp: '24'
           - elixir: '1.12'
@@ -59,12 +51,13 @@ jobs:
         run: |
           mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
           echo "mix_hash=$mix_hash" >> $GITHUB_ENV
-      - name: Cache PLT files
+      - name: Cache PLT files and deps
         uses: actions/cache@v4
         with:
           path: |
             _build/dev/*.plt
             _build/dev/*.plt.hash
+            deps/
           key: plt-cache-${{ env.mix_hash }}
           restore-keys: |
             plt-cache-
@@ -72,6 +65,6 @@ jobs:
         uses: erlef/setup-beam@v1
         with:
           otp-version: '27'
-          elixir-version: '1.17'
+          elixir-version: '1.18'
       - run: mix do deps.get, compile
       - run: mix check

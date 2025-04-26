@@ -22,6 +22,7 @@ Poolex is a library for managing pools of workers. Inspired by [poolboy](https:/
   - [Installation](#installation)
   - [Usage](#usage)
   - [Guides](#guides)
+  - [Used by](#used-by)
   - [Contributions](#contributions)
 
 ## Features
@@ -36,14 +37,14 @@ With `poolex` you can:
 **Why `poolex` instead of `poolboy`?**
   
 - `poolex` is written in Elixir. This library is much more convenient to use in Elixir projects.
-- `poolboy` is a great library, but not actively maintained :crying_cat_face:![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
+- `poolboy` is a great library, but not actively maintained :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
 
 ## Requirements
 
-| Requirement | Version |
-|-------------|---------|
-| Erlang/OTP  | >= 22   |
-| Elixir      | >= 1.7  |
+| Library | Elixir  | Erlang/OTP |
+|---------|---------|------------|
+| < 1.3   | >= 1.7  | >= 22      |
+| >= 1.3  | >= 1.11 | >= 24      |
 
 ## Installation
 
@@ -98,6 +99,10 @@ A detailed description of the available configuration or examples of use can be 
   - [Callers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#callers)
   - [Workers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#workers)
   - [Writing custom implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#writing-custom-implementations)
+
+## Used by
+
+[![Aviasales](./assets/companies/aviasales_logo.svg)](https://www.aviasales.com)
 
 ## Contributions
 

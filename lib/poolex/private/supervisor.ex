@@ -5,7 +5,7 @@ defmodule Poolex.Private.Supervisor do
   @doc false
   @spec start_link() :: Supervisor.on_start()
   def start_link do
-    DynamicSupervisor.start_link(__MODULE__, nil)
+    DynamicSupervisor.start_link(__MODULE__, [])
   end
 
   @doc false

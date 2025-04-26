@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-04-26 
+
+### Added
+
+- Added caching of the dependencies on CI (compilation speed up).
+- Added a new option `failed_workers_retry_interval` to the pool configuration. This option configures an interval in milliseconds between retry attempts for workers which failed to start. The value is `1 second` by default. Example:
+
+  ```elixir
+  Poolex.start_link(
+    worker_module: SomeUnstableWorker,
+    workers_count: 5,
+    failed_workers_retry_interval: 3_000
+  )
+  ```
+
+### Changed
+
+- Due to the deprecation of support ubuntu 20.04 on GitHub Actions (read more [here](https://github.com/actions/runner-images/issues/11101)), bumped minimum required versions of Elixir to `~> 1.11` and Erlang/OTP to `~> 24`.
+
+### Fixed
+
+- Fixed the `MatchError` on pool starting error that occurs with errors on the launch of workers (read more in [issue](https://github.com/general-CbIC/poolex/issues/113)).
+
 ## [1.2.1] - 2025-04-06
 
 ### Fixed
@@ -296,7 +319,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.2.1...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/general-CbIC/poolex/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/general-CbIC/poolex/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/general-CbIC/poolex/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/general-CbIC/poolex/compare/v1.0.0...v1.1.0

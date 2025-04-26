@@ -714,4 +714,33 @@ defmodule PoolexTest do
       end)
     end
   end
+
+  describe "handle errors on workers launch" do
+    @describetag capture_log: true
+    test "while starting the pool", %{pool_options: pool_options} do
+      {:ok, control_agent} = Agent.start_link(fn -> 3 end)
+
+      pool_name =
+        pool_options
+        |> Keyword.merge(
+          worker_module: SomeUnstableWorker,
+          worker_args: [[control_agent: control_agent]],
+          failed_workers_retry_interval: 100
+        )
+        |> start_pool()
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.failed_to_start_workers_count == 2
+      assert debug_info.idle_workers_count == 3
+
+      # Increase the agent value to allow the remaining workers to start
+      Agent.update(control_agent, fn _ -> 2 end)
+
+      :timer.sleep(150)
+
+      debug_info = Poolex.get_debug_info(pool_name)
+      assert debug_info.failed_to_start_workers_count == 0
+      assert debug_info.idle_workers_count == 5
+    end
+  end
 end
