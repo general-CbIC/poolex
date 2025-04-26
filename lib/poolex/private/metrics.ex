@@ -3,12 +3,14 @@ defmodule Poolex.Private.Metrics do
   Functions for dispatching metrics.
   """
 
+  alias Poolex.Private.DebugInfo
+
   @doc """
   Dispatches metrics with current count of idle workers.
   """
   @spec dispatch_pool_size_metrics(Poolex.pool_id()) :: :ok
   def dispatch_pool_size_metrics(pool_id) do
-    debug_info = Poolex.Private.DebugInfo.get_debug_info(pool_id)
+    debug_info = DebugInfo.get_debug_info(pool_id)
 
     :telemetry.execute(
       [:poolex, :metrics, :pool_size],
