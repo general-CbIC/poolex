@@ -36,4 +36,37 @@ defmodule Poolex.Private.DebugInfo do
           worker_module: module(),
           worker_start_fun: atom()
         }
+
+  @doc """
+  Returns detailed information about started pool.
+
+  Primarily needed to help with debugging. **Avoid using this function in production.**
+
+  ## Fields
+
+      * `busy_workers_count` - how many workers are busy right now.
+      * `busy_workers_pids` - list of busy workers.
+      * `failed_to_start_workers_count` - how many workers failed to start.
+      * `idle_workers_count` - how many workers are ready to work.
+      * `idle_workers_pids` - list of idle workers.
+      * `max_overflow` - how many workers can be created over the limit.
+      * `overflow` - current count of workers launched over limit.
+      * `waiting_caller_pids` - list of callers processes.
+      * `worker_args` - what parameters are used to start the worker.
+      * `worker_module` - name of a module that describes a worker.
+      * `worker_start_fun` - what function is used to start the worker.
+
+  ## Examples
+
+      iex> Poolex.start(pool_id: :my_pool_3, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 5)
+      iex> debug_info = %Poolex.Private.DebugInfo{} = Poolex.Private.DebugInfo.get_debug_info(:my_pool_3)
+      iex> debug_info.busy_workers_count
+      0
+      iex> debug_info.idle_workers_count
+      5
+  """
+  @spec get_debug_info(Poolex.pool_id()) :: t()
+  def get_debug_info(pool_id) do
+    GenServer.call(pool_id, :get_debug_info)
+  end
 end

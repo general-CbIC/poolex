@@ -31,7 +31,7 @@ defmodule PoolexTest do
     test "valid after initialization", %{pool_options: pool_options} do
       pool_name = start_pool(pool_options)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.__struct__ == DebugInfo
       assert debug_info.busy_workers_count == 0
@@ -57,7 +57,7 @@ defmodule PoolexTest do
         )
         |> start_pool()
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_impl == SomeBusyWorkersImpl
       assert debug_info.idle_workers_impl == SomeIdleWorkersImpl
@@ -69,7 +69,7 @@ defmodule PoolexTest do
 
       assert {:ok, :some_result} = Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_some_work) end)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.__struct__ == DebugInfo
       assert debug_info.busy_workers_count == 0
@@ -97,7 +97,7 @@ defmodule PoolexTest do
         _message -> nil
       end
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.__struct__ == DebugInfo
       assert debug_info.busy_workers_count == 1
@@ -119,7 +119,7 @@ defmodule PoolexTest do
 
       Poolex.run(pool_name, fn pid -> Agent.update(pid, fn _state -> 1 end) end)
 
-      [agent_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
+      [agent_pid] = DebugInfo.get_debug_info(pool_name).idle_workers_pids
 
       assert 1 == Agent.get(agent_pid, fn state -> state end)
     end
@@ -155,14 +155,14 @@ defmodule PoolexTest do
     test "works on idle workers", %{pool_options: pool_options} do
       pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
-      [some_worker_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
+      [some_worker_pid] = DebugInfo.get_debug_info(pool_name).idle_workers_pids
 
       Process.exit(some_worker_pid, :kill)
 
       # To be sure that DOWN message will be handed
       :timer.sleep(1)
 
-      [new_worker_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
+      [new_worker_pid] = DebugInfo.get_debug_info(pool_name).idle_workers_pids
 
       assert some_worker_pid != new_worker_pid
     end
@@ -183,14 +183,14 @@ defmodule PoolexTest do
         _message -> nil
       end
 
-      [some_worker_pid] = Poolex.get_debug_info(pool_name).busy_workers_pids
+      [some_worker_pid] = DebugInfo.get_debug_info(pool_name).busy_workers_pids
 
       Process.exit(some_worker_pid, :kill)
 
       # To be sure that DOWN message will be handed
       :timer.sleep(1)
 
-      [new_worker_pid] = Poolex.get_debug_info(pool_name).idle_workers_pids
+      [new_worker_pid] = DebugInfo.get_debug_info(pool_name).idle_workers_pids
 
       assert some_worker_pid != new_worker_pid
     end
@@ -200,7 +200,7 @@ defmodule PoolexTest do
 
       launch_long_tasks(pool_name, 2)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.busy_workers_count == 1
       assert length(debug_info.waiting_callers) == 1
 
@@ -210,7 +210,7 @@ defmodule PoolexTest do
       # To be sure that DOWN message will be handed
       :timer.sleep(1)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.busy_workers_count == 1
       assert Enum.empty?(debug_info.waiting_callers)
 
@@ -237,7 +237,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 10
 
       assert Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
@@ -247,7 +247,7 @@ defmodule PoolexTest do
       Process.exit(waiting_caller, :kill)
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 9
 
       refute Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
@@ -267,7 +267,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 1
@@ -278,7 +278,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_count == 2
@@ -302,7 +302,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 0
@@ -311,7 +311,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_count == 0
@@ -324,7 +324,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_count == 1
@@ -351,7 +351,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 1
 
       assert Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
@@ -359,7 +359,7 @@ defmodule PoolexTest do
              end)
 
       :timer.sleep(100)
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert Enum.empty?(debug_info.waiting_callers)
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 0
@@ -381,7 +381,7 @@ defmodule PoolexTest do
 
       :timer.sleep(10)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert Enum.empty?(debug_info.waiting_callers)
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 0
@@ -449,7 +449,7 @@ defmodule PoolexTest do
       refute_received _
 
       Process.sleep(100)
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_pids == [worker]
 
@@ -464,7 +464,7 @@ defmodule PoolexTest do
 
       launch_long_tasks(pool_name, 5)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.max_overflow == 5
       assert debug_info.busy_workers_count == 5
       assert debug_info.overflow == 4
@@ -484,7 +484,7 @@ defmodule PoolexTest do
 
       assert result == {:error, :checkout_timeout}
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_count == 1
       assert debug_info.max_overflow == 0
@@ -501,7 +501,7 @@ defmodule PoolexTest do
 
       :timer.sleep(50)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 0
@@ -511,7 +511,7 @@ defmodule PoolexTest do
     test "allows workers_count: 0", %{pool_options: pool_options} do
       pool_name = pool_options |> Keyword.merge(workers_count: 0, max_overflow: 2) |> start_pool()
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.idle_workers_count == 0
       assert debug_info.idle_workers_pids == []
@@ -530,7 +530,7 @@ defmodule PoolexTest do
       assert_receive {:traceable_start, :foo, worker_pid}
       refute_received {:traceable_end, _, _}
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.idle_workers_count == 0
       assert debug_info.idle_workers_pids == []
@@ -539,7 +539,7 @@ defmodule PoolexTest do
       assert debug_info.overflow == 1
 
       assert_receive {:traceable_end, :foo, ^worker_pid}
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.idle_workers_count == 0
       assert debug_info.idle_workers_pids == []
@@ -634,9 +634,9 @@ defmodule PoolexTest do
     test "adds idle workers to pool", %{pool_options: pool_options} do
       pool_name = start_pool(pool_options)
 
-      assert %DebugInfo{idle_workers_count: 5} = Poolex.get_debug_info(pool_name)
+      assert %DebugInfo{idle_workers_count: 5} = DebugInfo.get_debug_info(pool_name)
       assert :ok = Poolex.add_idle_workers!(pool_name, 5)
-      assert %DebugInfo{idle_workers_count: 10} = Poolex.get_debug_info(pool_name)
+      assert %DebugInfo{idle_workers_count: 10} = DebugInfo.get_debug_info(pool_name)
     end
 
     test "provides new workers to waiting callers", %{pool_options: pool_options} do
@@ -657,7 +657,7 @@ defmodule PoolexTest do
         _message -> nil
       end
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_count == 0
       assert Enum.count(debug_info.waiting_callers) == 1
@@ -665,7 +665,7 @@ defmodule PoolexTest do
 
       assert :ok = Poolex.add_idle_workers!(pool_name, 1)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.busy_workers_count == 1
       assert debug_info.idle_workers_count == 0
       assert Enum.empty?(debug_info.waiting_callers)
@@ -689,17 +689,17 @@ defmodule PoolexTest do
     test "removes idle workers from pool", %{pool_options: pool_options} do
       pool_name = start_pool(pool_options)
 
-      assert %DebugInfo{idle_workers_count: 5} = Poolex.get_debug_info(pool_name)
+      assert %DebugInfo{idle_workers_count: 5} = DebugInfo.get_debug_info(pool_name)
       assert :ok = Poolex.remove_idle_workers!(pool_name, 2)
-      assert %DebugInfo{idle_workers_count: 3} = Poolex.get_debug_info(pool_name)
+      assert %DebugInfo{idle_workers_count: 3} = DebugInfo.get_debug_info(pool_name)
     end
 
     test "removes all idle workers when argument is bigger than idle_workers count", %{pool_options: pool_options} do
       pool_name = pool_options |> Keyword.put(:workers_count, 3) |> start_pool()
 
-      assert %DebugInfo{idle_workers_count: 3} = Poolex.get_debug_info(pool_name)
+      assert %DebugInfo{idle_workers_count: 3} = DebugInfo.get_debug_info(pool_name)
       assert :ok = Poolex.remove_idle_workers!(pool_name, 5)
-      assert %DebugInfo{idle_workers_count: 0} = Poolex.get_debug_info(pool_name)
+      assert %DebugInfo{idle_workers_count: 0} = DebugInfo.get_debug_info(pool_name)
     end
 
     test "raises error on non positive workers_count", %{pool_options: pool_options} do
@@ -729,7 +729,7 @@ defmodule PoolexTest do
         )
         |> start_pool()
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.failed_to_start_workers_count == 2
       assert debug_info.idle_workers_count == 3
 
@@ -738,7 +738,7 @@ defmodule PoolexTest do
 
       :timer.sleep(150)
 
-      debug_info = Poolex.get_debug_info(pool_name)
+      debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.failed_to_start_workers_count == 0
       assert debug_info.idle_workers_count == 5
     end
