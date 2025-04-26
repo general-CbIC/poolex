@@ -40,7 +40,7 @@ defmodule Poolex.Private.Metrics do
     else
       :telemetry_poller.start_link(
         measurements: measurements,
-        period: :timer.seconds(1),
+        period: to_timeout(second: 1),
         name: :"#{pool_id}_metrics_poller"
       )
     end

@@ -89,7 +89,7 @@ defmodule PoolexTest do
       spawn(fn ->
         Poolex.run(pool_name, fn _pid ->
           Process.send(test_process, nil, [])
-          :timer.sleep(:timer.seconds(5))
+          :timer.sleep(to_timeout(second: 5))
         end)
       end)
 
@@ -175,7 +175,7 @@ defmodule PoolexTest do
       spawn(fn ->
         Poolex.run(pool_name, fn _pid ->
           Process.send(test_process, nil, [])
-          :timer.sleep(:timer.seconds(5))
+          :timer.sleep(to_timeout(second: 5))
         end)
       end)
 
@@ -224,14 +224,14 @@ defmodule PoolexTest do
 
       Enum.each(1..10, fn _ ->
         spawn(fn ->
-          Poolex.run(pool_name, fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end)
+          Poolex.run(pool_name, fn pid -> GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)}) end)
         end)
       end)
 
       waiting_caller =
         spawn(fn ->
           Poolex.run(pool_name, fn pid ->
-            GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(3)})
+            GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 3)})
           end)
         end)
 
@@ -261,7 +261,7 @@ defmodule PoolexTest do
       caller =
         spawn(fn ->
           Poolex.run(pool_name, fn pid ->
-            GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
+            GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)})
           end)
         end)
 
@@ -296,7 +296,7 @@ defmodule PoolexTest do
       caller =
         spawn(fn ->
           Poolex.run(pool_name, fn pid ->
-            GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
+            GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)})
           end)
         end)
 
@@ -343,7 +343,7 @@ defmodule PoolexTest do
           Poolex.run(
             pool_name,
             fn pid ->
-              GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)})
+              GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)})
             end,
             checkout_timeout: 100
           )
@@ -373,7 +373,7 @@ defmodule PoolexTest do
       result =
         Poolex.run(
           pool_name,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)}) end,
           checkout_timeout: 100
         )
 
@@ -478,7 +478,7 @@ defmodule PoolexTest do
       result =
         Poolex.run(
           pool_name,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, :timer.seconds(4)}) end,
+          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)}) end,
           checkout_timeout: 100
         )
 
@@ -649,7 +649,7 @@ defmodule PoolexTest do
 
         Poolex.run(pool_name, fn _pid ->
           Process.send(test_process, :started_work, [])
-          :timer.sleep(:timer.seconds(5))
+          :timer.sleep(to_timeout(second: 5))
         end)
       end)
 
