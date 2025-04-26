@@ -209,12 +209,6 @@ defmodule Poolex do
     end
   end
 
-  @deprecated "Use :sys.get_state/1 instead"
-  @doc false
-  def get_state(name) do
-    :sys.get_state(name)
-  end
-
   @doc """
   Adds some idle workers to existing pool.
   """
