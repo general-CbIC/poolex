@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Function `get_debug_info/1` moved from `Poolex` to `Poolex.Private.DebugInfo` (according to the [issue](https://github.com/general-CbIC/poolex/issues/140)).
 - Function `get_state/1` was removed.
+- Minimum required version of Elixir bumped to `~> 1.17` and Erlang/OTP to `~> 25`.
 
 ## [1.3.0] - 2025-04-26
 
