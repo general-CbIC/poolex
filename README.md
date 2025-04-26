@@ -22,6 +22,7 @@ Poolex is a library for managing pools of workers. Inspired by [poolboy](https:/
   - [Installation](#installation)
   - [Usage](#usage)
   - [Guides](#guides)
+  - [Used by](#used-by)
   - [Contributions](#contributions)
 
 ## Features
@@ -98,6 +99,10 @@ A detailed description of the available configuration or examples of use can be 
   - [Callers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#callers)
   - [Workers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#workers)
   - [Writing custom implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#writing-custom-implementations)
+
+## Used by
+
+[![Aviasales](./assets/companies/aviasales_logo.svg)](https://www.aviasales.com)
 
 ## Contributions
 
