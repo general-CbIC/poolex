@@ -22,7 +22,7 @@ defmodule Poolex do
   {:ok, true}
   ```
 
-  Fore more information see [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
+  For more information see [Getting Started](https://hexdocs.pm/poolex/getting-started.html)
   """
 
   use GenServer, shutdown: :infinity
@@ -35,20 +35,27 @@ defmodule Poolex do
   alias Poolex.Private.State
   alias Poolex.Private.WaitingCallers
 
+  require Logger
+
   @default_checkout_timeout :timer.seconds(5)
+
+  # Interval between retry attempts for workers that failed to start (1 second by default)
+  @default_failed_workers_retry_interval :timer.seconds(1)
+
   @poolex_options_table """
-  | Option                 | Description                                          | Example               | Default value                     |
-  |------------------------|------------------------------------------------------|-----------------------|-----------------------------------|
-  | `pool_id`              | Identifier by which you will access the pool         | `:my_pool`            | `worker_module` value             |
-  | `worker_module`        | Name of module that implements our worker            | `MyApp.Worker`        | **option is required**            |
-  | `workers_count`        | How many workers should be running in the pool       | `5`                   | **option is required**            |
-  | `max_overflow`         | How many workers can be created over the limit       | `2`                   | `0`                               |
-  | `worker_args`          | List of arguments passed to the start function       | `[:gg, "wp"]`         | `[]`                              |
-  | `worker_start_fun`     | Name of the function that starts the worker          | `:run`                | `:start_link`                     |
-  | `busy_workers_impl`    | Module that describes how to work with busy workers  | `SomeBusyWorkersImpl` | `Poolex.Workers.Impl.List`        |
-  | `idle_workers_impl`    | Module that describes how to work with idle workers  | `SomeIdleWorkersImpl` | `Poolex.Workers.Impl.List`        |
-  | `waiting_callers_impl` | Module that describes how to work with callers queue | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
-  | `pool_size_metrics`    | Whether to dispatch pool size metrics                | `true`                | `false`                           |
+  | Option                          | Description                                                        | Example               | Default value                     |
+  |---------------------------------|--------------------------------------------------------------------|-----------------------|-----------------------------------|
+  | `pool_id`                       | Identifier by which you will access the pool                       | `:my_pool`            | `worker_module` value             |
+  | `worker_module`                 | Name of module that implements our worker                          | `MyApp.Worker`        | **option is required**            |
+  | `workers_count`                 | How many workers should be running in the pool                     | `5`                   | **option is required**            |
+  | `max_overflow`                  | How many workers can be created over the limit                     | `2`                   | `0`                               |
+  | `worker_args`                   | List of arguments passed to the start function                     | `[:gg, "wp"]`         | `[]`                              |
+  | `worker_start_fun`              | Name of the function that starts the worker                        | `:run`                | `:start_link`                     |
+  | `busy_workers_impl`             | Module that describes how to work with busy workers                | `SomeBusyWorkersImpl` | `Poolex.Workers.Impl.List`        |
+  | `idle_workers_impl`             | Module that describes how to work with idle workers                | `SomeIdleWorkersImpl` | `Poolex.Workers.Impl.List`        |
+  | `waiting_callers_impl`          | Module that describes how to work with callers queue               | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
+  | `pool_size_metrics`             | Whether to dispatch pool size metrics                              | `true`                | `false`                           |
+  | `failed_workers_retry_interval` | Interval in milliseconds between retry attempts for failed workers | `5_000`               | `1_000`                           |
   """
 
   @typedoc """
@@ -70,6 +77,7 @@ defmodule Poolex do
           | {:idle_workers_impl, module()}
           | {:waiting_callers_impl, module()}
           | {:pool_size_metrics, boolean()}
+          | {:failed_workers_retry_interval, timeout()}
 
   @typedoc """
   Process id of `worker`.
@@ -216,6 +224,7 @@ defmodule Poolex do
 
       * `busy_workers_count` - how many workers are busy right now.
       * `busy_workers_pids` - list of busy workers.
+      * `failed_to_start_workers_count` - how many workers failed to start.
       * `idle_workers_count` - how many workers are ready to work.
       * `idle_workers_pids` - list of idle workers.
       * `max_overflow` - how many workers can be created over the limit.
@@ -286,10 +295,14 @@ defmodule Poolex do
     waiting_callers_impl =
       Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
+    failed_workers_retry_interval =
+      Keyword.get(opts, :failed_workers_retry_interval, @default_failed_workers_retry_interval)
+
     {:ok, supervisor} = Poolex.Private.Supervisor.start_link()
 
     state =
       %State{
+        failed_workers_retry_interval: failed_workers_retry_interval,
         max_overflow: max_overflow,
         pool_id: pool_id,
         supervisor: supervisor,
@@ -324,6 +337,8 @@ defmodule Poolex do
   def handle_continue(opts, state) do
     Metrics.start_poller(opts)
 
+    state = schedule_retry_failed_workers(state, state.failed_workers_retry_interval)
+
     {:noreply, state}
   end
 
@@ -333,10 +348,16 @@ defmodule Poolex do
   end
 
   defp start_workers(workers_count, state) when is_integer(workers_count) and workers_count >= 1 do
-    Enum.map_reduce(1..workers_count, state, fn _iterator, state ->
-      {:ok, worker_pid} = start_worker(state)
-      state = Monitoring.add(state, worker_pid, :worker)
-      {worker_pid, state}
+    Enum.reduce(1..workers_count, {[], state}, fn _iterator, {workers_pids, state} ->
+      case start_worker(state) do
+        {:ok, worker_pid} ->
+          state = Monitoring.add(state, worker_pid, :worker)
+          {[worker_pid | workers_pids], state}
+
+        {:error, :failed_to_start_worker} ->
+          state = %{state | failed_to_start_workers_count: state.failed_to_start_workers_count + 1}
+          {workers_pids, state}
+      end
     end)
   end
 
@@ -345,13 +366,20 @@ defmodule Poolex do
     raise ArgumentError, msg
   end
 
-  @spec start_worker(State.t()) :: {:ok, pid()}
+  @spec start_worker(State.t()) :: {:ok, pid()} | {:error, :failed_to_start_worker}
   defp start_worker(%State{} = state) do
-    DynamicSupervisor.start_child(state.supervisor, %{
-      id: make_ref(),
-      start: {state.worker_module, state.worker_start_fun, state.worker_args},
-      restart: :temporary
-    })
+    case DynamicSupervisor.start_child(state.supervisor, %{
+           id: make_ref(),
+           start: {state.worker_module, state.worker_start_fun, state.worker_args},
+           restart: :temporary
+         }) do
+      {:ok, pid} ->
+        {:ok, pid}
+
+      {:error, reason} ->
+        Logger.error("[Poolex] Failed to start worker. Reason: #{inspect(reason)}")
+        {:error, :failed_to_start_worker}
+    end
   end
 
   @spec stop_worker(Supervisor.supervisor(), pid()) :: :ok | {:error, :not_found}
@@ -392,6 +420,7 @@ defmodule Poolex do
       busy_workers_count: BusyWorkers.count(state),
       busy_workers_impl: state.busy_workers_impl,
       busy_workers_pids: BusyWorkers.to_list(state),
+      failed_to_start_workers_count: state.failed_to_start_workers_count,
       idle_workers_count: IdleWorkers.count(state),
       idle_workers_impl: state.idle_workers_impl,
       idle_workers_pids: IdleWorkers.to_list(state),
@@ -472,6 +501,22 @@ defmodule Poolex do
     end
   end
 
+  @impl GenServer
+  def handle_info(:retry_failed_workers, %{failed_workers_retry_interval: retry_interval} = state) do
+    # Try to start workers that failed to initialize
+    state =
+      if state.failed_to_start_workers_count > 0 do
+        retry_failed_workers(state)
+      else
+        state
+      end
+
+    # Schedule next check
+    state = schedule_retry_failed_workers(state, retry_interval)
+
+    {:noreply, state}
+  end
+
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
     if BusyWorkers.member?(state, worker) do
@@ -548,6 +593,39 @@ defmodule Poolex do
           # Send message to stop worker if caller is dead
           # After that worker will be restarted
           GenServer.cast(pool_id, {:stop_worker, worker})
+      end
+    end)
+  end
+
+  @spec schedule_retry_failed_workers(State.t(), timeout()) :: State.t()
+  defp schedule_retry_failed_workers(state, retry_interval) do
+    Process.send_after(self(), :retry_failed_workers, retry_interval)
+    %{state | failed_workers_retry_interval: retry_interval}
+  end
+
+  @spec retry_failed_workers(State.t()) :: State.t()
+  defp retry_failed_workers(%State{} = state) do
+    workers_to_retry = state.failed_to_start_workers_count
+
+    Logger.info("[Poolex] Attempting to restart #{workers_to_retry} failed workers")
+
+    # Reset the failed workers counter
+    state = %{state | failed_to_start_workers_count: 0}
+
+    # Start the specified number of workers
+    {workers, updated_state} = start_workers(workers_to_retry, state)
+
+    # Add successfully started workers to the pool
+    Enum.reduce(workers, updated_state, fn worker, acc_state ->
+      if WaitingCallers.empty?(acc_state) do
+        # If there are no waiting callers, add to idle workers list
+        IdleWorkers.add(acc_state, worker)
+      else
+        # If there are waiting callers, give them the worker
+        acc_state
+        |> Monitoring.add(worker, :worker)
+        |> BusyWorkers.add(worker)
+        |> provide_worker_to_waiting_caller(worker)
       end
     end)
   end
