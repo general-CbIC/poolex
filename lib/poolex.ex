@@ -298,7 +298,7 @@ defmodule Poolex do
   def handle_continue(opts, state) do
     Metrics.start_poller(opts)
 
-    state = schedule_retry_failed_workers(state, state.failed_workers_retry_interval)
+    schedule_retry_failed_workers(state)
 
     {:noreply, state}
   end
@@ -463,7 +463,7 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_info(:retry_failed_workers, %{failed_workers_retry_interval: retry_interval} = state) do
+  def handle_info(:retry_failed_workers, state) do
     # Try to start workers that failed to initialize
     state =
       if state.failed_to_start_workers_count > 0 do
@@ -472,8 +472,7 @@ defmodule Poolex do
         state
       end
 
-    # Schedule next check
-    state = schedule_retry_failed_workers(state, retry_interval)
+    schedule_retry_failed_workers(state)
 
     {:noreply, state}
   end
@@ -558,10 +557,11 @@ defmodule Poolex do
     end)
   end
 
-  @spec schedule_retry_failed_workers(State.t(), timeout()) :: State.t()
-  defp schedule_retry_failed_workers(state, retry_interval) do
-    Process.send_after(self(), :retry_failed_workers, retry_interval)
-    %{state | failed_workers_retry_interval: retry_interval}
+  @spec schedule_retry_failed_workers(State.t()) :: :ok
+  defp schedule_retry_failed_workers(state) do
+    Process.send_after(self(), :retry_failed_workers, state.failed_workers_retry_interval)
+
+    :ok
   end
 
   @spec retry_failed_workers(State.t()) :: State.t()
