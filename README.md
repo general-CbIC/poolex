@@ -110,3 +110,5 @@ A detailed description of the available configuration or examples of use can be 
 If you feel something can be improved or have any questions about specific behaviors or pieces of implementation, please feel free to file an issue. Proposed changes should be taken to issues before any PRs to save time on code that might not be merged upstream.
 
 If you are ready to change the project, please read the [Contributing guide](docs/CONTRIBUTING.md) first.
+
+<!-- GitAds-Verify: CDUCQHYKXMVS3SV6SC2SPVH8ID2NEJAV -->
