@@ -23,6 +23,7 @@ Poolex is a library for managing pools of workers. Inspired by [poolboy](https:/
   - [Usage](#usage)
   - [Guides](#guides)
   - [Used by](#used-by)
+  - [Sponsored by](#sponsored-by)
   - [Contributions](#contributions)
 
 ## Features
@@ -105,10 +106,12 @@ A detailed description of the available configuration or examples of use can be 
 
 [![Aviasales](https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/companies/aviasales_logo.svg)](https://www.aviasales.com)
 
+## Sponsored by
+
+[![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=general-cbic/poolex@github)](https://gitads.dev/v1/ad-track?source=general-cbic/poolex@github)
+
 ## Contributions
 
 If you feel something can be improved or have any questions about specific behaviors or pieces of implementation, please feel free to file an issue. Proposed changes should be taken to issues before any PRs to save time on code that might not be merged upstream.
 
 If you are ready to change the project, please read the [Contributing guide](docs/CONTRIBUTING.md) first.
-
-<!-- GitAds-Verify: CDUCQHYKXMVS3SV6SC2SPVH8ID2NEJAV -->
