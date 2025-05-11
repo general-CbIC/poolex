@@ -104,7 +104,7 @@ A detailed description of the available configuration or examples of use can be 
 
 ## Used by
 
-[![Aviasales](https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/companies/aviasales_logo.svg)](https://www.aviasales.com)
+[![Aviasales](https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/companies/aviasales_logo.svg)](https://aviasales.tp.st/VlJlf7Ar)
 
 ## Sponsored by
 
