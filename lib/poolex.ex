@@ -67,17 +67,17 @@ defmodule Poolex do
   #{@poolex_options_table}
   """
   @type poolex_option() ::
-          {:pool_id, pool_id()}
-          | {:worker_module, module()}
-          | {:workers_count, non_neg_integer()}
-          | {:max_overflow, non_neg_integer()}
-          | {:worker_args, list(any())}
-          | {:worker_start_fun, atom()}
-          | {:busy_workers_impl, module()}
-          | {:idle_workers_impl, module()}
-          | {:waiting_callers_impl, module()}
-          | {:pool_size_metrics, boolean()}
+          {:busy_workers_impl, module()}
           | {:failed_workers_retry_interval, timeout()}
+          | {:idle_workers_impl, module()}
+          | {:max_overflow, non_neg_integer()}
+          | {:pool_id, pool_id()}
+          | {:pool_size_metrics, boolean()}
+          | {:waiting_callers_impl, module()}
+          | {:worker_args, list(any())}
+          | {:worker_module, module()}
+          | {:worker_start_fun, atom()}
+          | {:workers_count, non_neg_integer()}
 
   @typedoc """
   Process id of `worker`.
