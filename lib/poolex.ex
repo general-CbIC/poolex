@@ -242,22 +242,19 @@ defmodule Poolex do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    pool_id = get_pool_id(opts)
-    worker_module = Keyword.fetch!(opts, :worker_module)
-    workers_count = Keyword.fetch!(opts, :workers_count)
-
-    max_overflow = Keyword.get(opts, :max_overflow, 0)
-    worker_args = Keyword.get(opts, :worker_args, [])
-    worker_start_fun = Keyword.get(opts, :worker_start_fun, :start_link)
-
     busy_workers_impl = Keyword.get(opts, :busy_workers_impl, Poolex.Workers.Impl.List)
-    idle_workers_impl = Keyword.get(opts, :idle_workers_impl, Poolex.Workers.Impl.List)
-
-    waiting_callers_impl =
-      Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
 
     failed_workers_retry_interval =
       Keyword.get(opts, :failed_workers_retry_interval, @default_failed_workers_retry_interval)
+
+    idle_workers_impl = Keyword.get(opts, :idle_workers_impl, Poolex.Workers.Impl.List)
+    max_overflow = Keyword.get(opts, :max_overflow, 0)
+    pool_id = get_pool_id(opts)
+    waiting_callers_impl = Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
+    worker_args = Keyword.get(opts, :worker_args, [])
+    worker_module = Keyword.fetch!(opts, :worker_module)
+    worker_start_fun = Keyword.get(opts, :worker_start_fun, :start_link)
+    workers_count = Keyword.fetch!(opts, :workers_count)
 
     {:ok, supervisor} = Poolex.Private.Supervisor.start_link()
 
