@@ -49,6 +49,7 @@ defmodule Poolex do
   | `failed_workers_retry_interval` | Interval in milliseconds between retry attempts for failed workers | `5_000`               | `1_000`                           |
   | `idle_workers_impl`             | Module that describes how to work with idle workers                | `SomeIdleWorkersImpl` | `Poolex.Workers.Impl.List`        |
   | `max_overflow`                  | How many workers can be created over the limit                     | `2`                   | `0`                               |
+  | `worker_shutdown_delay`         | Delay (ms) before shutting down overflow worker after release      | `5000`                | `0`                               |
   | `pool_id`                       | Identifier by which you will access the pool                       | `:my_pool`            | `worker_module` value             |
   | `pool_size_metrics`             | Whether to dispatch pool size metrics                              | `true`                | `false`                           |
   | `waiting_callers_impl`          | Module that describes how to work with callers queue               | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
@@ -71,6 +72,7 @@ defmodule Poolex do
           | {:failed_workers_retry_interval, timeout()}
           | {:idle_workers_impl, module()}
           | {:max_overflow, non_neg_integer()}
+          | {:worker_shutdown_delay, timeout()}
           | {:pool_id, pool_id()}
           | {:pool_size_metrics, boolean()}
           | {:waiting_callers_impl, module()}
@@ -249,6 +251,7 @@ defmodule Poolex do
 
     idle_workers_impl = Keyword.get(opts, :idle_workers_impl, Poolex.Workers.Impl.List)
     max_overflow = Keyword.get(opts, :max_overflow, 0)
+    worker_shutdown_delay = Keyword.get(opts, :worker_shutdown_delay, 0)
     pool_id = get_pool_id(opts)
     waiting_callers_impl = Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
     worker_args = Keyword.get(opts, :worker_args, [])
@@ -266,7 +269,8 @@ defmodule Poolex do
         supervisor: supervisor,
         worker_args: worker_args,
         worker_module: worker_module,
-        worker_start_fun: worker_start_fun
+        worker_start_fun: worker_start_fun,
+        worker_shutdown_delay: worker_shutdown_delay
       }
 
     {initial_workers_pids, state} = start_workers(workers_count, state)

@@ -12,7 +12,8 @@ defmodule Poolex.Private.State do
     :supervisor,
     :worker_args,
     :worker_module,
-    :worker_start_fun
+    :worker_start_fun,
+    :worker_shutdown_delay
   ]
 
   defstruct @enforce_keys ++
@@ -44,6 +45,7 @@ defmodule Poolex.Private.State do
           waiting_callers_state: nil | Poolex.Callers.Behaviour.state(),
           worker_args: list(any()),
           worker_module: module(),
-          worker_start_fun: atom()
+          worker_start_fun: atom(),
+          worker_shutdown_delay: timeout()
         }
 end
