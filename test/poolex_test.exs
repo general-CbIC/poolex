@@ -823,10 +823,30 @@ defmodule PoolexTest do
       # Wait for the shutdown delay
       :timer.sleep(shutdown_delay + 50)
 
-      pool_name |> DebugInfo.get_debug_info() |> dbg()
-
       # Check that the overflowed worker is still alive
       assert Process.alive?(overflowed_worker_pid)
+    end
+
+    test "overflowed worker is terminated immediately if worker_shutdown_delay is 0", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 1, max_overflow: 1, worker_shutdown_delay: 0)
+        |> start_pool()
+
+      # Launch a long task to occupy the worker
+      launch_long_task(pool_name)
+
+      # Launch another task to trigger overflow
+      {:ok, overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      :timer.sleep(10)
+
+      # Ensure the overflowed worker is alive
+      refute Process.alive?(overflowed_worker_pid)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 0
+      assert debug_info.idle_overflowed_workers_pids == []
     end
   end
 end
