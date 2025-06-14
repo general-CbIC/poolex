@@ -12,7 +12,8 @@ defmodule Poolex.Private.State do
     :supervisor,
     :worker_args,
     :worker_module,
-    :worker_start_fun
+    :worker_start_fun,
+    :worker_shutdown_delay
   ]
 
   defstruct @enforce_keys ++
@@ -20,6 +21,9 @@ defmodule Poolex.Private.State do
                 busy_workers_impl: nil,
                 busy_workers_state: nil,
                 failed_to_start_workers_count: 0,
+                idle_overflowed_workers_impl: nil,
+                idle_overflowed_workers_last_touches: %{},
+                idle_overflowed_workers_state: nil,
                 idle_workers_impl: nil,
                 idle_workers_state: nil,
                 monitors: %{},
@@ -33,6 +37,9 @@ defmodule Poolex.Private.State do
           busy_workers_state: nil | Poolex.Workers.Behaviour.state(),
           failed_to_start_workers_count: non_neg_integer(),
           failed_workers_retry_interval: timeout() | nil,
+          idle_overflowed_workers_impl: module(),
+          idle_overflowed_workers_last_touches: %{pid() => Time.t()},
+          idle_overflowed_workers_state: nil | Poolex.Workers.Behaviour.state(),
           idle_workers_impl: module(),
           idle_workers_state: nil | Poolex.Workers.Behaviour.state(),
           max_overflow: non_neg_integer(),
@@ -44,6 +51,7 @@ defmodule Poolex.Private.State do
           waiting_callers_state: nil | Poolex.Callers.Behaviour.state(),
           worker_args: list(any()),
           worker_module: module(),
+          worker_shutdown_delay: timeout(),
           worker_start_fun: atom()
         }
 end
