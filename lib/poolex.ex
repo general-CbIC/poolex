@@ -29,6 +29,7 @@ defmodule Poolex do
 
   alias Poolex.Private.BusyWorkers
   alias Poolex.Private.DebugInfo
+  alias Poolex.Private.IdleOverflowedWorkers
   alias Poolex.Private.IdleWorkers
   alias Poolex.Private.Metrics
   alias Poolex.Private.Monitoring
@@ -245,11 +246,14 @@ defmodule Poolex do
     Process.flag(:trap_exit, true)
 
     busy_workers_impl = Keyword.get(opts, :busy_workers_impl, Poolex.Workers.Impl.List)
+    idle_workers_impl = Keyword.get(opts, :idle_workers_impl, Poolex.Workers.Impl.List)
+
+    idle_overflowed_workers_impl =
+      Keyword.get(opts, :idle_overflowed_workers_impl, Poolex.Workers.Impl.List)
 
     failed_workers_retry_interval =
       Keyword.get(opts, :failed_workers_retry_interval, @default_failed_workers_retry_interval)
 
-    idle_workers_impl = Keyword.get(opts, :idle_workers_impl, Poolex.Workers.Impl.List)
     max_overflow = Keyword.get(opts, :max_overflow, 0)
     worker_shutdown_delay = Keyword.get(opts, :worker_shutdown_delay, 0)
     pool_id = get_pool_id(opts)
@@ -279,6 +283,7 @@ defmodule Poolex do
       state
       |> IdleWorkers.init(idle_workers_impl, initial_workers_pids)
       |> BusyWorkers.init(busy_workers_impl)
+      |> IdleOverflowedWorkers.init(idle_overflowed_workers_impl)
       |> WaitingCallers.init(waiting_callers_impl)
 
     {:ok, state, {:continue, opts}}
@@ -383,6 +388,9 @@ defmodule Poolex do
       busy_workers_impl: state.busy_workers_impl,
       busy_workers_pids: BusyWorkers.to_list(state),
       failed_to_start_workers_count: state.failed_to_start_workers_count,
+      idle_overflowed_workers_count: IdleOverflowedWorkers.count(state),
+      idle_overflowed_workers_impl: state.idle_overflowed_workers_impl,
+      idle_overflowed_workers_pids: IdleOverflowedWorkers.to_list(state),
       idle_workers_count: IdleWorkers.count(state),
       idle_workers_impl: state.idle_workers_impl,
       idle_workers_pids: IdleWorkers.to_list(state),

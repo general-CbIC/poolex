@@ -9,6 +9,9 @@ defmodule Poolex.Private.DebugInfo do
             busy_workers_impl: nil,
             busy_workers_pids: [],
             failed_to_start_workers_count: 0,
+            idle_overflowed_workers_count: 0,
+            idle_overflowed_workers_impl: nil,
+            idle_overflowed_workers_pids: [],
             idle_workers_count: 0,
             idle_workers_impl: nil,
             idle_workers_pids: [],
@@ -47,9 +50,14 @@ defmodule Poolex.Private.DebugInfo do
   ## Fields
 
       * `busy_workers_count` - how many workers are busy right now.
+      * `busy_workers_impl` - implementation of busy workers.
       * `busy_workers_pids` - list of busy workers.
       * `failed_to_start_workers_count` - how many workers failed to start.
+      * `idle_overflowed_workers_count` - how many idle overflowed workers are there.
+      * `idle_overflowed_workers_impl` - implementation of idle overflowed workers.
+      * `idle_overflowed_workers_pids` - list of idle overflowed workers.
       * `idle_workers_count` - how many workers are ready to work.
+      * `idle_workers_impl` - implementation of idle workers.
       * `idle_workers_pids` - list of idle workers.
       * `max_overflow` - how many workers can be created over the limit.
       * `overflow` - current count of workers launched over limit.

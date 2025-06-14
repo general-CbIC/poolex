@@ -39,6 +39,9 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_pids == []
       assert debug_info.idle_workers_count == 5
       assert debug_info.idle_workers_impl == Poolex.Workers.Impl.List
+      assert debug_info.idle_overflowed_workers_count == 0
+      assert debug_info.idle_overflowed_workers_impl == Poolex.Workers.Impl.List
+      assert debug_info.idle_overflowed_workers_pids == []
       assert debug_info.max_overflow == 0
       assert Enum.count(debug_info.idle_workers_pids) == 5
       assert debug_info.worker_module == SomeWorker
@@ -53,6 +56,7 @@ defmodule PoolexTest do
         pool_options
         |> Keyword.merge(
           busy_workers_impl: SomeBusyWorkersImpl,
+          idle_overflowed_workers_impl: SomeIdleOverflowedWorkersImpl,
           idle_workers_impl: SomeIdleWorkersImpl,
           waiting_callers_impl: SomeWaitingCallersImpl
         )
@@ -61,6 +65,7 @@ defmodule PoolexTest do
       debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_impl == SomeBusyWorkersImpl
+      assert debug_info.idle_overflowed_workers_impl == SomeIdleOverflowedWorkersImpl
       assert debug_info.idle_workers_impl == SomeIdleWorkersImpl
       assert debug_info.waiting_callers_impl == SomeWaitingCallersImpl
     end
