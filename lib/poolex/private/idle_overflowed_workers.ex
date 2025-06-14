@@ -15,7 +15,11 @@ defmodule Poolex.Private.IdleOverflowedWorkers do
         %State{idle_overflowed_workers_impl: impl, idle_overflowed_workers_state: idle_overflowed_workers_state} = state,
         worker
       ) do
-    %{state | idle_overflowed_workers_state: impl.add(idle_overflowed_workers_state, worker)}
+    %{
+      state
+      | idle_overflowed_workers_state: impl.add(idle_overflowed_workers_state, worker),
+        idle_overflowed_workers_last_touches: Map.put(state.idle_overflowed_workers_last_touches, worker, Time.utc_now())
+    }
   end
 
   @doc false
@@ -33,7 +37,11 @@ defmodule Poolex.Private.IdleOverflowedWorkers do
         %State{idle_overflowed_workers_impl: impl, idle_overflowed_workers_state: idle_overflowed_workers_state} = state,
         worker
       ) do
-    %{state | idle_overflowed_workers_state: impl.remove(idle_overflowed_workers_state, worker)}
+    %{
+      state
+      | idle_overflowed_workers_state: impl.remove(idle_overflowed_workers_state, worker),
+        idle_overflowed_workers_last_touches: Map.delete(state.idle_overflowed_workers_last_touches, worker)
+    }
   end
 
   @doc false
@@ -61,10 +69,24 @@ defmodule Poolex.Private.IdleOverflowedWorkers do
       ) do
     case impl.pop(idle_overflowed_workers_state) do
       {worker, new_idle_overflowed_workers_state} ->
-        {worker, %{state | idle_overflowed_workers_state: new_idle_overflowed_workers_state}}
+        {worker,
+         %{
+           state
+           | idle_overflowed_workers_state: new_idle_overflowed_workers_state,
+             idle_overflowed_workers_last_touches: Map.delete(state.idle_overflowed_workers_last_touches, worker)
+         }}
 
       :empty ->
         :empty
+    end
+  end
+
+  @doc false
+  @spec expired?(State.t(), Poolex.worker()) :: boolean()
+  def expired?(%State{idle_overflowed_workers_last_touches: last_touches, worker_shutdown_delay: timeout}, worker) do
+    case Map.get(last_touches, worker) do
+      nil -> false
+      last_touch -> Time.diff(Time.utc_now(), last_touch) > timeout
     end
   end
 end

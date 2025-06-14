@@ -500,8 +500,8 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_info({:delayed_stop_worker, worker}, %State{} = state) do
-    if IdleOverflowedWorkers.member?(state, worker) do
-      # If the worker is in idle overflowed workers list, stop it
+    if IdleOverflowedWorkers.expired?(state, worker) do
+      # Stop the worker if it has been idle for too long
       stop_worker(state.supervisor, worker)
 
       {:noreply, IdleOverflowedWorkers.remove(state, worker)}

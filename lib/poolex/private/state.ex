@@ -22,6 +22,7 @@ defmodule Poolex.Private.State do
                 busy_workers_state: nil,
                 failed_to_start_workers_count: 0,
                 idle_overflowed_workers_impl: nil,
+                idle_overflowed_workers_last_touches: %{},
                 idle_overflowed_workers_state: nil,
                 idle_workers_impl: nil,
                 idle_workers_state: nil,
@@ -37,6 +38,7 @@ defmodule Poolex.Private.State do
           failed_to_start_workers_count: non_neg_integer(),
           failed_workers_retry_interval: timeout() | nil,
           idle_overflowed_workers_impl: module(),
+          idle_overflowed_workers_last_touches: %{pid() => Time.t()},
           idle_overflowed_workers_state: nil | Poolex.Workers.Behaviour.state(),
           idle_workers_impl: module(),
           idle_workers_state: nil | Poolex.Workers.Behaviour.state(),
@@ -49,7 +51,7 @@ defmodule Poolex.Private.State do
           waiting_callers_state: nil | Poolex.Callers.Behaviour.state(),
           worker_args: list(any()),
           worker_module: module(),
-          worker_start_fun: atom(),
-          worker_shutdown_delay: timeout()
+          worker_shutdown_delay: timeout(),
+          worker_start_fun: atom()
         }
 end
