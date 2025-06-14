@@ -478,21 +478,46 @@ defmodule Poolex do
     {:noreply, state}
   end
 
+  @impl GenServer
+  def handle_info({:delayed_stop_worker, worker}, %State{} = state) do
+    # If the worker is busy, do nothing and let it finish its work.
+    # It's also possible that worker has an idle status, because pool size was increased
+    # and worker was released to idle workers list.
+    if BusyWorkers.member?(state, worker) or IdleWorkers.member?(state, worker) do
+      {:noreply, state}
+    else
+      # If the worker is still unused, stop it
+      # NOTE: It is possible that worker was already used but finished its work
+      # and was released again with timeout, but I think it is not a big problem
+      # Poolex will get other stop message(s) and just ignore it(them)
+      stop_worker(state.supervisor, worker)
+      {:noreply, state}
+    end
+  end
+
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
     if BusyWorkers.member?(state, worker) do
       state = BusyWorkers.remove(state, worker)
 
       if state.overflow > 0 do
-        stop_worker(state.supervisor, worker)
-
-        state
+        release_overflowed_worker(state, worker)
       else
         IdleWorkers.add(state, worker)
       end
     else
       state
     end
+  end
+
+  defp release_overflowed_worker(%State{} = state, worker) do
+    if state.worker_shutdown_delay > 0 do
+      Process.send_after(self(), {:delayed_stop_worker, worker}, state.worker_shutdown_delay)
+    else
+      stop_worker(state.supervisor, worker)
+    end
+
+    state
   end
 
   @spec provide_worker_to_waiting_caller(State.t(), worker()) :: State.t()
