@@ -356,8 +356,23 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_call({:get_idle_worker, caller_reference}, {from_pid, _} = caller, %State{} = state) do
-    if IdleWorkers.empty?(state) do
-      if state.overflow < state.max_overflow do
+    cond do
+      not IdleOverflowedWorkers.empty?(state) ->
+        # If there are overflowed idle workers, we can immediately provide one to the caller
+        {overflowed_worker_pid, state} = IdleOverflowedWorkers.pop(state)
+        state = BusyWorkers.add(state, overflowed_worker_pid)
+
+        {:reply, {:ok, overflowed_worker_pid}, state}
+
+      not IdleWorkers.empty?(state) ->
+        # If there are idle workers, we can immediately provide one to the caller
+        {idle_worker_pid, state} = IdleWorkers.pop(state)
+        state = BusyWorkers.add(state, idle_worker_pid)
+
+        {:reply, {:ok, idle_worker_pid}, state}
+
+      state.overflow < state.max_overflow ->
+        # We can create a new worker if we are not at the max overflow limit
         {:ok, new_worker} = start_worker(state)
 
         state =
@@ -366,19 +381,15 @@ defmodule Poolex do
           |> BusyWorkers.add(new_worker)
 
         {:reply, {:ok, new_worker}, %{state | overflow: state.overflow + 1}}
-      else
+
+      true ->
+        # We can't provide a worker immediately, so we need to add the caller to the waiting list
         state =
           state
           |> Monitoring.add(from_pid, :waiting_caller)
           |> WaitingCallers.add(%Poolex.Caller{reference: caller_reference, from: caller})
 
         {:noreply, state}
-      end
-    else
-      {idle_worker_pid, state} = IdleWorkers.pop(state)
-      state = BusyWorkers.add(state, idle_worker_pid)
-
-      {:reply, {:ok, idle_worker_pid}, state}
     end
   end
 
@@ -489,17 +500,13 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_info({:delayed_stop_worker, worker}, %State{} = state) do
-    # If the worker is busy, do nothing and let it finish its work.
-    # It's also possible that worker has an idle status, because pool size was increased
-    # and worker was released to idle workers list.
-    if BusyWorkers.member?(state, worker) or IdleWorkers.member?(state, worker) do
-      {:noreply, state}
-    else
-      # If the worker is still unused, stop it
-      # NOTE: It is possible that worker was already used but finished its work
-      # and was released again with timeout, but I think it is not a big problem
-      # Poolex will get other stop message(s) and just ignore it(them)
+    if IdleOverflowedWorkers.member?(state, worker) do
+      # If the worker is in idle overflowed workers list, stop it
       stop_worker(state.supervisor, worker)
+
+      {:noreply, IdleOverflowedWorkers.remove(state, worker)}
+    else
+      # Otherwise, just ignore the message
       {:noreply, state}
     end
   end
@@ -522,11 +529,13 @@ defmodule Poolex do
   defp release_overflowed_worker(%State{} = state, worker) do
     if state.worker_shutdown_delay > 0 do
       Process.send_after(self(), {:delayed_stop_worker, worker}, state.worker_shutdown_delay)
+
+      IdleOverflowedWorkers.add(state, worker)
     else
       stop_worker(state.supervisor, worker)
-    end
 
-    state
+      state
+    end
   end
 
   @spec provide_worker_to_waiting_caller(State.t(), worker()) :: State.t()
@@ -544,6 +553,7 @@ defmodule Poolex do
       state
       |> IdleWorkers.remove(dead_process_pid)
       |> BusyWorkers.remove(dead_process_pid)
+      |> IdleOverflowedWorkers.remove(dead_process_pid)
 
     if WaitingCallers.empty?(state) do
       if state.overflow > 0 do
