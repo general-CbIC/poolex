@@ -43,6 +43,7 @@ defmodule PoolexTest do
       assert Enum.count(debug_info.idle_workers_pids) == 5
       assert debug_info.worker_module == SomeWorker
       assert debug_info.worker_args == []
+      assert debug_info.worker_shutdown_delay == 0
       assert debug_info.waiting_callers == []
       assert debug_info.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
     end
@@ -62,6 +63,19 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_impl == SomeBusyWorkersImpl
       assert debug_info.idle_workers_impl == SomeIdleWorkersImpl
       assert debug_info.waiting_callers_impl == SomeWaitingCallersImpl
+    end
+
+    test "valid configured shutdown_delay", %{pool_options: pool_options} do
+      shutdown_delay = 1000
+
+      pool_name =
+        pool_options
+        |> Keyword.put(:worker_shutdown_delay, shutdown_delay)
+        |> start_pool()
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+
+      assert debug_info.worker_shutdown_delay == shutdown_delay
     end
 
     test "valid after using the worker", %{pool_options: pool_options} do

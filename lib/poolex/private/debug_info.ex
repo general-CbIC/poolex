@@ -18,6 +18,7 @@ defmodule Poolex.Private.DebugInfo do
             waiting_callers: [],
             worker_args: [],
             worker_module: nil,
+            worker_shutdown_delay: 0,
             worker_start_fun: nil
 
   @type t() :: %__MODULE__{
@@ -34,6 +35,7 @@ defmodule Poolex.Private.DebugInfo do
           waiting_callers: list(pid()),
           worker_args: list(any()),
           worker_module: module(),
+          worker_shutdown_delay: timeout(),
           worker_start_fun: atom()
         }
 
@@ -54,6 +56,7 @@ defmodule Poolex.Private.DebugInfo do
       * `waiting_caller_pids` - list of callers processes.
       * `worker_args` - what parameters are used to start the worker.
       * `worker_module` - name of a module that describes a worker.
+      * `worker_shutdown_delay` - how long to wait before shutting down a worker.
       * `worker_start_fun` - what function is used to start the worker.
 
   ## Examples

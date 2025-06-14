@@ -392,6 +392,7 @@ defmodule Poolex do
       waiting_callers_impl: state.waiting_callers_impl,
       worker_args: state.worker_args,
       worker_module: state.worker_module,
+      worker_shutdown_delay: state.worker_shutdown_delay,
       worker_start_fun: state.worker_start_fun
     }
 
