@@ -16,12 +16,6 @@ defmodule Poolex.Private.IdleWorkers do
   end
 
   @doc false
-  @spec member?(State.t(), Poolex.worker()) :: boolean()
-  def member?(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state}, worker) do
-    impl.member?(idle_workers_state, worker)
-  end
-
-  @doc false
   @spec remove(State.t(), Poolex.worker()) :: State.t()
   def remove(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state, worker) do
     %{state | idle_workers_state: impl.remove(idle_workers_state, worker)}
