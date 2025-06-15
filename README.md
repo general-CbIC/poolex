@@ -27,17 +27,17 @@ Poolex is a library for managing pools of workers. Inspired by [poolboy](https:/
 
 ## Features
 
-With `poolex` you can:
+With Poolex, you can:
 
 - Launch multiple pools of workers and then access the free ones from anywhere in the application.
 - Configure the pool to run additional temporary workers if the load increases.
 - Analyze and optimize your pool's production settings using metrics.
-- Use your implementations to define worker and caller processes access logic.
-- Use the shutdown settings with a delay. This can be useful if the creation of workers is a resource-cost operation.
+- Use your own implementations to define the logic for worker and caller process access.
+- Configure delayed shutdown for workers. This is useful if creating workers is a resource-intensive operation.
 
 **Why `poolex` instead of `poolboy`?**
   
-- `poolex` is written in Elixir. This library is much more convenient to use in Elixir projects.
+- `poolex` is written in Elixir. This library is much more convenient for use in Elixir projects.
 - `poolboy` is a great library, but not actively maintained :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
 
 ## Requirements
@@ -81,7 +81,7 @@ iex> Poolex.run(SomeWorker, &(is_pid?(&1)), checkout_timeout: 1_000)
 {:ok, true}
 ```
 
-A detailed description of the available configuration or examples of use can be found in [documentation](https://hexdocs.pm/poolex/getting-started.html).
+A detailed description of the available configuration options and usage examples can be found in the [documentation](https://hexdocs.pm/poolex/getting-started.html).
 
 ## Guides
 
@@ -122,6 +122,6 @@ NOTE: Commented cause I'm not sure if the ads are allowed :shrug:
 
 ## Contributions
 
-If you feel something can be improved or have any questions about specific behaviors or pieces of implementation, please feel free to file an issue. Proposed changes should be taken to issues before any PRs to save time on code that might not be merged upstream.
+If you think something can be improved or have any questions about specific behaviors or implementation details, please feel free to file an issue. Proposed changes should be discussed in issues before submitting any PRs, to avoid spending time on code that might not be merged upstream.
 
 If you are ready to change the project, please read the [Contributing guide](docs/CONTRIBUTING.md) first.
