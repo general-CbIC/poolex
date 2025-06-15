@@ -69,6 +69,7 @@ defmodule Poolex.MixProject do
         "docs/guides/example-of-use.cheatmd",
         "docs/guides/pool-metrics.cheatmd",
         "docs/guides/workers-and-callers-implementations.md",
+        "docs/guides/worker-shutdown-delay.cheatmd",
         "docs/CONTRIBUTING.md"
       ],
       groups_for_extras: [

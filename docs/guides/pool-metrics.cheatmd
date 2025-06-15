@@ -32,10 +32,10 @@ You can handle them by using `:telemetry.attach/4`:
 
 For example, your application can write metrics to the console: [PoolexExample.MetricsHandler](https://github.com/general-CbIC/poolex/blob/develop/examples/poolex_example/lib/poolex_example/metrics_handler.ex).
 
-More about using `telemetry` [here](https://hexdocs.pm/telemetry/readme.html).
+[More about using `telemetry`](https://hexdocs.pm/telemetry/readme.html).
 
 ## Integration with PromEx
 
 There is a plugin that works with the [PromEx](https://github.com/akoutmos/prom_ex) library: [Poolex.PromEx](https://hex.pm/packages/poolex_prom_ex).
 
-About installation of this plugin you can read [here](https://hexdocs.pm/poolex_prom_ex/readme.html#installation).
+[Installation of this plugin](https://hexdocs.pm/poolex_prom_ex/readme.html#installation).

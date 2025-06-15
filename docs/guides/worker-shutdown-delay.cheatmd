@@ -1,0 +1,46 @@
+# Using `worker_shutdown_delay` for Overflow Workers
+
+Poolex allows you to flexibly control the lifetime of overflow workers using the `worker_shutdown_delay` parameter. This is useful if you want to avoid frequent creation/destruction of overflow processes during short load spikes.
+
+## What are overflow workers?
+
+Overflow workers are additional processes created when all regular workers are busy and the pool is allowed to temporarily grow (via the `max_overflow` parameter).
+
+## The problem with immediate overflow worker shutdown
+
+By default, when an overflow worker is released, it is immediately terminated. This can lead to unnecessary overhead if your workload is "bursty" and overflow workers are needed again soon after.
+
+## Solution: Delayed shutdown of overflow workers
+
+With the `worker_shutdown_delay` parameter (in milliseconds), you can specify how long an overflow worker should wait after being released before shutting down. If the worker is needed again during this time, it will be reused and the timer will reset.
+
+## Example usage
+
+```elixir
+children = [
+  {Poolex,
+    worker_module: MyApp.Worker,
+    workers_count: 5,
+    max_overflow: 2,
+    worker_shutdown_delay: 5_000 # 5 seconds delay before shutting down overflow worker
+  }
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+## How it works
+
+1. All regular workers are busy — an overflow worker is created.
+2. The overflow worker is released — a timer for `worker_shutdown_delay` ms starts.
+3. If the worker is needed again before the timer expires — it is reused and the timer is reset.
+4. If not needed — the process is terminated after the delay.
+
+## When to use
+
+- If you have short load spikes and want to avoid frequent creation/destruction of overflow workers.
+- If you want to minimize latency when reusing overflow workers.
+
+## Default value
+
+If you do not specify `worker_shutdown_delay`, overflow workers are terminated immediately after being released (default value is `0`).

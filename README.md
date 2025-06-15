@@ -33,6 +33,7 @@ With `poolex` you can:
 - Configure the pool to run additional temporary workers if the load increases.
 - Analyze and optimize your pool's production settings using metrics.
 - Use your implementations to define worker and caller processes access logic.
+- Use the shutdown settings with a delay. This can be useful if the creation of workers is a resource-cost operation.
 
 **Why `poolex` instead of `poolboy`?**
   
@@ -100,6 +101,14 @@ A detailed description of the available configuration or examples of use can be 
   - [Callers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#callers)
   - [Workers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#workers)
   - [Writing custom implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#writing-custom-implementations)
+- [Using `worker_shutdown_delay` for Overflow Workers](https://hexdocs.pm/poolex/worker-shutdown-delay.html)
+  - [What are overflow workers?](https://hexdocs.pm/poolex/worker-shutdown-delay.html#what-are-overflow-workers)
+  - [The problem with immediate overflow worker shutdown](https://hexdocs.pm/poolex/worker-shutdown-delay.html#the-problem-with-immediate-overflow-worker-shutdown)
+  - [Solution: Delayed shutdown of overflow workers](https://hexdocs.pm/poolex/worker-shutdown-delay.html#solution-delayed-shutdown-of-overflow-workers)
+  - [Example usage](https://hexdocs.pm/poolex/worker-shutdown-delay.html#example-usage)
+  - [How it works](https://hexdocs.pm/poolex/worker-shutdown-delay.html#how-it-works)
+  - [When to use](https://hexdocs.pm/poolex/worker-shutdown-delay.html#when-to-use)
+  - [Default value](https://hexdocs.pm/poolex/worker-shutdown-delay.html#default-value)
 
 ## Used by
 
