@@ -15,7 +15,9 @@ defmodule PoolexTest do
 
   import PoolHelpers
 
+  alias Poolex.Private.BusyWorkers
   alias Poolex.Private.DebugInfo
+  alias Poolex.Private.IdleOverflowedWorkers
 
   setup_all do
     if Version.match?(System.version(), ">= 1.18.0") do
@@ -39,10 +41,14 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_pids == []
       assert debug_info.idle_workers_count == 5
       assert debug_info.idle_workers_impl == Poolex.Workers.Impl.List
+      assert debug_info.idle_overflowed_workers_count == 0
+      assert debug_info.idle_overflowed_workers_impl == Poolex.Workers.Impl.List
+      assert debug_info.idle_overflowed_workers_pids == []
       assert debug_info.max_overflow == 0
       assert Enum.count(debug_info.idle_workers_pids) == 5
       assert debug_info.worker_module == SomeWorker
       assert debug_info.worker_args == []
+      assert debug_info.worker_shutdown_delay == 0
       assert debug_info.waiting_callers == []
       assert debug_info.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
     end
@@ -52,6 +58,7 @@ defmodule PoolexTest do
         pool_options
         |> Keyword.merge(
           busy_workers_impl: SomeBusyWorkersImpl,
+          idle_overflowed_workers_impl: SomeIdleOverflowedWorkersImpl,
           idle_workers_impl: SomeIdleWorkersImpl,
           waiting_callers_impl: SomeWaitingCallersImpl
         )
@@ -60,8 +67,22 @@ defmodule PoolexTest do
       debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.busy_workers_impl == SomeBusyWorkersImpl
+      assert debug_info.idle_overflowed_workers_impl == SomeIdleOverflowedWorkersImpl
       assert debug_info.idle_workers_impl == SomeIdleWorkersImpl
       assert debug_info.waiting_callers_impl == SomeWaitingCallersImpl
+    end
+
+    test "valid configured shutdown_delay", %{pool_options: pool_options} do
+      shutdown_delay = 1000
+
+      pool_name =
+        pool_options
+        |> Keyword.put(:worker_shutdown_delay, shutdown_delay)
+        |> start_pool()
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+
+      assert debug_info.worker_shutdown_delay == shutdown_delay
     end
 
     test "valid after using the worker", %{pool_options: pool_options} do
@@ -741,6 +762,205 @@ defmodule PoolexTest do
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.failed_to_start_workers_count == 0
       assert debug_info.idle_workers_count == 5
+    end
+  end
+
+  describe "overflow worker shutdown delay" do
+    test "overflowed worker is terminated with delay", %{pool_options: pool_options} do
+      shutdown_delay = 200
+
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 1, max_overflow: 1, worker_shutdown_delay: shutdown_delay)
+        |> start_pool()
+
+      # Launch a long task to occupy the worker
+      launch_long_task(pool_name)
+
+      # Launch another task to trigger overflow
+      {:ok, overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      # Ensure the overflowed worker is alive
+      assert Process.alive?(overflowed_worker_pid)
+
+      # Check that the overflowed worker is not in the busy workers list
+      state = :sys.get_state(pool_name)
+      refute BusyWorkers.member?(state, overflowed_worker_pid)
+
+      # Wait for the shutdown delay
+      :timer.sleep(shutdown_delay + 50)
+
+      # Check that the overflowed worker is no longer alive
+      refute Process.alive?(overflowed_worker_pid)
+    end
+
+    test "overflowed worker is not terminated if used again", %{pool_options: pool_options} do
+      shutdown_delay = 200
+
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 1, max_overflow: 1, worker_shutdown_delay: shutdown_delay)
+        |> start_pool()
+
+      # Launch a long task to occupy the worker
+      launch_long_task(pool_name)
+
+      # Launch another task to trigger overflow
+      {:ok, overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      # Ensure the overflowed worker is alive
+      assert Process.alive?(overflowed_worker_pid)
+
+      # Check that the overflowed worker is not in the busy workers list
+      # And check that it is in the idle overflowed workers list
+      state = :sys.get_state(pool_name)
+      refute BusyWorkers.member?(state, overflowed_worker_pid)
+      assert IdleOverflowedWorkers.member?(state, overflowed_worker_pid)
+
+      # Use the overflowed worker again before the shutdown delay
+      launch_long_task(pool_name)
+
+      # Wait for the shutdown delay
+      :timer.sleep(shutdown_delay + 50)
+
+      # Check that the overflowed worker is still alive
+      assert Process.alive?(overflowed_worker_pid)
+    end
+
+    test "overflowed worker is terminated immediately if worker_shutdown_delay is 0", %{pool_options: pool_options} do
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 1, max_overflow: 1, worker_shutdown_delay: 0)
+        |> start_pool()
+
+      # Launch a long task to occupy the worker
+      launch_long_task(pool_name)
+
+      # Launch another task to trigger overflow
+      {:ok, overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      :timer.sleep(10)
+
+      # Ensure the overflowed worker is alive
+      refute Process.alive?(overflowed_worker_pid)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 0
+      assert debug_info.idle_overflowed_workers_pids == []
+    end
+
+    test "overflowed workers terminates independently of each other", %{pool_options: pool_options} do
+      shutdown_delay = 200
+
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 1, max_overflow: 2, worker_shutdown_delay: shutdown_delay)
+        |> start_pool()
+
+      # Launch a long task to occupy the worker
+      launch_long_task(pool_name)
+
+      # Launch first task to trigger overflow
+      launch_long_task(pool_name, 100)
+
+      # Wait a bit before launching the second overflowed worker
+      :timer.sleep(50)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 0
+      assert debug_info.busy_workers_count == 2
+      assert debug_info.overflow == 1
+
+      # Launch second task to trigger another overflow
+      Poolex.run(pool_name, fn pid -> pid end)
+
+      # Wait to ensure all messages are processed
+      :timer.sleep(20)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 1
+      assert debug_info.busy_workers_count == 2
+      assert debug_info.overflow == 2
+
+      # Wait until first overflowed worker is released
+      :timer.sleep(50)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 2
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.overflow == 2
+
+      # Wait for the first overflowed worker shutdown delay
+      :timer.sleep(150)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 1
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.overflow == 1
+
+      # Wait for the second overflowed worker shutdown delay
+      :timer.sleep(100)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 0
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.overflow == 0
+    end
+
+    test "overflowed worker can be released many times without errors", %{pool_options: pool_options} do
+      shutdown_delay = 100
+
+      pool_name =
+        pool_options
+        |> Keyword.merge(workers_count: 1, max_overflow: 2, worker_shutdown_delay: shutdown_delay)
+        |> start_pool()
+
+      # Launch a long task to occupy the worker
+      launch_long_task(pool_name)
+
+      # Launch first task to trigger overflow
+      {:ok, overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      # Ensure the overflowed worker is alive
+      assert Process.alive?(overflowed_worker_pid)
+
+      # Wait a bit before using the overflowed worker again
+      :timer.sleep(50)
+
+      # Use the overflowed worker again
+      assert {:ok, ^overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      # Wait a bit ont more time before using the overflowed worker again
+      :timer.sleep(50)
+
+      # Use the overflowed worker again
+      assert {:ok, ^overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      # Wait a bit again before checking the overflowed worker
+      :timer.sleep(50)
+
+      # Check that the overflowed worker is still alive
+      assert Process.alive?(overflowed_worker_pid)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 1
+      assert debug_info.idle_overflowed_workers_pids == [overflowed_worker_pid]
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.overflow == 1
+      assert debug_info.max_overflow == 2
+
+      # Wait for the shutdown delay
+      :timer.sleep(shutdown_delay + 50)
+
+      # Check that the overflowed worker is no longer alive
+      refute Process.alive?(overflowed_worker_pid)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 0
+      assert debug_info.idle_overflowed_workers_pids == []
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.overflow == 0
+      assert debug_info.max_overflow == 2
     end
   end
 end

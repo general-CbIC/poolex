@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- New option `worker_shutdown_delay` for delayed shutdown of overflow workers. Allows to specify a delay (in ms) before terminating overflow workers after they are released. See the new guide for details.
+- New option `idle_overflowed_workers_impl` for customizing the implementation of idle overflowed workers storage.
+
 ### Changed
 
 #### Breaking changes

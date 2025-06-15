@@ -1,11 +1,11 @@
 # Example of use
 
 This example is based on the [Elixir School's poolboy guide](https://elixirschool.com/en/lessons/misc/poolboy).  
-You can find the source of the below example here: [poolex_example](https://github.com/general-CbIC/poolex/tree/develop/examples/poolex_example).
+You can find the source code for the example below here: [poolex_example](https://github.com/general-CbIC/poolex/tree/develop/examples/poolex_example).
 
 ## Defining the worker
 
-We describe an actor that can easily become a bottleneck in our application since it has a rather long execution time on a blocking call.
+Here is an actor that can easily become a bottleneck in our application, since it has a relatively long execution time for a blocking call.
 
 ```elixir
 defmodule PoolexExample.Worker do
