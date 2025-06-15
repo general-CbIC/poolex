@@ -948,6 +948,19 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_count == 1
       assert debug_info.overflow == 1
       assert debug_info.max_overflow == 2
+
+      # Wait for the shutdown delay
+      :timer.sleep(shutdown_delay + 50)
+
+      # Check that the overflowed worker is no longer alive
+      refute Process.alive?(overflowed_worker_pid)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.idle_overflowed_workers_count == 0
+      assert debug_info.idle_overflowed_workers_pids == []
+      assert debug_info.busy_workers_count == 1
+      assert debug_info.overflow == 0
+      assert debug_info.max_overflow == 2
     end
   end
 end
