@@ -528,7 +528,8 @@ defmodule Poolex do
 
   defp release_overflowed_worker(%State{} = state, worker) do
     if state.worker_shutdown_delay > 0 do
-      Process.send_after(self(), {:delayed_stop_worker, worker}, state.worker_shutdown_delay)
+      # We add 10 ms to the delay to ensure that message will be processed after the expiration
+      Process.send_after(self(), {:delayed_stop_worker, worker}, state.worker_shutdown_delay + 10)
 
       IdleOverflowedWorkers.add(state, worker)
     else

@@ -86,8 +86,7 @@ defmodule Poolex.Private.IdleOverflowedWorkers do
   def expired?(%State{idle_overflowed_workers_last_touches: last_touches, worker_shutdown_delay: timeout}, worker) do
     case Map.get(last_touches, worker) do
       nil -> false
-      # We need to remove the 10ms tolerance to avoid infelicity
-      last_touch -> Time.diff(Time.utc_now(), last_touch, :millisecond) > timeout - 10
+      last_touch -> Time.diff(Time.utc_now(), last_touch, :millisecond) > timeout
     end
   end
 end
