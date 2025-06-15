@@ -44,20 +44,21 @@ defmodule Poolex do
   @default_failed_workers_retry_interval to_timeout(second: 1)
 
   @poolex_options_table """
-  | Option                          | Description                                                        | Example               | Default value                     |
-  |---------------------------------|--------------------------------------------------------------------|-----------------------|-----------------------------------|
-  | `busy_workers_impl`             | Module that describes how to work with busy workers                | `SomeBusyWorkersImpl` | `Poolex.Workers.Impl.List`        |
-  | `failed_workers_retry_interval` | Interval in milliseconds between retry attempts for failed workers | `5_000`               | `1_000`                           |
-  | `idle_workers_impl`             | Module that describes how to work with idle workers                | `SomeIdleWorkersImpl` | `Poolex.Workers.Impl.List`        |
-  | `max_overflow`                  | How many workers can be created over the limit                     | `2`                   | `0`                               |
-  | `worker_shutdown_delay`         | Delay (ms) before shutting down overflow worker after release      | `5000`                | `0`                               |
-  | `pool_id`                       | Identifier by which you will access the pool                       | `:my_pool`            | `worker_module` value             |
-  | `pool_size_metrics`             | Whether to dispatch pool size metrics                              | `true`                | `false`                           |
-  | `waiting_callers_impl`          | Module that describes how to work with callers queue               | `WaitingCallersImpl`  | `Poolex.Callers.Impl.ErlangQueue` |
-  | `worker_args`                   | List of arguments passed to the start function                     | `[:gg, "wp"]`         | `[]`                              |
-  | `worker_module`                 | Name of module that implements our worker                          | `MyApp.Worker`        | **option is required**            |
-  | `worker_start_fun`              | Name of the function that starts the worker                        | `:run`                | `:start_link`                     |
-  | `workers_count`                 | How many workers should be running in the pool                     | `5`                   | **option is required**            |
+  | Option                           | Description                                                        | Example                         | Default value                     |
+  |----------------------------------|--------------------------------------------------------------------|---------------------------------|-----------------------------------|
+  | `busy_workers_impl`              | Module that describes how to work with busy workers                | `SomeBusyWorkersImpl`           | `Poolex.Workers.Impl.List`        |
+  | `failed_workers_retry_interval`  | Interval in milliseconds between retry attempts for failed workers | `5_000`                         | `1_000`                           |
+  | `idle_workers_impl`              | Module that describes how to work with idle workers                | `SomeIdleWorkersImpl`           | `Poolex.Workers.Impl.List`        |
+  | `idle_overflowed_workers_impl`   | Module that describes how to work with idle overflowed workers     | `SomeIdleOverflowedWorkersImpl` | `Poolex.Workers.Impl.List`        |
+  | `max_overflow`                   | How many workers can be created over the limit                     | `2`                             | `0`                               |
+  | `worker_shutdown_delay`          | Delay (ms) before shutting down overflow worker after release      | `5000`                          | `0`                               |
+  | `pool_id`                        | Identifier by which you will access the pool                       | `:my_pool`                      | `worker_module` value             |
+  | `pool_size_metrics`              | Whether to dispatch pool size metrics                              | `true`                          | `false`                           |
+  | `waiting_callers_impl`           | Module that describes how to work with callers queue               | `WaitingCallersImpl`            | `Poolex.Callers.Impl.ErlangQueue` |
+  | `worker_args`                    | List of arguments passed to the start function                     | `[:gg, "wp"]`                   | `[]`                              |
+  | `worker_module`                  | Name of module that implements our worker                          | `MyApp.Worker`                  | **option is required**            |
+  | `worker_start_fun`               | Name of the function that starts the worker                        | `:run`                          | `:start_link`                     |
+  | `workers_count`                  | How many workers should be running in the pool                     | `5`                             | **option is required**            |
   """
 
   @typedoc """
@@ -71,14 +72,15 @@ defmodule Poolex do
   @type poolex_option() ::
           {:busy_workers_impl, module()}
           | {:failed_workers_retry_interval, timeout()}
+          | {:idle_overflowed_workers_impl, module()}
           | {:idle_workers_impl, module()}
           | {:max_overflow, non_neg_integer()}
-          | {:worker_shutdown_delay, timeout()}
           | {:pool_id, pool_id()}
           | {:pool_size_metrics, boolean()}
           | {:waiting_callers_impl, module()}
           | {:worker_args, list(any())}
           | {:worker_module, module()}
+          | {:worker_shutdown_delay, timeout()}
           | {:worker_start_fun, atom()}
           | {:workers_count, non_neg_integer()}
 
