@@ -1,6 +1,6 @@
 # Using `worker_shutdown_delay` for Overflow Workers
 
-Poolex allows you to flexibly control the lifetime of overflow workers using the `worker_shutdown_delay` parameter. This is useful if you want to avoid frequent creation/destruction of overflow processes during short load spikes.
+Poolex allows you to flexibly control the lifetime of overflow workers using the `worker_shutdown_delay` parameter. This is useful if you want to avoid frequent creation and destruction of overflow processes during short load spikes.
 
 ## What are overflow workers?
 
@@ -33,12 +33,12 @@ Supervisor.start_link(children, strategy: :one_for_one)
 
 1. All regular workers are busy — an overflow worker is created.
 2. The overflow worker is released — a timer for `worker_shutdown_delay` ms starts.
-3. If the worker is needed again before the timer expires — it is reused and the timer is reset.
-4. If not needed — the process is terminated after the delay.
+3. If the worker is needed again before the timer expires, it is reused and the timer is reset.
+4. If not needed, the process is terminated after the delay.
 
 ## When to use
 
-- If you have short load spikes and want to avoid frequent creation/destruction of overflow workers.
+- If you have short load spikes and want to avoid frequent creation and destruction of overflow workers.
 - If you want to minimize latency when reusing overflow workers.
 
 ## Default value

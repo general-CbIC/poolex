@@ -2,7 +2,7 @@
 
 ## Starting pool of workers
 
-To start a pool you can use either `start/1` or `start_link/1`.
+To start a pool, you can use either `start/1` or `start_link/1`.
 
 ```elixir
 Poolex.start_link(worker_module: SomeWorker, workers_count: 10)
@@ -40,7 +40,7 @@ Supervisor.start_link(children, strategy: :one_for_one)
 
 After the pool is initialized, you can get a free worker and perform any operations on it. This is done through the main interface `run/3`.
 
-The first argument is the name of the pool mentioned above.
+The first argument is the pool name.
 
 The second argument is the function that takes the pid of the worker as the only parameter and performs the necessary actions.
 

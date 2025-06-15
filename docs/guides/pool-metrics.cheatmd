@@ -1,12 +1,12 @@
 # Working with metrics
 
-You can quickly analyze and optimize your pool's production settings with the metrics presented by the library.
+You can quickly analyze and optimize your pool's production settings using the metrics provided by the library.
 
 ## Pool size metrics
 
 The Poolex library presents **an idle/busy worker count metric**. These metrics help estimate a pool load and the number of workers used.
 
-Also, there is **an overflow metric**. It shows how long pools are forced to use additional workers.
+There is also an **overflow metric**. It shows how long pools are forced to use additional workers.
 
 To enable pool size metrics, you need to set the pool_size_metrics parameter to true on the pool initialization:
 
