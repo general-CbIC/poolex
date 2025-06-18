@@ -10,20 +10,20 @@ defmodule Poolex.Private.Options.Parser do
   def parse(options) do
     %Parsed{
       busy_workers_impl: parse_optional_option(options, :busy_workers_impl, Poolex.Workers.Impl.List),
-      idle_workers_impl: parse_optional_option(options, :idle_workers_impl, Poolex.Workers.Impl.List),
+      failed_workers_retry_interval:
+        parse_optional_timeout(options, :failed_workers_retry_interval, @default_failed_workers_retry_interval),
       idle_overflowed_workers_impl:
         parse_optional_option(options, :idle_overflowed_workers_impl, Poolex.Workers.Impl.List),
-      waiting_callers_impl: parse_optional_option(options, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue),
-      failed_workers_retry_interval:
-        parse_optional_option(options, :failed_workers_retry_interval, @default_failed_workers_retry_interval),
-      max_overflow: parse_optional_option(options, :max_overflow, 0),
-      worker_shutdown_delay: parse_optional_option(options, :worker_shutdown_delay, 0),
+      idle_workers_impl: parse_optional_option(options, :idle_workers_impl, Poolex.Workers.Impl.List),
+      max_overflow: parse_optional_non_neg_integer(options, :max_overflow, 0),
       pool_id: parse_pool_id(options),
+      pool_size_metrics: parse_optional_option(options, :pool_size_metrics, false),
+      waiting_callers_impl: parse_optional_option(options, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue),
       worker_args: parse_optional_option(options, :worker_args, []),
       worker_module: parse_required_option(options, :worker_module),
+      worker_shutdown_delay: parse_optional_timeout(options, :worker_shutdown_delay, 0),
       worker_start_fun: parse_optional_option(options, :worker_start_fun, :start_link),
-      workers_count: parse_required_option(options, :workers_count),
-      pool_size_metrics: parse_optional_option(options, :pool_size_metrics, false)
+      workers_count: parse_required_option(options, :workers_count)
     }
   end
 
@@ -32,6 +32,25 @@ defmodule Poolex.Private.Options.Parser do
     case Keyword.get(options, :pool_id) do
       nil -> Keyword.fetch!(options, :worker_module)
       pool_id -> pool_id
+    end
+  end
+
+  defp parse_optional_timeout(options, key, default) do
+    options
+    |> parse_optional_option(key, default)
+    |> case do
+      value when is_integer(value) and value >= 0 -> value
+      :infinity -> :infinity
+      value -> raise ArgumentError, "Expected non-negative integer for #{inspect(key)}. Got: #{value}"
+    end
+  end
+
+  defp parse_optional_non_neg_integer(options, key, default) do
+    options
+    |> parse_optional_option(key, default)
+    |> case do
+      value when is_integer(value) and value >= 0 -> value
+      value -> raise ArgumentError, "Expected non-negative integer for #{inspect(key)}. Got: #{value}"
     end
   end
 
