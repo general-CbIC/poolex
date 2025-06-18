@@ -3,11 +3,13 @@ defmodule PoolHelpers do
   Module with helpers functions for launching pools and long tasks.
   """
 
+  alias Poolex.Private.Options.Parser, as: OptionsParser
+
   @spec start_pool(list(Poolex.poolex_option())) :: Poolex.pool_id()
   def start_pool(options) do
     {:ok, _pid} = ExUnit.Callbacks.start_supervised({Poolex, options})
 
-    Poolex.get_pool_id(options)
+    OptionsParser.parse_pool_id(options)
   end
 
   @spec launch_long_task(Poolex.pool_id(), timeout()) :: :ok

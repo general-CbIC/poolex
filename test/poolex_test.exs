@@ -18,6 +18,7 @@ defmodule PoolexTest do
   alias Poolex.Private.BusyWorkers
   alias Poolex.Private.DebugInfo
   alias Poolex.Private.IdleOverflowedWorkers
+  alias Poolex.Private.Options.Parser, as: OptionsParser
 
   setup_all do
     if Version.match?(System.version(), ">= 1.18.0") do
@@ -572,7 +573,7 @@ defmodule PoolexTest do
 
   describe "child_spec" do
     test "child_spec/1", %{pool_options: pool_options} do
-      id = Poolex.get_pool_id(pool_options)
+      id = OptionsParser.parse_pool_id(pool_options)
 
       assert Poolex.child_spec(pool_options) ==
                %{

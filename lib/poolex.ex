@@ -112,7 +112,7 @@ defmodule Poolex do
   """
   @spec start(list(poolex_option())) :: GenServer.on_start()
   def start(opts) do
-    GenServer.start(__MODULE__, opts, name: get_pool_id(opts), spawn_opt: @spawn_opts)
+    GenServer.start(__MODULE__, opts, name: OptionsParser.parse_pool_id(opts), spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -135,7 +135,7 @@ defmodule Poolex do
   """
   @spec start_link(list(poolex_option())) :: GenServer.on_start()
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: get_pool_id(opts), spawn_opt: @spawn_opts)
+    GenServer.start_link(__MODULE__, opts, name: OptionsParser.parse_pool_id(opts), spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -157,7 +157,7 @@ defmodule Poolex do
   """
   @spec child_spec(list(poolex_option())) :: Supervisor.child_spec()
   def child_spec(opts) do
-    %{id: get_pool_id(opts), start: {Poolex, :start_link, [opts]}}
+    %{id: OptionsParser.parse_pool_id(opts), start: {Poolex, :start_link, [opts]}}
   end
 
   @doc """
@@ -271,17 +271,6 @@ defmodule Poolex do
       |> WaitingCallers.init(parsed_options.waiting_callers_impl)
 
     {:ok, state, {:continue, opts}}
-  end
-
-  @doc """
-  Returns pool identifier from initialization options.
-  """
-  @spec get_pool_id(list(poolex_option())) :: pool_id()
-  def get_pool_id(options) do
-    case Keyword.get(options, :pool_id) do
-      nil -> Keyword.fetch!(options, :worker_module)
-      pool_id -> pool_id
-    end
   end
 
   @impl GenServer
