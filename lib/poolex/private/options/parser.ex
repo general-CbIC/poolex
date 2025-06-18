@@ -50,20 +50,13 @@ defmodule Poolex.Private.Options.Parser do
   defp parse_optional_timeout(options, key, default) do
     options
     |> parse_optional_option(key, default)
-    |> case do
-      value when is_integer(value) and value >= 0 -> value
-      :infinity -> :infinity
-      value -> raise ArgumentError, "Expected non-negative integer for #{inspect(key)}. Got: #{value}"
-    end
+    |> validate_timeout()
   end
 
   defp parse_optional_non_neg_integer(options, key, default) do
     options
     |> parse_optional_option(key, default)
-    |> case do
-      value when is_integer(value) and value >= 0 -> value
-      value -> raise ArgumentError, "Expected non-negative integer for #{inspect(key)}. Got: #{value}"
-    end
+    |> validate_non_neg_integer()
   end
 
   # Universal parse functions
@@ -92,5 +85,25 @@ defmodule Poolex.Private.Options.Parser do
 
   defp validate_module(value) do
     raise ArgumentError, "Expected a module atom, got: #{inspect(value)}"
+  end
+
+  defp validate_non_neg_integer(value) when is_integer(value) and value >= 0 do
+    value
+  end
+
+  defp validate_non_neg_integer(value) do
+    raise ArgumentError, "Expected a non-negative integer, got: #{inspect(value)}"
+  end
+
+  defp validate_timeout(value) when is_integer(value) and value >= 0 do
+    value
+  end
+
+  defp validate_timeout(:infinity) do
+    :infinity
+  end
+
+  defp validate_timeout(value) do
+    raise ArgumentError, "Expected a non-negative integer or :infinity, got: #{inspect(value)}"
   end
 end
