@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-06-19
+
 ### Added
 
 - New option `worker_shutdown_delay` for delayed shutdown of overflow workers. Allows to specify a delay (in ms) before terminating overflow workers after they are released. See the new guide for details.
@@ -333,7 +335,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.3.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/general-CbIC/poolex/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/general-CbIC/poolex/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/general-CbIC/poolex/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/general-CbIC/poolex/compare/v1.1.0...v1.2.0
