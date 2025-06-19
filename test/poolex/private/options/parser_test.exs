@@ -329,14 +329,14 @@ defmodule Poolex.Private.Options.ParserTest do
 
       result = Parser.parse(options_without_impl)
 
-      assert result.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
+      assert result.waiting_callers_impl == ErlangQueue
     end
   end
 
   describe "worker_args validation" do
     test "parse/1 with valid worker_args values", %{options: options} do
       # Test with keyword list
-      options_with_keyword = Keyword.put(options, :worker_args, [timeout: 5000, retries: 3])
+      options_with_keyword = Keyword.put(options, :worker_args, timeout: 5000, retries: 3)
       result = Parser.parse(options_with_keyword)
       assert result.worker_args == [timeout: 5000, retries: 3]
 
