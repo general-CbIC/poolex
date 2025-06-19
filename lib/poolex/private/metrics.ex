@@ -3,12 +3,15 @@ defmodule Poolex.Private.Metrics do
   Functions for dispatching metrics.
   """
 
+  alias Poolex.Private.DebugInfo
+  alias Poolex.Private.Options.Parser, as: OptionsParser
+
   @doc """
   Dispatches metrics with current count of idle workers.
   """
   @spec dispatch_pool_size_metrics(Poolex.pool_id()) :: :ok
   def dispatch_pool_size_metrics(pool_id) do
-    debug_info = Poolex.get_debug_info(pool_id)
+    debug_info = DebugInfo.get_debug_info(pool_id)
 
     :telemetry.execute(
       [:poolex, :metrics, :pool_size],
@@ -30,7 +33,7 @@ defmodule Poolex.Private.Metrics do
   """
   @spec start_poller(list(Poolex.poolex_option())) :: GenServer.on_start()
   def start_poller(opts) do
-    pool_id = Poolex.get_pool_id(opts)
+    pool_id = OptionsParser.parse_pool_id(opts)
     measurements = collect_measurements(opts)
 
     if measurements == [] do
@@ -38,7 +41,7 @@ defmodule Poolex.Private.Metrics do
     else
       :telemetry_poller.start_link(
         measurements: measurements,
-        period: :timer.seconds(1),
+        period: to_timeout(second: 1),
         name: :"#{pool_id}_metrics_poller"
       )
     end
@@ -46,7 +49,7 @@ defmodule Poolex.Private.Metrics do
 
   @spec collect_measurements(list(Poolex.poolex_option())) :: list()
   defp collect_measurements(opts) do
-    pool_id = Poolex.get_pool_id(opts)
+    pool_id = OptionsParser.parse_pool_id(opts)
 
     if Keyword.get(opts, :pool_size_metrics, false) do
       [

@@ -6,19 +6,19 @@ defmodule Poolex.Private.IdleWorkers do
   @doc false
   @spec init(State.t(), idle_workers_impl :: module(), list(Poolex.worker())) :: State.t()
   def init(%State{} = state, impl, workers) do
-    %State{state | idle_workers_impl: impl, idle_workers_state: impl.init(workers)}
+    %{state | idle_workers_impl: impl, idle_workers_state: impl.init(workers)}
   end
 
   @doc false
   @spec add(State.t(), Poolex.worker()) :: State.t()
   def add(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state, worker) do
-    %State{state | idle_workers_state: impl.add(idle_workers_state, worker)}
+    %{state | idle_workers_state: impl.add(idle_workers_state, worker)}
   end
 
   @doc false
   @spec remove(State.t(), Poolex.worker()) :: State.t()
   def remove(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state, worker) do
-    %State{state | idle_workers_state: impl.remove(idle_workers_state, worker)}
+    %{state | idle_workers_state: impl.remove(idle_workers_state, worker)}
   end
 
   @doc false
@@ -44,7 +44,7 @@ defmodule Poolex.Private.IdleWorkers do
   def pop(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state} = state) do
     case impl.pop(idle_workers_state) do
       {worker, new_idle_workers_state} ->
-        {worker, %State{state | idle_workers_state: new_idle_workers_state}}
+        {worker, %{state | idle_workers_state: new_idle_workers_state}}
 
       :empty ->
         :empty

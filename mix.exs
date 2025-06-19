@@ -7,7 +7,7 @@ defmodule Poolex.MixProject do
       deps: deps(),
       description: "The library for managing pools of workers.",
       docs: docs(),
-      elixir: "~> 1.11",
+      elixir: "~> 1.17",
       elixirc_options: [
         warnings_as_errors: true
       ],
@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "1.3.0"
+      version: "1.4.0"
     ]
   end
 
@@ -61,7 +61,7 @@ defmodule Poolex.MixProject do
   defp docs do
     [
       main: "readme",
-      logo: "assets/poolex.jpeg",
+      logo: "assets/poolex.png",
       extras: [
         "README.md",
         "docs/guides/getting-started.cheatmd",
@@ -69,6 +69,7 @@ defmodule Poolex.MixProject do
         "docs/guides/example-of-use.cheatmd",
         "docs/guides/pool-metrics.cheatmd",
         "docs/guides/workers-and-callers-implementations.md",
+        "docs/guides/worker-shutdown-delay.cheatmd",
         "docs/CONTRIBUTING.md"
       ],
       groups_for_extras: [
