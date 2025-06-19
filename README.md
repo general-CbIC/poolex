@@ -42,11 +42,11 @@ With Poolex, you can:
 
 ## Requirements
 
-| Library                                                  | Elixir     | Erlang/OTP |
-|----------------------------------------------------------|------------|------------|
-| from `0.1.0` to `1.2.1`                                  | `>= 1.7`   | `>= 22`    |
-| `1.3.0`                                                  | `>= 1 .11` | `>= 24`    |
-| `>= 1.4.0` ([not released yet](https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md#unreleased)) | `>= 1.17`  | `>= 25`    |
+| Library                 | Elixir     | Erlang/OTP |
+|-------------------------|------------|------------|
+| from `0.1.0` to `1.2.1` | `>= 1.7`   | `>= 22`    |
+| `1.3.0`                 | `>= 1 .11` | `>= 24`    |
+| `>= 1.4.0`              | `>= 1.17`  | `>= 25`    |
 
 ## Installation
 
