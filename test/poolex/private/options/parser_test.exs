@@ -146,4 +146,46 @@ defmodule Poolex.Private.Options.ParserTest do
       assert result.failed_workers_retry_interval == 1000
     end
   end
+
+  describe "idle_overflowed_workers_impl validation" do
+    test "parse/1 with non-atom idle_overflowed_workers_impl raises ArgumentError", %{options: options} do
+      invalid_options = Keyword.put(options, :idle_overflowed_workers_impl, "not_an_atom")
+
+      assert_raise ArgumentError, "Expected a module atom, got: \"not_an_atom\"", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 with integer idle_overflowed_workers_impl raises ArgumentError", %{options: options} do
+      invalid_options = Keyword.put(options, :idle_overflowed_workers_impl, 456)
+
+      assert_raise ArgumentError, "Expected a module atom, got: 456", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 with map idle_overflowed_workers_impl raises ArgumentError", %{options: options} do
+      invalid_options = Keyword.put(options, :idle_overflowed_workers_impl, %{key: "value"})
+
+      assert_raise ArgumentError, "Expected a module atom, got: %{key: \"value\"}", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 with non-existent module idle_overflowed_workers_impl raises ArgumentError", %{options: options} do
+      invalid_options = Keyword.put(options, :idle_overflowed_workers_impl, :AnotherNonExistentModule)
+
+      assert_raise ArgumentError, "Module :AnotherNonExistentModule is not loaded or does not exist", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 without idle_overflowed_workers_impl uses default value", %{options: options} do
+      options_without_impl = Keyword.delete(options, :idle_overflowed_workers_impl)
+
+      result = Parser.parse(options_without_impl)
+
+      assert result.idle_overflowed_workers_impl == Poolex.Workers.Impl.List
+    end
+  end
 end
