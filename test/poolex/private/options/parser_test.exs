@@ -86,4 +86,64 @@ defmodule Poolex.Private.Options.ParserTest do
       assert result.busy_workers_impl == Poolex.Workers.Impl.List
     end
   end
+
+  describe "failed_workers_retry_interval validation" do
+    test "parse/1 with valid timeout values", %{options: options} do
+      # Test with positive integer
+      options_with_timeout = Keyword.put(options, :failed_workers_retry_interval, 5000)
+      result = Parser.parse(options_with_timeout)
+      assert result.failed_workers_retry_interval == 5000
+
+      # Test with zero
+      options_with_zero = Keyword.put(options, :failed_workers_retry_interval, 0)
+      result = Parser.parse(options_with_zero)
+      assert result.failed_workers_retry_interval == 0
+
+      # Test with :infinity
+      options_with_infinity = Keyword.put(options, :failed_workers_retry_interval, :infinity)
+      result = Parser.parse(options_with_infinity)
+      assert result.failed_workers_retry_interval == :infinity
+    end
+
+    test "parse/1 with negative integer failed_workers_retry_interval raises ArgumentError", %{options: options} do
+      invalid_options = Keyword.put(options, :failed_workers_retry_interval, -100)
+
+      assert_raise ArgumentError, "Expected a non-negative integer or :infinity, got: -100", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 with float failed_workers_retry_interval raises ArgumentError", %{options: options} do
+      invalid_options = Keyword.put(options, :failed_workers_retry_interval, 1.5)
+
+      assert_raise ArgumentError, "Expected a non-negative integer or :infinity, got: 1.5", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 with string failed_workers_retry_interval raises ArgumentError", %{options: options} do
+      invalid_options = Keyword.put(options, :failed_workers_retry_interval, "1000")
+
+      assert_raise ArgumentError, "Expected a non-negative integer or :infinity, got: \"1000\"", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 with atom (not :infinity) failed_workers_retry_interval raises ArgumentError", %{options: options} do
+      invalid_options = Keyword.put(options, :failed_workers_retry_interval, :some_atom)
+
+      assert_raise ArgumentError, "Expected a non-negative integer or :infinity, got: :some_atom", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 without failed_workers_retry_interval uses default value", %{options: options} do
+      options_without_interval = Keyword.delete(options, :failed_workers_retry_interval)
+
+      result = Parser.parse(options_without_interval)
+
+      # Default is 1 second (1000ms)
+      assert result.failed_workers_retry_interval == 1000
+    end
+  end
 end
