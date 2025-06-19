@@ -33,15 +33,13 @@ defmodule Poolex do
   alias Poolex.Private.IdleWorkers
   alias Poolex.Private.Metrics
   alias Poolex.Private.Monitoring
+  alias Poolex.Private.Options.Parser, as: OptionsParser
   alias Poolex.Private.State
   alias Poolex.Private.WaitingCallers
 
   require Logger
 
   @default_checkout_timeout to_timeout(second: 5)
-
-  # Interval between retry attempts for workers that failed to start (1 second by default)
-  @default_failed_workers_retry_interval to_timeout(second: 1)
 
   @poolex_options_table """
   | Option                           | Description                                                        | Example                         | Default value                     |
@@ -114,7 +112,7 @@ defmodule Poolex do
   """
   @spec start(list(poolex_option())) :: GenServer.on_start()
   def start(opts) do
-    GenServer.start(__MODULE__, opts, name: get_pool_id(opts), spawn_opt: @spawn_opts)
+    GenServer.start(__MODULE__, opts, name: OptionsParser.parse_pool_id(opts), spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -137,7 +135,7 @@ defmodule Poolex do
   """
   @spec start_link(list(poolex_option())) :: GenServer.on_start()
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: get_pool_id(opts), spawn_opt: @spawn_opts)
+    GenServer.start_link(__MODULE__, opts, name: OptionsParser.parse_pool_id(opts), spawn_opt: @spawn_opts)
   end
 
   @doc """
@@ -159,7 +157,7 @@ defmodule Poolex do
   """
   @spec child_spec(list(poolex_option())) :: Supervisor.child_spec()
   def child_spec(opts) do
-    %{id: get_pool_id(opts), start: {Poolex, :start_link, [opts]}}
+    %{id: OptionsParser.parse_pool_id(opts), start: {Poolex, :start_link, [opts]}}
   end
 
   @doc """
@@ -247,59 +245,32 @@ defmodule Poolex do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    busy_workers_impl = Keyword.get(opts, :busy_workers_impl, Poolex.Workers.Impl.List)
-    idle_workers_impl = Keyword.get(opts, :idle_workers_impl, Poolex.Workers.Impl.List)
-
-    idle_overflowed_workers_impl =
-      Keyword.get(opts, :idle_overflowed_workers_impl, Poolex.Workers.Impl.List)
-
-    failed_workers_retry_interval =
-      Keyword.get(opts, :failed_workers_retry_interval, @default_failed_workers_retry_interval)
-
-    max_overflow = Keyword.get(opts, :max_overflow, 0)
-    worker_shutdown_delay = Keyword.get(opts, :worker_shutdown_delay, 0)
-    pool_id = get_pool_id(opts)
-    waiting_callers_impl = Keyword.get(opts, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue)
-    worker_args = Keyword.get(opts, :worker_args, [])
-    worker_module = Keyword.fetch!(opts, :worker_module)
-    worker_start_fun = Keyword.get(opts, :worker_start_fun, :start_link)
-    workers_count = Keyword.fetch!(opts, :workers_count)
+    parsed_options = OptionsParser.parse(opts)
 
     {:ok, supervisor} = Poolex.Private.Supervisor.start_link()
 
     state =
       %State{
-        failed_workers_retry_interval: failed_workers_retry_interval,
-        max_overflow: max_overflow,
-        pool_id: pool_id,
+        failed_workers_retry_interval: parsed_options.failed_workers_retry_interval,
+        max_overflow: parsed_options.max_overflow,
+        pool_id: parsed_options.pool_id,
         supervisor: supervisor,
-        worker_args: worker_args,
-        worker_module: worker_module,
-        worker_start_fun: worker_start_fun,
-        worker_shutdown_delay: worker_shutdown_delay
+        worker_args: parsed_options.worker_args,
+        worker_module: parsed_options.worker_module,
+        worker_start_fun: parsed_options.worker_start_fun,
+        worker_shutdown_delay: parsed_options.worker_shutdown_delay
       }
 
-    {initial_workers_pids, state} = start_workers(workers_count, state)
+    {initial_workers_pids, state} = start_workers(parsed_options.workers_count, state)
 
     state =
       state
-      |> IdleWorkers.init(idle_workers_impl, initial_workers_pids)
-      |> BusyWorkers.init(busy_workers_impl)
-      |> IdleOverflowedWorkers.init(idle_overflowed_workers_impl)
-      |> WaitingCallers.init(waiting_callers_impl)
+      |> IdleWorkers.init(parsed_options.idle_workers_impl, initial_workers_pids)
+      |> BusyWorkers.init(parsed_options.busy_workers_impl)
+      |> IdleOverflowedWorkers.init(parsed_options.idle_overflowed_workers_impl)
+      |> WaitingCallers.init(parsed_options.waiting_callers_impl)
 
     {:ok, state, {:continue, opts}}
-  end
-
-  @doc """
-  Returns pool identifier from initialization options.
-  """
-  @spec get_pool_id(list(poolex_option())) :: pool_id()
-  def get_pool_id(options) do
-    case Keyword.get(options, :pool_id) do
-      nil -> Keyword.fetch!(options, :worker_module)
-      pool_id -> pool_id
-    end
   end
 
   @impl GenServer
