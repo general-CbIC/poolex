@@ -22,8 +22,8 @@ defmodule Poolex.Private.Options.Parser do
       worker_args: parse_optional_list(options, :worker_args, []),
       worker_module: parse_required_module(options, :worker_module),
       worker_shutdown_delay: parse_optional_timeout(options, :worker_shutdown_delay, 0),
-      worker_start_fun: parse_optional_option(options, :worker_start_fun, :start_link),
-      workers_count: parse_required_option(options, :workers_count)
+      worker_start_fun: parse_optional_atom(options, :worker_start_fun, :start_link),
+      workers_count: parse_required_non_neg_integer(options, :workers_count)
     }
   end
 
@@ -33,6 +33,12 @@ defmodule Poolex.Private.Options.Parser do
       nil -> Keyword.fetch!(options, :worker_module)
       pool_id -> pool_id
     end
+  end
+
+  defp parse_optional_atom(options, key, default) do
+    options
+    |> parse_optional_option(key, default)
+    |> validate_atom()
   end
 
   defp parse_optional_list(options, key, default) do
@@ -63,6 +69,12 @@ defmodule Poolex.Private.Options.Parser do
     options
     |> parse_optional_option(key, default)
     |> validate_timeout()
+  end
+
+  defp parse_required_non_neg_integer(options, key) do
+    options
+    |> parse_required_option(key)
+    |> validate_non_neg_integer()
   end
 
   defp parse_optional_non_neg_integer(options, key, default) do
@@ -133,5 +145,13 @@ defmodule Poolex.Private.Options.Parser do
 
   defp valiadate_list(value) do
     raise ArgumentError, "Expected a list, got: #{inspect(value)}"
+  end
+
+  defp validate_atom(value) when is_atom(value) do
+    value
+  end
+
+  defp validate_atom(value) do
+    raise ArgumentError, "Expected an atom, got: #{inspect(value)}"
   end
 end
