@@ -17,7 +17,7 @@ defmodule Poolex.Private.Options.Parser do
       idle_workers_impl: parse_optional_module(options, :idle_workers_impl, Poolex.Workers.Impl.List),
       max_overflow: parse_optional_non_neg_integer(options, :max_overflow, 0),
       pool_id: parse_pool_id(options),
-      pool_size_metrics: parse_optional_option(options, :pool_size_metrics, false),
+      pool_size_metrics: parse_optional_boolean(options, :pool_size_metrics, false),
       waiting_callers_impl: parse_optional_module(options, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue),
       worker_args: parse_optional_option(options, :worker_args, []),
       worker_module: parse_required_module(options, :worker_module),
@@ -33,6 +33,12 @@ defmodule Poolex.Private.Options.Parser do
       nil -> Keyword.fetch!(options, :worker_module)
       pool_id -> pool_id
     end
+  end
+
+  defp parse_optional_boolean(options, key, default) do
+    options
+    |> parse_optional_option(key, default)
+    |> validate_boolean()
   end
 
   defp parse_optional_module(options, key, default) do
@@ -105,5 +111,13 @@ defmodule Poolex.Private.Options.Parser do
 
   defp validate_timeout(value) do
     raise ArgumentError, "Expected a non-negative integer or :infinity, got: #{inspect(value)}"
+  end
+
+  defp validate_boolean(value) when is_boolean(value) do
+    value
+  end
+
+  defp validate_boolean(value) do
+    raise ArgumentError, "Expected a boolean value, got: #{inspect(value)}"
   end
 end
