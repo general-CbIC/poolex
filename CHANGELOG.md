@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed overflow worker expiration timing to use `System.monotonic_time/1` instead of `Time.utc_now/0`. This prevents incorrect worker expiration when system clock changes occur (e.g., from NTP adjustments or timezone changes).
+
 ## [1.4.0] - 2025-06-19
 
 ### Added

@@ -18,7 +18,8 @@ defmodule Poolex.Private.IdleOverflowedWorkers do
     %{
       state
       | idle_overflowed_workers_state: impl.add(idle_overflowed_workers_state, worker),
-        idle_overflowed_workers_last_touches: Map.put(state.idle_overflowed_workers_last_touches, worker, Time.utc_now())
+        idle_overflowed_workers_last_touches:
+          Map.put(state.idle_overflowed_workers_last_touches, worker, System.monotonic_time(:millisecond))
     }
   end
 
@@ -86,7 +87,7 @@ defmodule Poolex.Private.IdleOverflowedWorkers do
   def expired?(%State{idle_overflowed_workers_last_touches: last_touches, worker_shutdown_delay: timeout}, worker) do
     case Map.get(last_touches, worker) do
       nil -> false
-      last_touch -> Time.diff(Time.utc_now(), last_touch, :millisecond) > timeout
+      last_touch -> System.monotonic_time(:millisecond) - last_touch > timeout
     end
   end
 end
