@@ -445,6 +445,9 @@ defmodule PoolexTest do
 
       reference_1 = Process.monitor(process_1)
 
+      # Wait a bit to ensure the first process sended the message
+      Process.sleep(10)
+
       process_2 =
         spawn(fn ->
           assert {:error, :checkout_timeout} =
