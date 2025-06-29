@@ -24,6 +24,7 @@ Poolex is a library for managing pools of workers. Inspired by [poolboy](https:/
   - [Guides](#guides)
   - [Used by](#used-by)
   - [Contributions](#contributions)
+  - [Support the Project](#support-the-project)
 
 ## Features
 
@@ -125,3 +126,12 @@ NOTE: Commented cause I'm not sure if the ads are allowed :shrug:
 If you think something can be improved or have any questions about specific behaviors or implementation details, please feel free to file an issue. Proposed changes should be discussed in issues before submitting any PRs, to avoid spending time on code that might not be merged upstream.
 
 If you are ready to change the project, please read the [Contributing guide](docs/CONTRIBUTING.md) first.
+
+## Support the Project
+
+If you find Poolex useful, please consider supporting its development! You can:
+
+- ⭐ Star the project on [GitHub](https://github.com/general-CbIC/poolex)
+- 💖 Sponsor the author on [GitHub Sponsors](https://github.com/sponsors/general-CbIC)
+
+Your support helps keep the project active and maintained. Thank you!
