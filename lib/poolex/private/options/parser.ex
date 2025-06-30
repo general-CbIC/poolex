@@ -44,7 +44,7 @@ defmodule Poolex.Private.Options.Parser do
   defp parse_optional_list(options, key, default) do
     options
     |> parse_optional_option(key, default)
-    |> valiadate_list()
+    |> validate_list()
   end
 
   defp parse_optional_boolean(options, key, default) do
@@ -139,11 +139,11 @@ defmodule Poolex.Private.Options.Parser do
     raise ArgumentError, "Expected a boolean value, got: #{inspect(value)}"
   end
 
-  defp valiadate_list(value) when is_list(value) do
+  defp validate_list(value) when is_list(value) do
     value
   end
 
-  defp valiadate_list(value) do
+  defp validate_list(value) do
     raise ArgumentError, "Expected a list, got: #{inspect(value)}"
   end
 
