@@ -28,17 +28,18 @@ Poolex is a library for managing pools of workers. Inspired by [poolboy](https:/
 
 ## Features
 
-With Poolex, you can:
+Poolex makes working with worker pools easy and flexible:
 
-- Launch multiple pools of workers and then access the free ones from anywhere in the application.
-- Configure the pool to run additional temporary workers if the load increases.
-- Analyze and optimize your pool's production settings using metrics.
-- Use your own implementations to define the logic for worker and caller process access.
-- Configure delayed shutdown for workers. This is useful if creating workers is a resource-intensive operation.
+- 🚀 Start multiple pools and grab a free worker from anywhere in your app.
+- ⚡ Automatically spin up extra workers when the load grows.
+- 📊 Get built-in metrics to monitor and tune your pools.
+- 🛠️ Plug in your own logic for how workers and callers are managed.
+- ⏳ Delay worker shutdowns to save resources when creating workers is expensive.
 
-**Why `poolex` instead of `poolboy`?**
+**Why choose `poolex` over `poolboy`?**
   
-- `poolex` is written in Elixir. This library is much more convenient for use in Elixir projects.
+- Written in Elixir for a smoother experience in Elixir projects.
+- Actively maintained and focused on modern Elixir needs.
 - `poolboy` is a great library, but not actively maintained :crying_cat_face: ![Last poolboy commit](https://img.shields.io/github/last-commit/devinus/poolboy?style=flat)
 
 ## Requirements
