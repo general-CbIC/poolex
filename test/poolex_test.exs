@@ -262,7 +262,7 @@ defmodule PoolexTest do
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 10
 
-      assert Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
+      assert Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
                pid == waiting_caller
              end)
 
@@ -272,7 +272,7 @@ defmodule PoolexTest do
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 9
 
-      refute Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
+      refute Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
                pid == waiting_caller
              end)
     end
@@ -307,9 +307,7 @@ defmodule PoolexTest do
 
       # Busy worker should be restarted if caller dies
       # NOTE: may be I should write a test using :do_some_work_with_delay
-      refute Enum.any?(debug_info.idle_workers_pids, fn pid ->
-               pid == busy_worker_pid
-             end)
+      refute busy_worker_pid in debug_info.idle_workers_pids
     end
 
     test "release busy worker when caller dies (overflow case)", %{pool_options: pool_options} do
@@ -376,7 +374,7 @@ defmodule PoolexTest do
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert length(debug_info.waiting_callers) == 1
 
-      assert Enum.find(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
+      assert Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
                pid == waiting_caller
              end)
 
