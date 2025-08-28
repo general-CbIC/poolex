@@ -25,7 +25,7 @@ jobs:
           - elixir: '1.18'
             otp: '27'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Static analysis
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set mix.lock file hash
         run: |
           mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
