@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated `styler` dependency to version 1.9.1.
+- Improved worker startup handling by returning state alongside worker PID or error, ensuring state consistency during worker creation and handling of failed worker starts. This prevents potential deadlocks when workers fail to start.
+- Refactored worker down handling logic by extracting different scenarios into dedicated functions for better code readability and maintainability.
+
+### Fixed
+
+- Fixed incorrect typespecs in `Poolex.Private.IdleOverflowedWorkers.count/1` and `Poolex.Private.IdleWorkers.count/1` (changed from `neg_integer()` to `non_neg_integer()`).
+- Made `Poolex.Private.Monitoring.remove/2` safer by not pattern matching on the `Process.demonitor/1` return value.
+
 ## [1.4.1] - 2025-06-29
 
 ### Fixed
