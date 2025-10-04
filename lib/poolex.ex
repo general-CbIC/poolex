@@ -536,25 +536,34 @@ defmodule Poolex do
       |> BusyWorkers.remove(dead_process_pid)
       |> IdleOverflowedWorkers.remove(dead_process_pid)
 
-    if WaitingCallers.empty?(state) do
-      if state.overflow > 0 do
-        %{state | overflow: state.overflow - 1}
-      else
-        case start_worker(state) do
-          {:ok, new_worker, state} -> IdleWorkers.add(state, new_worker)
-          {:error, :failed_to_start_worker, state} -> state
-        end
-      end
-    else
-      case start_worker(state) do
-        {:ok, new_worker, state} ->
-          state
-          |> BusyWorkers.add(new_worker)
-          |> provide_worker_to_waiting_caller(new_worker)
+    cond do
+      not WaitingCallers.empty?(state) ->
+        handle_down_worker_with_waiting_callers(state)
 
-        {:error, :failed_to_start_worker, state} ->
-          state
-      end
+      state.overflow > 0 ->
+        %{state | overflow: state.overflow - 1}
+
+      true ->
+        handle_down_worker_without_overflow(state)
+    end
+  end
+
+  defp handle_down_worker_with_waiting_callers(state) do
+    case start_worker(state) do
+      {:ok, new_worker, state} ->
+        state
+        |> BusyWorkers.add(new_worker)
+        |> provide_worker_to_waiting_caller(new_worker)
+
+      {:error, :failed_to_start_worker, state} ->
+        state
+    end
+  end
+
+  defp handle_down_worker_without_overflow(state) do
+    case start_worker(state) do
+      {:ok, new_worker, state} -> IdleWorkers.add(state, new_worker)
+      {:error, :failed_to_start_worker, state} -> state
     end
   end
 
