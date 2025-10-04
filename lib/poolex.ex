@@ -290,12 +290,10 @@ defmodule Poolex do
   defp start_workers(workers_count, state) when is_integer(workers_count) and workers_count >= 1 do
     Enum.reduce(1..workers_count, {[], state}, fn _iterator, {workers_pids, state} ->
       case start_worker(state) do
-        {:ok, worker_pid} ->
-          state = Monitoring.add(state, worker_pid, :worker)
+        {:ok, worker_pid, state} ->
           {[worker_pid | workers_pids], state}
 
-        {:error, :failed_to_start_worker} ->
-          state = %{state | failed_to_start_workers_count: state.failed_to_start_workers_count + 1}
+        {:error, :failed_to_start_worker, state} ->
           {workers_pids, state}
       end
     end)
@@ -306,19 +304,21 @@ defmodule Poolex do
     raise ArgumentError, msg
   end
 
-  @spec start_worker(State.t()) :: {:ok, pid()} | {:error, :failed_to_start_worker}
+  @spec start_worker(State.t()) :: {:ok, pid(), State.t()} | {:error, :failed_to_start_worker, State.t()}
   defp start_worker(%State{} = state) do
     case DynamicSupervisor.start_child(state.supervisor, %{
            id: make_ref(),
            start: {state.worker_module, state.worker_start_fun, state.worker_args},
            restart: :temporary
          }) do
-      {:ok, pid} ->
-        {:ok, pid}
+      {:ok, worker_pid} ->
+        state = Monitoring.add(state, worker_pid, :worker)
+        {:ok, worker_pid, state}
 
       {:error, reason} ->
         Logger.error("[Poolex] Failed to start worker. Reason: #{inspect(reason)}")
-        {:error, :failed_to_start_worker}
+        state = %{state | failed_to_start_workers_count: state.failed_to_start_workers_count + 1}
+        {:error, :failed_to_start_worker, state}
     end
   end
 
@@ -346,14 +346,22 @@ defmodule Poolex do
 
       state.overflow < state.max_overflow ->
         # We can create a new worker if we are not at the max overflow limit
-        {:ok, new_worker} = start_worker(state)
+        case start_worker(state) do
+          {:ok, new_worker, state} ->
+            # When worker created successfully
+            state = BusyWorkers.add(state, new_worker)
 
-        state =
-          state
-          |> Monitoring.add(new_worker, :worker)
-          |> BusyWorkers.add(new_worker)
+            {:reply, {:ok, new_worker}, %{state | overflow: state.overflow + 1}}
 
-        {:reply, {:ok, new_worker}, %{state | overflow: state.overflow + 1}}
+          # When something went wrong, the caller will wait while worker retries to start
+          {:error, :failed_to_start_worker, state} ->
+            state =
+              state
+              |> Monitoring.add(from_pid, :waiting_caller)
+              |> WaitingCallers.add(%Poolex.Caller{reference: caller_reference, from: caller})
+
+            {:noreply, state}
+        end
 
       true ->
         # We can't provide a worker immediately, so we need to add the caller to the waiting list
@@ -401,7 +409,6 @@ defmodule Poolex do
           IdleWorkers.add(acc_state, worker)
         else
           acc_state
-          |> Monitoring.add(worker, :worker)
           |> BusyWorkers.add(worker)
           |> provide_worker_to_waiting_caller(worker)
         end
@@ -529,23 +536,34 @@ defmodule Poolex do
       |> BusyWorkers.remove(dead_process_pid)
       |> IdleOverflowedWorkers.remove(dead_process_pid)
 
-    if WaitingCallers.empty?(state) do
-      if state.overflow > 0 do
+    cond do
+      not WaitingCallers.empty?(state) ->
+        handle_down_worker_with_waiting_callers(state)
+
+      state.overflow > 0 ->
         %{state | overflow: state.overflow - 1}
-      else
-        {:ok, new_worker} = start_worker(state)
 
+      true ->
+        handle_down_worker_without_overflow(state)
+    end
+  end
+
+  defp handle_down_worker_with_waiting_callers(state) do
+    case start_worker(state) do
+      {:ok, new_worker, state} ->
         state
-        |> Monitoring.add(new_worker, :worker)
-        |> IdleWorkers.add(new_worker)
-      end
-    else
-      {:ok, new_worker} = start_worker(state)
+        |> BusyWorkers.add(new_worker)
+        |> provide_worker_to_waiting_caller(new_worker)
 
-      state
-      |> Monitoring.add(new_worker, :worker)
-      |> BusyWorkers.add(new_worker)
-      |> provide_worker_to_waiting_caller(new_worker)
+      {:error, :failed_to_start_worker, state} ->
+        state
+    end
+  end
+
+  defp handle_down_worker_without_overflow(state) do
+    case start_worker(state) do
+      {:ok, new_worker, state} -> IdleWorkers.add(state, new_worker)
+      {:error, :failed_to_start_worker, state} -> state
     end
   end
 
@@ -603,7 +621,6 @@ defmodule Poolex do
       else
         # If there are waiting callers, give them the worker
         acc_state
-        |> Monitoring.add(worker, :worker)
         |> BusyWorkers.add(worker)
         |> provide_worker_to_waiting_caller(worker)
       end

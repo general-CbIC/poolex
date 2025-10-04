@@ -9,6 +9,7 @@ Poolex is an Elixir library for managing pools of workers, inspired by poolboy. 
 ## Development Commands
 
 ### Core Development Tasks
+
 - `mix deps.get` - Install dependencies
 - `mix check` - Run all code analysis & testing tools (includes tests, dialyzer, credo, format check)
 - `mix test` - Run tests only
@@ -17,12 +18,14 @@ Poolex is an Elixir library for managing pools of workers, inspired by poolboy. 
 - `mix credo` - Run code analysis
 
 ### Testing
+
 - `mix test` - Run all tests
 - `mix test --cover` - Run tests with coverage
 - `mix test test/poolex_test.exs` - Run specific test file
 - `mix test --only focus` - Run only focused tests (tagged with @tag :focus)
 
 ### Documentation
+
 - `mix docs` - Generate documentation
 - `mix hex.docs open` - Open generated docs in browser
 
@@ -52,10 +55,12 @@ The main pool GenServer (`Poolex`) manages several internal components:
 ### Pluggable Implementations
 
 The library uses behaviour-based implementations for:
+
 - **Workers**: `Poolex.Workers.Behaviour` - How to store/retrieve worker PIDs
 - **Callers**: `Poolex.Callers.Behaviour` - How to queue waiting callers
 
 Built-in implementations:
+
 - `Poolex.Workers.Impl.List` - Simple list-based storage
 - `Poolex.Workers.Impl.ErlangQueue` - Erlang queue-based storage  
 - `Poolex.Callers.Impl.ErlangQueue` - Erlang queue for caller management
@@ -71,6 +76,7 @@ Built-in implementations:
 ## Configuration Options
 
 Key pool configuration (see `Poolex.poolex_option()` type):
+
 - `worker_module` - Module implementing the worker (required)
 - `workers_count` - Base number of workers (required)
 - `max_overflow` - Additional workers allowed beyond base count
@@ -99,3 +105,43 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 
 - Elixir >= 1.17, Erlang/OTP >= 25
 - Use `asdf` for version management (see `.tool-versions`)
+
+## Recent Improvements & Known Issues
+
+### Known Issues
+
+1. **Flaky Tests (~10-20% failure rate)**
+   - **Root cause**: Parameterized tests with identical `pool_id` (`:SomeWorker`)
+   - **Problem**: `launch_long_task` spawns processes with 4-second delays that outlive test execution
+   - **Impact**: Spawned processes from first parameterized run try to access pool in second run → crashes
+   - **Status**: Investigated but not fixed (would require systematic test refactoring)
+   - **Affected tests**: Various overflow and timeout tests
+
+2. **`remove_idle_workers!/2` Design Issue**
+   - **Current behavior**: Removes workers from idle list but doesn't stop them
+   - **Problem**: Workers continue running but are inaccessible to pool (potential resource leak)
+   - **Root cause**: Can't easily unmonitor by pid (only by reference)
+   - **Workaround**: Would need reverse monitor map (`pid → reference`)
+   - **Better solution**: See "Planned Architecture Improvements" in TODO.md
+
+### Architecture Considerations
+
+**Current Monitoring Approach:**
+
+- Uses `Process.monitor` with `%{reference() => kind_of_process()}` map
+- Limitation: Can't unmonitor by pid, only by reference
+- Makes features like `remove_idle_workers!` difficult to implement correctly
+
+**Proposed Future Improvement (see TODO.md):**
+
+- Replace `Process.monitor` with `Process.link` + `trap_exit`
+- Would eliminate need for monitors map entirely
+- Would make `remove_idle_workers!` trivial: `Process.unlink(worker) + terminate_child`
+- Significant architectural simplification
+
+### Development Notes
+
+- When adding new worker lifecycle features, be aware of monitoring limitations
+- Consider the `Process.link` refactoring (in TODO.md) for major features requiring worker removal
+- Test flakiness is a known issue; run tests multiple times to verify changes
+- Always run `mix check` before committing (includes tests, dialyzer, credo)

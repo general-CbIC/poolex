@@ -46,7 +46,7 @@ defmodule Poolex.Private.IdleOverflowedWorkers do
   end
 
   @doc false
-  @spec count(State.t()) :: neg_integer()
+  @spec count(State.t()) :: non_neg_integer()
   def count(%State{idle_overflowed_workers_impl: impl, idle_overflowed_workers_state: state}) do
     impl.count(state)
   end

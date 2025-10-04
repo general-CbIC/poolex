@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue list:*)",
+      "Bash(mix test:*)",
+      "Bash(mix dialyzer:*)",
+      "Bash(mix credo:*)"
+    ],
+    "deny": []
+  }
+}

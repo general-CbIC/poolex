@@ -18,7 +18,7 @@ defmodule Poolex.Private.Monitoring do
   Stop monitoring given worker or caller process and return kind of it.
   """
   def remove(%{monitors: monitors} = state, monitoring_reference) do
-    true = Process.demonitor(monitoring_reference)
+    Process.demonitor(monitoring_reference)
     kind_of_process = Map.get(monitors, monitoring_reference)
     state = %{state | monitors: Map.delete(monitors, monitoring_reference)}
     {kind_of_process, state}
