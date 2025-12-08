@@ -4,7 +4,8 @@
       "Bash(gh issue list:*)",
       "Bash(mix test:*)",
       "Bash(mix dialyzer:*)",
-      "Bash(mix credo:*)"
+      "Bash(mix credo:*)",
+      "Bash(mix check:*)"
     ],
     "deny": []
   }

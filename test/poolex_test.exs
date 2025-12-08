@@ -1,8 +1,8 @@
 defmodule PoolexTest do
   use ExUnit.Case,
     parameterize: [
-      %{pool_options: [worker_module: SomeWorker, workers_count: 5]},
-      %{pool_options: [pool_id: SomeWorker, worker_module: SomeWorker, workers_count: 5]},
+      %{pool_options: [pool_id: SomeWorkerParam1, worker_module: SomeWorker, workers_count: 5]},
+      %{pool_options: [pool_id: SomeWorkerParam2, worker_module: SomeWorker, workers_count: 5]},
       %{pool_options: [pool_id: {:global, SomeWorker}, worker_module: SomeWorker, workers_count: 5]},
       %{
         pool_options: [
