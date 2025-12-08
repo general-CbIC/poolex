@@ -44,7 +44,7 @@ defmodule Poolex.MetricsCase do
           send(self, {:telemetry_event, name, measurements, metadata})
 
           # Send related metrics
-          if Enum.count(metrics) > 0 do
+          if not Enum.empty?(metrics) do
             Enum.each(Map.get(groups, name, []), fn metric ->
               send(
                 self,
