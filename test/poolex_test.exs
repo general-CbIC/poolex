@@ -1,9 +1,9 @@
 defmodule PoolexTest do
   use ExUnit.Case,
     parameterize: [
-      %{pool_options: [pool_id: SomeWorkerParam1, worker_module: SomeWorker, workers_count: 5]},
-      %{pool_options: [pool_id: SomeWorkerParam2, worker_module: SomeWorker, workers_count: 5]},
-      %{pool_options: [pool_id: {:global, SomeWorker}, worker_module: SomeWorker, workers_count: 5]},
+      %{pool_options: [worker_module: SomeWorker, workers_count: 5]},
+      %{pool_options: [pool_id: SomeWorkerLocal, worker_module: SomeWorker, workers_count: 5]},
+      %{pool_options: [pool_id: {:global, SomeWorkerGlobal}, worker_module: SomeWorker, workers_count: 5]},
       %{
         pool_options: [
           pool_id: {:via, Registry, {PoolexTestRegistry, "some_pool"}},
