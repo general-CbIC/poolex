@@ -2,11 +2,11 @@ name: Build and tests
 
 on:
   push:
-    branches: 
+    branches:
       - main
       - develop
   pull_request:
-    branches: [ develop ]
+    branches: [develop]
 
 jobs:
   test:
@@ -16,16 +16,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: '1.17'
-            otp: '25'
-          - elixir: '1.17'
-            otp: '26'
-          - elixir: '1.17'
-            otp: '27'
-          - elixir: '1.18'
-            otp: '27'
+          - elixir: "1.17"
+            otp: "25"
+          - elixir: "1.17"
+            otp: "26"
+          - elixir: "1.17"
+            otp: "27"
+          - elixir: "1.18"
+            otp: "27"
+          - elixir: "1.19"
+            otp: "28"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
@@ -38,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Static analysis
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set mix.lock file hash
         run: |
           mix_hash="${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}"
@@ -56,7 +58,7 @@ jobs:
       - name: Run dialyzer
         uses: erlef/setup-beam@v1
         with:
-          otp-version: '27'
-          elixir-version: '1.18'
-      - run: mix do deps.get, compile
+          otp-version: "28"
+          elixir-version: "1.19"
+      - run: mix do deps.get + compile
       - run: mix check
