@@ -43,7 +43,7 @@ def init(_args) do
 -      max_overflow: 50
 -    )
 +    {Poolex,
-+      pool_id: {:local, :some_pool},
++      pool_id: :some_pool,
 +      worker_module: MyApp.SomeWorker,
 +      workers_count: 100,
 +      max_overflow: 50}
