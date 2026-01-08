@@ -1,7 +1,8 @@
 # Manual Worker Acquire/Release Design
 
 **Date:** 2025-12-08
-**Status:** In Progress - Brainstorming Phase
+**Updated:** 2026-01-08
+**Status:** Design Complete - Ready for Implementation
 **Issue:** https://github.com/general-CbIC/poolex/issues/154
 
 ## Context
@@ -155,50 +156,114 @@ defp start_manual_monitor(pool_id, caller, worker) do
 end
 ```
 
-## Open Questions
+## Race Condition Resolution
 
-### Race Condition in acquire
+### Problem
 
-**Problem:** Between `start_manual_monitor` and `register_manual_monitor` there's a window where:
+Between `start_manual_monitor` and `register_manual_monitor` there's a window where:
 - Monitor process is created and monitoring caller
 - But worker_pid not yet in `manual_monitors`
 - If caller crashes in this window, monitor sends `{:release_manual_worker, worker_pid}` but worker_pid not in map
 
-**Possible Solutions:**
+### Chosen Solution: Atomic Registration Inside GenServer
 
-1. **Ignore gracefully:** In `handle_cast({:release_manual_worker, ...})`, if worker not in `manual_monitors`, just call `release_busy_worker` directly
-   - Pros: Simple, safe fallback
-   - Cons: Monitor process becomes orphaned (but will exit naturally after one message)
+**Decision:** Create monitor process INSIDE GenServer through atomic handle_call
 
-2. **Register before monitor:** Change order in `acquire`:
-   ```elixir
-   GenServer.call(pool_id, {:acquire_and_register, self(), worker_pid})
-   ```
-   - Handle call creates monitor AND registers it atomically
-   - Pros: No race condition
-   - Cons: More complex call, blocks GenServer longer
+**Implementation:**
 
-3. **Two-phase with pre-registration:**
-   - Register placeholder in `manual_monitors` first
-   - Create monitor
-   - Update with real monitor_pid
-   - Pros: Atomic
-   - Cons: Most complex
+```elixir
+def acquire(pool_id, options \\ []) do
+  checkout_timeout = Keyword.get(options, :checkout_timeout, @default_checkout_timeout)
 
-**Recommendation:** TBD - needs discussion
+  case get_idle_worker(pool_id, checkout_timeout) do
+    {:ok, worker_pid} ->
+      # Atomically create monitor and register in one call
+      GenServer.call(pool_id, {:register_manual_acquisition, self(), worker_pid})
+      {:ok, worker_pid}
+
+    {:error, :checkout_timeout} ->
+      {:error, :checkout_timeout}
+  end
+end
+
+# In GenServer:
+def handle_call({:register_manual_acquisition, caller_pid, worker_pid}, _from, state) do
+  monitor_pid = start_manual_monitor(state.pool_id, caller_pid, worker_pid)
+  new_state = put_in(state.manual_monitors[worker_pid], monitor_pid)
+  {:reply, :ok, new_state}
+end
+```
+
+**Rationale:**
+
+- **Eliminates race condition:** Operation is atomic within GenServer
+- **Simple semantics:** Monitor created and registered in single step
+- **Guaranteed consistency:** Monitor process ALWAYS in map when it sends messages
+- **Follows principle:** Critical state belongs inside GenServer
+
+**Trade-offs:**
+
+- GenServer blocks during `spawn` (but only ~microseconds)
+- Two sequential GenServer.call operations for `acquire` instead of one
+
+**Alternatives Considered:**
+
+1. **Graceful ignore** - Would leave orphaned monitor processes
+2. **Two-phase registration** - Unnecessarily complex
 
 ## Implementation Plan
 
-(To be completed once design is finalized)
+### Phase 1: Proof-of-Concept (Validate Race Condition Solution)
 
-1. Add `manual_monitors` field to State
-2. Implement `start_manual_monitor/3`
-3. Implement `acquire/2` with `handle_call({:register_manual_monitor, ...})`
-4. Implement `release/2` with `handle_cast({:release_manual_worker, ...})`
-5. Refactor `run/3` to use `acquire`/`release`
-6. Remove old `monitor_caller/3` function
-7. Add tests for new functionality
-8. Update documentation
+**Goal:** Verify atomic registration approach works before changing public API
+
+1. **Add infrastructure:**
+   - Add `manual_monitors: %{pid() => pid()}` field to `Poolex.Private.State`
+   - Implement `handle_call({:register_manual_acquisition, caller_pid, worker_pid}, ...)`
+   - Implement `start_manual_monitor/3` (based on current `monitor_caller/3`)
+   - Implement `handle_cast({:release_manual_worker, worker_pid}, ...)`
+
+2. **Write proof-of-concept test:**
+   - Test basic flow: get_idle_worker → register_manual_acquisition → verify monitor created
+   - Test auto-release: caller crashes → worker automatically released
+   - Test manual release: call release_manual_worker cast → monitor killed, worker freed
+
+3. **Write stress test for race condition:**
+   - Spawn many processes in parallel
+   - Each process: get_idle_worker → register_manual_acquisition → crash immediately
+   - Verify: no worker leaks, all workers returned to pool
+
+4. **Decision point:** If PoC successful, proceed to Phase 2
+
+### Phase 2: Public API Implementation
+
+5. **Implement public `acquire/2` function:**
+   - Wraps `get_idle_worker` + `register_manual_acquisition`
+   - Returns `{:ok, worker_pid}` or `{:error, :checkout_timeout}`
+
+6. **Implement public `release/2` function:**
+   - Simple wrapper around `GenServer.cast(pool_id, {:release_manual_worker, worker_pid})`
+
+7. **Refactor `run/3` to use `acquire`/`release`:**
+   - Replace `monitor_caller` + manual cleanup with `acquire` → `release` in after block
+   - Ensures consistency between manual and automatic worker management
+
+8. **Remove old `monitor_caller/3` function:**
+   - No longer needed after `run/3` refactoring
+
+### Phase 3: Testing & Documentation
+
+9. **Add comprehensive tests:**
+   - Multiple workers per caller
+   - Timeout behavior
+   - Interaction with overflow workers
+   - Edge cases (releasing non-existent worker, double-release, etc.)
+
+10. **Update documentation:**
+    - Add `acquire/2` and `release/2` to module docs
+    - Add usage examples and patterns
+    - Document safety guarantees (auto-release on crash)
+    - Update CHANGELOG.md
 
 ## Notes
 
