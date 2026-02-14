@@ -94,7 +94,7 @@ iex> Poolex.release(SomeWorker, worker)
 :ok
 ```
 
-Workers acquired with `acquire/2` are automatically cleaned up if your process crashes, preventing resource leaks.
+Workers acquired with `acquire/2` are automatically cleaned up if your process crashes, preventing resource leaks. The implementation is safe against double-release and ensures workers can only be released by their owner process.
 
 A detailed description of the available configuration options and usage examples can be found in the [documentation](https://hexdocs.pm/poolex/getting-started.html).
 

@@ -331,3 +331,32 @@ end
 - ✅ Documentation coverage: 98.7%
 
 **Conclusion:** Public API is complete and ready for production use.
+
+## Phase 2.1 Results - Safety Fix
+
+**Status:** ✅ Complete (2026-02-14)
+
+**Critical Bug Fixed:**
+Double-release and cross-process release vulnerability:
+- **Problem**: Process A could release worker owned by Process B
+- **Impact**: Monitor of Process B would be killed, leaving worker orphaned
+- **Root cause**: `manual_monitors` used only `worker_pid` as key
+
+**Solution:**
+- Changed structure from `%{worker_pid => monitor_pid}`
+- To `%{worker_pid => {caller_pid, monitor_pid}}`
+- `release/2` now checks ownership before releasing
+
+**Safety Guarantees:**
+- ✅ Double release is ignored (second release does nothing)
+- ✅ Release from wrong process is ignored
+- ✅ Only the owner can release their worker
+- ✅ Workers are automatically killed on abnormal caller termination
+
+**Testing:**
+- ✅ Added "double release is safe" test
+- ✅ Added "release from wrong caller is ignored" test
+- ✅ All 229 tests pass
+- ✅ All quality checks pass
+
+**Conclusion:** API is now safe for production use with proper ownership tracking.
