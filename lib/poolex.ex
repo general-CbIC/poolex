@@ -285,7 +285,7 @@ defmodule Poolex do
   """
   @spec release(pool_id(), worker()) :: :ok
   def release(pool_id, worker_pid) do
-    GenServer.cast(pool_id, {:release_manual_worker, worker_pid})
+    GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
     :ok
   end
 
@@ -467,7 +467,7 @@ defmodule Poolex do
 
   def handle_call({:register_manual_acquisition, caller_pid, worker_pid}, _from, %State{} = state) do
     monitor_pid = start_manual_monitor(state.pool_id, caller_pid, worker_pid)
-    new_state = put_in(state.manual_monitors[worker_pid], monitor_pid)
+    new_state = put_in(state.manual_monitors[worker_pid], {caller_pid, monitor_pid})
     {:reply, :ok, new_state}
   end
 
@@ -539,24 +539,35 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_cast({:release_manual_worker, worker_pid}, %State{} = state) do
-    # Kill monitor process if it exists
-    state =
+  def handle_cast({:release_manual_worker, caller_pid, worker_pid}, %State{} = state) do
+    # Check if caller is the owner and clean up monitor
+    {state, caller_is_owner} =
       case Map.get(state.manual_monitors, worker_pid) do
         nil ->
-          state
+          # Worker not in manual_monitors
+          {state, false}
 
-        monitor_pid ->
+        {^caller_pid, monitor_pid} ->
+          # Caller is the owner, kill monitor and remove from map
           Process.exit(monitor_pid, :kill)
-          %{state | manual_monitors: Map.delete(state.manual_monitors, worker_pid)}
+          new_state = %{state | manual_monitors: Map.delete(state.manual_monitors, worker_pid)}
+          {new_state, true}
+
+        {_other_caller, _monitor_pid} ->
+          # Different caller owns this worker
+          {state, false}
       end
 
-    # Release worker back to pool or handle waiting callers
+    # Only release worker if caller was the owner
     new_state =
-      if WaitingCallers.empty?(state) do
-        release_busy_worker(state, worker_pid)
+      if caller_is_owner do
+        if WaitingCallers.empty?(state) do
+          release_busy_worker(state, worker_pid)
+        else
+          provide_worker_to_waiting_caller(state, worker_pid)
+        end
       else
-        provide_worker_to_waiting_caller(state, worker_pid)
+        state
       end
 
     {:noreply, new_state}
@@ -576,7 +587,7 @@ defmodule Poolex do
         nil ->
           state
 
-        monitor_pid ->
+        {_caller_pid, monitor_pid} ->
           Process.exit(monitor_pid, :kill)
           %{state | manual_monitors: Map.delete(state.manual_monitors, worker_pid)}
       end

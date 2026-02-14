@@ -26,7 +26,8 @@ defmodule PoolexManualAcquisitionTest do
       state = :sys.get_state(pool_id)
       assert is_map(state.manual_monitors)
       assert Map.has_key?(state.manual_monitors, worker_pid)
-      monitor_pid = state.manual_monitors[worker_pid]
+      {caller_pid, monitor_pid} = state.manual_monitors[worker_pid]
+      assert caller_pid == self()
       assert is_pid(monitor_pid)
       assert Process.alive?(monitor_pid)
 
@@ -35,7 +36,7 @@ defmodule PoolexManualAcquisitionTest do
       refute IdleWorkers.member?(state, worker_pid)
 
       # Clean up
-      GenServer.cast(pool_id, {:release_manual_worker, worker_pid})
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
     end
 
     test "allows multiple workers per caller" do
@@ -56,8 +57,8 @@ defmodule PoolexManualAcquisitionTest do
       assert Map.has_key?(state.manual_monitors, worker2)
 
       # Clean up
-      GenServer.cast(pool_id, {:release_manual_worker, worker1})
-      GenServer.cast(pool_id, {:release_manual_worker, worker2})
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker1})
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker2})
     end
   end
 
@@ -113,11 +114,11 @@ defmodule PoolexManualAcquisitionTest do
 
       # Get monitor pid
       state = :sys.get_state(pool_id)
-      monitor_pid = state.manual_monitors[worker_pid]
+      {_caller_pid, monitor_pid} = state.manual_monitors[worker_pid]
       assert Process.alive?(monitor_pid)
 
       # Release worker
-      GenServer.cast(pool_id, {:release_manual_worker, worker_pid})
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
       Process.sleep(10)
 
       # Verify monitor process killed
@@ -144,7 +145,7 @@ defmodule PoolexManualAcquisitionTest do
       assert IdleWorkers.count(state_before) == 1
 
       # Release explicitly
-      GenServer.cast(pool_id, {:release_manual_worker, worker_pid})
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
       Process.sleep(10)
 
       # Verify returned to idle
@@ -161,11 +162,63 @@ defmodule PoolexManualAcquisitionTest do
       fake_worker_pid = spawn(fn -> :ok end)
 
       # Should not crash
-      GenServer.cast(pool_id, {:release_manual_worker, fake_worker_pid})
+      GenServer.cast(pool_id, {:release_manual_worker, self(), fake_worker_pid})
       Process.sleep(10)
 
       # Pool should still be operational
       assert {:ok, _worker} = GenServer.call(pool_id, {:get_idle_worker, make_ref()}, 5_000)
+    end
+
+    test "double release is safe - second release is ignored" do
+      pool_id = start_pool(worker_module: SomeWorker, workers_count: 2)
+
+      # Acquire worker
+      {:ok, worker_pid} = GenServer.call(pool_id, {:get_idle_worker, make_ref()}, 5_000)
+      :ok = GenServer.call(pool_id, {:register_manual_acquisition, self(), worker_pid})
+
+      # Release once
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
+      Process.sleep(10)
+
+      # Verify worker returned to idle
+      state_after_first = :sys.get_state(pool_id)
+      assert IdleWorkers.count(state_after_first) == 2
+      assert BusyWorkers.count(state_after_first) == 0
+
+      # Release again (should be ignored)
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
+      Process.sleep(10)
+
+      # State should not change
+      state_after_second = :sys.get_state(pool_id)
+      assert IdleWorkers.count(state_after_second) == 2
+      assert BusyWorkers.count(state_after_second) == 0
+    end
+
+    test "release from wrong caller is ignored" do
+      pool_id = start_pool(worker_module: SomeWorker, workers_count: 2)
+
+      # Acquire worker from this process
+      {:ok, worker_pid} = GenServer.call(pool_id, {:get_idle_worker, make_ref()}, 5_000)
+      :ok = GenServer.call(pool_id, {:register_manual_acquisition, self(), worker_pid})
+
+      # Verify worker is busy
+      state_before = :sys.get_state(pool_id)
+      assert BusyWorkers.member?(state_before, worker_pid)
+      assert Map.has_key?(state_before.manual_monitors, worker_pid)
+
+      # Try to release from a different process (should be ignored)
+      other_pid = spawn(fn -> :timer.sleep(1000) end)
+      GenServer.cast(pool_id, {:release_manual_worker, other_pid, worker_pid})
+      Process.sleep(10)
+
+      # Worker should still be busy
+      state_after = :sys.get_state(pool_id)
+      assert BusyWorkers.member?(state_after, worker_pid)
+      assert Map.has_key?(state_after.manual_monitors, worker_pid)
+
+      # Clean up - release from correct caller
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
     end
 
     test "worker provided to waiting caller instead of idle pool" do
@@ -191,7 +244,7 @@ defmodule PoolexManualAcquisitionTest do
       assert length(WaitingCallers.to_list(state_waiting)) == 1
 
       # Release worker
-      GenServer.cast(pool_id, {:release_manual_worker, worker_pid})
+      GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
 
       # Verify waiting caller received the worker
       assert_receive {:got_worker, {:ok, ^worker_pid}}, 1_000
@@ -260,7 +313,7 @@ defmodule PoolexManualAcquisitionTest do
                 :timer.sleep(:rand.uniform(20))
 
                 # Release
-                GenServer.cast(pool_id, {:release_manual_worker, worker_pid})
+                GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
 
                 send(test_pid, {:completed, i, :released})
 

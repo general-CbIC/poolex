@@ -43,7 +43,7 @@ defmodule Poolex.Private.State do
           idle_overflowed_workers_state: nil | Poolex.Workers.Behaviour.state(),
           idle_workers_impl: module(),
           idle_workers_state: nil | Poolex.Workers.Behaviour.state(),
-          manual_monitors: %{pid() => pid()},
+          manual_monitors: %{(worker_pid :: pid()) => {caller_pid :: pid(), monitor_pid :: pid()}},
           max_overflow: non_neg_integer(),
           monitors: %{reference() => Poolex.Private.Monitoring.kind_of_process()},
           overflow: non_neg_integer(),
