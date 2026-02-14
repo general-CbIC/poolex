@@ -374,6 +374,12 @@ defmodule Poolex do
     end
   end
 
+  def handle_call({:register_manual_acquisition, caller_pid, worker_pid}, _from, %State{} = state) do
+    monitor_pid = start_manual_monitor(state.pool_id, caller_pid, worker_pid)
+    new_state = put_in(state.manual_monitors[worker_pid], monitor_pid)
+    {:reply, :ok, new_state}
+  end
+
   def handle_call(:get_debug_info, _from, %State{} = state) do
     debug_info = %DebugInfo{
       busy_workers_count: BusyWorkers.count(state),
@@ -439,6 +445,30 @@ defmodule Poolex do
       new_state = provide_worker_to_waiting_caller(state, worker)
       {:noreply, new_state}
     end
+  end
+
+  @impl GenServer
+  def handle_cast({:release_manual_worker, worker_pid}, %State{} = state) do
+    # Kill monitor process if it exists
+    state =
+      case Map.get(state.manual_monitors, worker_pid) do
+        nil ->
+          state
+
+        monitor_pid ->
+          Process.exit(monitor_pid, :kill)
+          %{state | manual_monitors: Map.delete(state.manual_monitors, worker_pid)}
+      end
+
+    # Release worker back to pool or handle waiting callers
+    new_state =
+      if WaitingCallers.empty?(state) do
+        release_busy_worker(state, worker_pid)
+      else
+        provide_worker_to_waiting_caller(state, worker_pid)
+      end
+
+    {:noreply, new_state}
   end
 
   @impl GenServer
@@ -590,6 +620,21 @@ defmodule Poolex do
           # Send message to stop worker if caller is dead
           # After that worker will be restarted
           GenServer.cast(pool_id, {:stop_worker, worker})
+      end
+    end)
+  end
+
+  # Monitor the `caller`. Release attached worker in case of caller's death.
+  # Unlike monitor_caller/3, this uses cast to release worker gracefully instead of stopping it.
+  @spec start_manual_monitor(pool_id(), caller :: pid(), worker :: pid()) :: monitor_process :: pid()
+  def start_manual_monitor(pool_id, caller, worker) do
+    spawn(fn ->
+      reference = Process.monitor(caller)
+
+      receive do
+        {:DOWN, ^reference, :process, ^caller, _reason} ->
+          # Send message to release worker if caller is dead
+          GenServer.cast(pool_id, {:release_manual_worker, worker})
       end
     end)
   end
