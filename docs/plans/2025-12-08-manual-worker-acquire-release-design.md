@@ -271,3 +271,32 @@ end
 - Existing `release_busy_worker/1` handles returning worker to pool or stopping overflow workers
 - New code mainly adds monitoring layer on top of existing infrastructure
 - The `{:stop_worker, worker}` message used in old `monitor_caller/3` is replaced with `{:release_manual_worker, worker}` for more graceful handling
+
+## Phase 1 Results - Proof of Concept
+
+**Status:** ✅ Complete (2026-02-14)
+
+**Implementation:**
+- Added `manual_monitors` field to State (lib/poolex/private/state.ex:29)
+- Added `member?/2` to IdleWorkers for consistency with BusyWorkers
+- Implemented `start_manual_monitor/3` (lib/poolex.ex:627-639)
+- Implemented `handle_call({:register_manual_acquisition, ...})` (lib/poolex.ex:377-381)
+- Implemented `handle_cast({:release_manual_worker, ...})` (lib/poolex.ex:450-471)
+
+**Testing:**
+- ✅ Basic flow tests (monitor creation, registration, multiple workers)
+- ✅ Auto-release tests (caller crash, monitor cleanup)
+- ✅ Manual release tests (explicit release, waiting callers, graceful error handling)
+- ✅ Stress tests (100 concurrent crashes, 50 concurrent operations)
+- ✅ All 9 PoC tests pass consistently across 5 runs
+
+**Validation:**
+- ✅ No race conditions detected in stress tests
+- ✅ No worker leaks
+- ✅ No monitor process leaks
+- ✅ All existing tests pass (227 total tests)
+- ✅ Dialyzer clean
+- ✅ Credo clean
+- ✅ Code formatted
+
+**Conclusion:** Atomic registration approach is validated and ready for Phase 2 (public API implementation).
