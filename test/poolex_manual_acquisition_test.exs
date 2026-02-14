@@ -61,8 +61,8 @@ defmodule PoolexManualAcquisitionTest do
     end
   end
 
-  describe "release_manual_worker - auto release on caller crash" do
-    test "worker released when caller crashes" do
+  describe "release_manual_worker - auto kill on caller crash" do
+    test "worker killed and restarted when caller crashes" do
       pool_id = start_pool(worker_module: SomeWorker, workers_count: 2)
 
       # Spawn process that acquires worker and crashes
@@ -94,11 +94,14 @@ defmodule PoolexManualAcquisitionTest do
       send(crashed_caller, :crash)
       Process.sleep(50)
 
-      # Verify worker released and monitor removed
+      # Verify worker was killed (restarted, not the same PID)
       state_after = :sys.get_state(pool_id)
       refute BusyWorkers.member?(state_after, worker_pid)
-      assert IdleWorkers.member?(state_after, worker_pid)
+      refute IdleWorkers.member?(state_after, worker_pid)
       refute Map.has_key?(state_after.manual_monitors, worker_pid)
+
+      # A new worker should have been started to replace it
+      assert IdleWorkers.count(state_after) == 2
     end
 
     test "monitor process dies after releasing worker" do

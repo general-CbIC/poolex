@@ -180,22 +180,113 @@ defmodule Poolex do
   @spec run(pool_id(), (worker :: pid() -> any()), list(run_option())) ::
           {:ok, any()} | {:error, :checkout_timeout}
   def run(pool_id, fun, options \\ []) do
-    checkout_timeout = Keyword.get(options, :checkout_timeout, @default_checkout_timeout)
-
-    case get_idle_worker(pool_id, checkout_timeout) do
+    case acquire(pool_id, options) do
       {:ok, worker_pid} ->
-        monitor_process = monitor_caller(pool_id, self(), worker_pid)
-
         try do
           {:ok, fun.(worker_pid)}
         after
-          Process.exit(monitor_process, :kill)
-          GenServer.cast(pool_id, {:release_busy_worker, worker_pid})
+          release(pool_id, worker_pid)
         end
 
       {:error, :checkout_timeout} ->
         {:error, :checkout_timeout}
     end
+  end
+
+  @doc """
+  Acquires a worker from the pool for manual management.
+
+  This function checks out a worker from the pool and returns its PID. Unlike `run/3`,
+  the worker must be manually released using `release/2`. If the calling process crashes
+  before releasing the worker, it will be automatically returned to the pool.
+
+  This is useful for long-running operations where you need to hold onto a worker
+  for an extended period, such as maintaining a database connection for the lifetime
+  of a TCP session.
+
+  ## Options
+
+  Same as `run/3`:
+    * `checkout_timeout` - How long to wait for a worker (default: #{@default_checkout_timeout}ms)
+
+  ## Returns
+
+    * `{:ok, worker_pid}` - Successfully acquired a worker
+    * `{:error, :checkout_timeout}` - No worker available within timeout
+
+  ## Examples
+
+      iex> Poolex.start_link(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 2)
+      iex> {:ok, worker} = Poolex.acquire(:my_pool)
+      iex> Agent.get(worker, & &1)
+      0
+      iex> Poolex.release(:my_pool, worker)
+      :ok
+
+  ## Safety
+
+  If the caller process crashes before calling `release/2`, the worker will be automatically
+  killed and restarted by the supervisor. This ensures that the next caller gets a clean worker,
+  not one potentially stuck in a long-running operation.
+
+  For graceful cleanup, always explicitly call `release/2` when done with the worker.
+
+  ## Multiple Workers
+
+  A single process can acquire multiple workers from the same pool:
+
+      {:ok, worker1} = Poolex.acquire(:my_pool)
+      {:ok, worker2} = Poolex.acquire(:my_pool)
+      # ... use both workers ...
+      Poolex.release(:my_pool, worker1)
+      Poolex.release(:my_pool, worker2)
+  """
+  @spec acquire(pool_id(), list(run_option())) :: {:ok, worker()} | {:error, :checkout_timeout}
+  def acquire(pool_id, options \\ []) do
+    checkout_timeout = Keyword.get(options, :checkout_timeout, @default_checkout_timeout)
+
+    case get_idle_worker(pool_id, checkout_timeout) do
+      {:ok, worker_pid} ->
+        GenServer.call(pool_id, {:register_manual_acquisition, self(), worker_pid})
+        {:ok, worker_pid}
+
+      {:error, :checkout_timeout} ->
+        {:error, :checkout_timeout}
+    end
+  end
+
+  @doc """
+  Releases a manually acquired worker back to the pool.
+
+  This function returns a worker that was previously acquired with `acquire/2`
+  back to the pool, making it available for other callers.
+
+  ## Parameters
+
+    * `pool_id` - The pool identifier
+    * `worker_pid` - The PID of the worker to release
+
+  ## Returns
+
+    * `:ok` - Always returns `:ok`, even if the worker was already released or doesn't exist
+
+  ## Examples
+
+      {:ok, worker} = Poolex.acquire(:my_pool)
+      # ... use worker ...
+      Poolex.release(:my_pool, worker)
+
+  ## Notes
+
+    * It's safe to call `release/2` multiple times for the same worker
+    * If there are callers waiting for a worker, the released worker is provided to them
+    * Otherwise, the worker is returned to the idle pool
+    * The monitor process created during `acquire/2` is automatically cleaned up
+  """
+  @spec release(pool_id(), worker()) :: :ok
+  def release(pool_id, worker_pid) do
+    GenServer.cast(pool_id, {:release_manual_worker, worker_pid})
+    :ok
   end
 
   @spec get_idle_worker(pool_id(), timeout()) :: {:ok, worker()} | {:error, :checkout_timeout}
@@ -478,6 +569,22 @@ defmodule Poolex do
   end
 
   @impl GenServer
+  def handle_cast({:cleanup_manual_monitor, worker_pid}, %State{} = state) do
+    # Clean up manual monitor when worker is killed due to caller crash
+    state =
+      case Map.get(state.manual_monitors, worker_pid) do
+        nil ->
+          state
+
+        monitor_pid ->
+          Process.exit(monitor_pid, :kill)
+          %{state | manual_monitors: Map.delete(state.manual_monitors, worker_pid)}
+      end
+
+    {:noreply, state}
+  end
+
+  @impl GenServer
   def handle_cast({:cancel_waiting, caller_reference}, %State{} = state) do
     {:noreply, WaitingCallers.remove_by_reference(state, caller_reference)}
   end
@@ -609,32 +716,22 @@ defmodule Poolex do
     :ok
   end
 
-  # Monitor the `caller`. Release attached worker in case of caller's death.
-  @spec monitor_caller(pool_id(), caller :: pid(), worker :: pid()) :: monitor_process :: pid()
-  defp monitor_caller(pool_id, caller, worker) do
-    spawn(fn ->
-      reference = Process.monitor(caller)
-
-      receive do
-        {:DOWN, ^reference, :process, ^caller, _reason} ->
-          # Send message to stop worker if caller is dead
-          # After that worker will be restarted
-          GenServer.cast(pool_id, {:stop_worker, worker})
-      end
-    end)
-  end
-
-  # Monitor the `caller`. Release attached worker in case of caller's death.
-  # Unlike monitor_caller/3, this uses cast to release worker gracefully instead of stopping it.
+  # Monitor the `caller`. Kill attached worker if caller dies unexpectedly.
+  # This ensures the next caller gets a clean worker, not one potentially stuck in a long operation.
+  # Used by both run/3 (via acquire/release) and manual acquire/release workflows.
   @spec start_manual_monitor(pool_id(), caller :: pid(), worker :: pid()) :: monitor_process :: pid()
-  def start_manual_monitor(pool_id, caller, worker) do
+  defp start_manual_monitor(pool_id, caller, worker) do
     spawn(fn ->
       reference = Process.monitor(caller)
 
       receive do
-        {:DOWN, ^reference, :process, ^caller, _reason} ->
-          # Send message to release worker if caller is dead
-          GenServer.cast(pool_id, {:release_manual_worker, worker})
+        {:DOWN, ^reference, :process, ^caller, reason} ->
+          # Only kill worker if caller died abnormally (not :normal shutdown)
+          # Normal shutdown means release/2 was called explicitly
+          if reason != :normal do
+            GenServer.cast(pool_id, {:stop_worker, worker})
+            GenServer.cast(pool_id, {:cleanup_manual_monitor, worker})
+          end
       end
     end)
   end
