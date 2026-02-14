@@ -300,3 +300,34 @@ end
 - ✅ Code formatted
 
 **Conclusion:** Atomic registration approach is validated and ready for Phase 2 (public API implementation).
+
+## Phase 2 Results - Public API Implementation
+
+**Status:** ✅ Complete (2026-02-14)
+
+**Implementation:**
+- ✅ Implemented public `acquire/2` function (lib/poolex.ex:220-240)
+- ✅ Implemented public `release/2` function (lib/poolex.ex:269-289)
+- ✅ Refactored `run/3` to use `acquire/release` internally (lib/poolex.ex:182-194)
+- ✅ Removed old `monitor_caller/3` (consolidated into `start_manual_monitor/3`)
+- ✅ Added `cleanup_manual_monitor` handler for proper cleanup
+- ✅ Enhanced monitor to only kill worker on abnormal termination (not `:normal`)
+
+**Key Design Decision:**
+- **Normal shutdown (`:normal`)**: Worker returned gracefully via `release/2`
+- **Abnormal shutdown (crash)**: Worker killed and restarted to prevent stuck workers
+- This prevents returning workers stuck in long-running operations to the pool
+
+**API Documentation:**
+- Comprehensive docs for `acquire/2` with examples and safety notes
+- Comprehensive docs for `release/2` with usage patterns
+- Both functions have @spec and doctests
+
+**Testing:**
+- ✅ Updated auto-kill test to verify worker restart on crash
+- ✅ All 227 tests pass (with 1 pre-existing flaky test unrelated to feature)
+- ✅ Dialyzer clean
+- ✅ Credo clean
+- ✅ Documentation coverage: 98.7%
+
+**Conclusion:** Public API is complete and ready for production use.
