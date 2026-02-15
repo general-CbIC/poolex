@@ -22,6 +22,12 @@ defmodule Poolex.Private.IdleWorkers do
   end
 
   @doc false
+  @spec member?(State.t(), Poolex.worker()) :: boolean()
+  def member?(%State{idle_workers_impl: impl, idle_workers_state: idle_workers_state}, worker) do
+    impl.member?(idle_workers_state, worker)
+  end
+
+  @doc false
   @spec count(State.t()) :: non_neg_integer()
   def count(%State{idle_workers_impl: impl, idle_workers_state: state}) do
     impl.count(state)

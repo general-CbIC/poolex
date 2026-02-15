@@ -84,6 +84,18 @@ iex> Poolex.run(SomeWorker, &(is_pid?(&1)), checkout_timeout: 1_000)
 {:ok, true}
 ```
 
+For long-running operations where you need to hold onto a worker (like maintaining a database connection for a TCP session), use `acquire/2` and `release/2`:
+
+```elixir
+iex> {:ok, worker} = Poolex.acquire(SomeWorker)
+iex> # Use worker for as long as needed...
+iex> GenServer.call(worker, :some_operation)
+iex> Poolex.release(SomeWorker, worker)
+:ok
+```
+
+Workers acquired with `acquire/2` are automatically cleaned up if your process crashes, preventing resource leaks. The implementation is safe against double-release and ensures workers can only be released by their owner process.
+
 A detailed description of the available configuration options and usage examples can be found in the [documentation](https://hexdocs.pm/poolex/getting-started.html).
 
 ## Guides
@@ -92,6 +104,11 @@ A detailed description of the available configuration options and usage examples
   - [Starting pool of workers](https://hexdocs.pm/poolex/getting-started.html#starting-pool-of-workers)
   - [Poolex configuration options](https://hexdocs.pm/poolex/getting-started.html#starting-pool-of-workers)
   - [Working with the pool](https://hexdocs.pm/poolex/getting-started.html#working-with-the-pool)
+- [Manual Worker Management](https://hexdocs.pm/poolex/manual-worker-management.html)
+  - [When to use acquire/release](https://hexdocs.pm/poolex/manual-worker-management.html#when-to-use-acquire-release)
+  - [Basic usage](https://hexdocs.pm/poolex/manual-worker-management.html#basic-usage)
+  - [Safety guarantees](https://hexdocs.pm/poolex/manual-worker-management.html#safety-guarantees)
+  - [Best practices](https://hexdocs.pm/poolex/manual-worker-management.html#best-practices)
 - [Migration from `:poolboy`](https://hexdocs.pm/poolex/migration-from-poolboy.html)
 - [Example of use](https://hexdocs.pm/poolex/example-of-use.html)
   - [Defining the worker](https://hexdocs.pm/poolex/example-of-use.html#defining-the-worker)
