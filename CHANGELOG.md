@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added Elixir 1.19 and Erlang 28 support to CI.
+- Added `acquire/2` and `release/2` functions for manual worker management in long-running operations. These functions provide automatic cleanup when the caller process crashes. See the [documentation](https://hexdocs.pm/poolex/manual-worker-management.html) for more details.
+
+### Changed
+
+- Refactored `run/3` to use the new `acquire/2` and `release/2` internally, ensuring consistent behavior between manual and automatic worker management.
+- Refactored caller monitoring system. Pools now store monitor references to enable proper cleanup and prevent double-release vulnerabilities.
 
 ## [1.4.2] - 2025-09-04
 
