@@ -6,6 +6,7 @@
 [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
 [![Weekly Downloads](https://img.shields.io/hexpm/dw/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
 [![Total Downloads](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
+[![Elixir Forum](https://img.shields.io/badge/Elixir_Forum-purple?style=flat&logo=elixir)](https://elixirforum.com/t/poolex-a-library-for-managing-pools-of-workers/54800)
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
