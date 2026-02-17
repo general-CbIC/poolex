@@ -12,6 +12,19 @@ iex -S mix
 iex> PoolexExample.Test.start
 ```
 
+## Pool metrics logs
+
+You can turn on/off metric logs by using `PoolexExample.MetricsHandler.turn_on_logs/0` and `PoolexExample.MetricsHandler.turn_off_logs/0`.
+
+Example of log:
+
+```shell
+[Pool: worker_pool]:
+- Idle workers: 5
+- Busy workers: 0
+- Overflowed: 0
+```
+
 ## Comparing run/3 vs acquire/release
 
 The example application demonstrates two approaches to using Poolex workers:
