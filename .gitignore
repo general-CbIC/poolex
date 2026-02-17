@@ -26,3 +26,5 @@ poolex-*.tar
 /tmp/
 
 .claude/settings.local.json
+
+examples/poolex_example/.claude/settings.local.json
