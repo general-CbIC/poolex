@@ -60,13 +60,15 @@ defmodule PoolexExample.AcquireDemo do
     IO.puts("\nExecuting operations in parallel...")
 
     # Execute operations in parallel using Task
-    task1 = Task.async(fn ->
-      GenServer.call(worker1, {:square_root, 25})
-    end)
+    task1 =
+      Task.async(fn ->
+        GenServer.call(worker1, {:square_root, 25})
+      end)
 
-    task2 = Task.async(fn ->
-      GenServer.call(worker2, {:power, 2, 10})
-    end)
+    task2 =
+      Task.async(fn ->
+        GenServer.call(worker2, {:power, 2, 10})
+      end)
 
     # Wait for results
     result1 = Task.await(task1, @timeout)
