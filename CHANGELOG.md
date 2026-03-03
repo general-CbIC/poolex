@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-03-03
+
 ### Added
 
 - Added Elixir 1.19 and Erlang 28 support to CI.
@@ -365,7 +367,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.4.2...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/general-CbIC/poolex/compare/v1.4.2...v1.5.0
 [1.4.2]: https://github.com/general-CbIC/poolex/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/general-CbIC/poolex/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/general-CbIC/poolex/compare/v1.3.0...v1.4.0
