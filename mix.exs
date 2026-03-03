@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "1.4.2"
+      version: "1.5.0"
     ]
   end
 
@@ -35,7 +35,7 @@ defmodule Poolex.MixProject do
       {:telemetry, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       # Development dependencies
-      {:credo, "1.7.12", only: [:dev], runtime: false},
+      {:credo, "1.7.16", only: [:dev], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev], runtime: false},
       {:doctor, ">= 0.0.0", only: [:dev], runtime: false},
       {:ex_check, "~> 0.16.0", only: [:dev], runtime: false},
@@ -63,14 +63,15 @@ defmodule Poolex.MixProject do
       main: "readme",
       logo: "assets/poolex.png",
       extras: [
-        "README.md",
-        "docs/guides/getting-started.cheatmd",
-        "docs/guides/migration-from-poolboy.cheatmd",
+        "docs/CONTRIBUTING.md",
         "docs/guides/example-of-use.cheatmd",
+        "docs/guides/getting-started.cheatmd",
+        "docs/guides/manual-worker-management.md",
+        "docs/guides/migration-from-poolboy.cheatmd",
         "docs/guides/pool-metrics.cheatmd",
-        "docs/guides/workers-and-callers-implementations.md",
         "docs/guides/worker-shutdown-delay.cheatmd",
-        "docs/CONTRIBUTING.md"
+        "docs/guides/workers-and-callers-implementations.md",
+        "README.md"
       ],
       groups_for_extras: [
         Guides: Path.wildcard("docs/guides/*md")

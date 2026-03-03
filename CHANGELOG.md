@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-03-03
+
+### Added
+
+- Added Elixir 1.19 and Erlang 28 support to CI.
+- Added `acquire/2` and `release/2` functions for manual worker management in long-running operations. These functions provide automatic cleanup when the caller process crashes. See the [documentation](https://hexdocs.pm/poolex/manual-worker-management.html) for more details.
+
+### Changed
+
+- Refactored `run/3` to use the new `acquire/2` and `release/2` internally, ensuring consistent behavior between manual and automatic worker management.
+- Refactored caller monitoring system. Pools now store monitor references to enable proper cleanup and prevent double-release vulnerabilities.
+
 ## [1.4.2] - 2025-09-04
 
 ### Changed
@@ -355,7 +367,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.4.2...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/general-CbIC/poolex/compare/v1.4.2...v1.5.0
 [1.4.2]: https://github.com/general-CbIC/poolex/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/general-CbIC/poolex/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/general-CbIC/poolex/compare/v1.3.0...v1.4.0

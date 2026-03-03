@@ -20,15 +20,17 @@ defmodule PoolHelpers do
   @spec launch_long_tasks(Poolex.pool_id(), non_neg_integer(), timeout()) :: :ok
   def launch_long_tasks(pool_id, count, delay \\ to_timeout(second: 4)) do
     for _i <- 1..count do
-      spawn(fn ->
-        Poolex.run(
-          pool_id,
-          fn pid -> GenServer.call(pid, {:do_some_work_with_delay, delay}) end,
-          checkout_timeout: 100
-        )
-      end)
+      spawn(fn -> do_launch(pool_id, delay) end)
     end
 
     :timer.sleep(10)
+  end
+
+  defp do_launch(pool_id, delay) do
+    Poolex.run(
+      pool_id,
+      fn pid -> GenServer.call(pid, {:do_some_work_with_delay, delay}) end,
+      checkout_timeout: 100
+    )
   end
 end
