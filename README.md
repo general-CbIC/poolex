@@ -10,6 +10,8 @@
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
+See the [Poolex Playground](https://poolex-playground.cbic-dev.com/) — interactive page to play with the lobrary.
+
 > [!IMPORTANT]  
 > Documentation on GitHub corresponds to the current branch. For stable versions' docs see [Hexdocs](https://hexdocs.pm/poolex/).
 
