@@ -50,9 +50,9 @@ Poolex makes working with worker pools easy and flexible:
 
 | Library                 | Elixir     | Erlang/OTP |
 |-------------------------|------------|------------|
-| from `0.1.0` to `1.2.1` | `>= 1.7`   | `>= 22`    |
-| `1.3.0`                 | `>= 1 .11` | `>= 24`    |
 | `>= 1.4.0`              | `>= 1.17`  | `>= 25`    |
+| `1.3.0`                 | `>= 1 .11` | `>= 24`    |
+| from `0.1.0` to `1.2.1` | `>= 1.7`   | `>= 22`    |
 
 ## Installation
 
