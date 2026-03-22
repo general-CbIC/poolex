@@ -49,6 +49,8 @@ defmodule Poolex do
   | `idle_workers_impl`              | Module that describes how to work with idle workers                | `SomeIdleWorkersImpl`           | `Poolex.Workers.Impl.List`        |
   | `idle_overflowed_workers_impl`   | Module that describes how to work with idle overflowed workers     | `SomeIdleOverflowedWorkersImpl` | `Poolex.Workers.Impl.List`        |
   | `max_overflow`                   | How many workers can be created over the limit                     | `2`                             | `0`                               |
+  | `max_pool_size`                  | Maximum total workers count in the pool                            | `100`                           | `:infinity`                       |
+  | `min_pool_size`                  | Minimum total workers count in the pool                            | `50`                            | `0`                               |
   | `worker_shutdown_delay`          | Delay (ms) before shutting down overflow worker after release      | `5000`                          | `0`                               |
   | `pool_id`                        | Identifier by which you will access the pool                       | `:my_pool`                      | `worker_module` value             |
   | `pool_size_metrics`              | Whether to dispatch pool size metrics                              | `true`                          | `false`                           |
@@ -73,6 +75,8 @@ defmodule Poolex do
           | {:idle_overflowed_workers_impl, module()}
           | {:idle_workers_impl, module()}
           | {:max_overflow, non_neg_integer()}
+          | {:max_pool_size, pos_integer() | :infinity}
+          | {:min_pool_size, non_neg_integer()}
           | {:pool_id, pool_id()}
           | {:pool_size_metrics, boolean()}
           | {:waiting_callers_impl, module()}
@@ -344,6 +348,8 @@ defmodule Poolex do
       %State{
         failed_workers_retry_interval: parsed_options.failed_workers_retry_interval,
         max_overflow: parsed_options.max_overflow,
+        max_pool_size: parsed_options.max_pool_size,
+        min_pool_size: parsed_options.min_pool_size,
         pool_id: parsed_options.pool_id,
         supervisor: supervisor,
         worker_args: parsed_options.worker_args,
@@ -371,6 +377,25 @@ defmodule Poolex do
     schedule_retry_failed_workers(state)
 
     {:noreply, state}
+  end
+
+  @spec base_workers_count(State.t()) :: non_neg_integer()
+  defp base_workers_count(%State{} = state) do
+    IdleWorkers.count(state) + BusyWorkers.count(state)
+  end
+
+  @spec available_to_add_count(State.t(), non_neg_integer()) :: non_neg_integer()
+  defp available_to_add_count(%State{max_pool_size: :infinity}, workers_count), do: workers_count
+
+  defp available_to_add_count(%State{max_pool_size: max} = state, workers_count) do
+    max(0, min(workers_count, max - base_workers_count(state)))
+  end
+
+  @spec available_to_remove_count(State.t(), non_neg_integer()) :: non_neg_integer()
+  defp available_to_remove_count(%State{min_pool_size: 0}, workers_count), do: workers_count
+
+  defp available_to_remove_count(%State{min_pool_size: min} = state, workers_count) do
+    max(0, min(workers_count, base_workers_count(state) - min))
   end
 
   @spec start_workers(non_neg_integer(), State.t()) :: {[pid], State.t()}
@@ -498,7 +523,14 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_call({:add_idle_workers, workers_count}, _from, %State{} = state) do
-    {workers, state} = start_workers(workers_count, state)
+    allowed = available_to_add_count(state, workers_count)
+    skipped = workers_count - allowed
+
+    if skipped > 0 do
+      Logger.error("Failed to add #{skipped} worker(s): max_pool_size limit of #{state.max_pool_size} reached")
+    end
+
+    {workers, state} = start_workers(allowed, state)
 
     state =
       Enum.reduce(workers, state, fn worker, acc_state ->
@@ -516,10 +548,20 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_call({:remove_idle_workers, workers_count}, _from, %State{} = state) do
+    # removable is capped by idle count (can't remove workers that aren't idle)
+    removable = min(workers_count, IdleWorkers.count(state))
+    allowed = available_to_remove_count(state, removable)
+
+    skipped = removable - allowed
+
+    if skipped > 0 do
+      Logger.error("Failed to remove #{skipped} worker(s): min_pool_size limit of #{state.min_pool_size} reached")
+    end
+
     new_state =
       state
       |> IdleWorkers.to_list()
-      |> Enum.take(workers_count)
+      |> Enum.take(allowed)
       |> Enum.reduce(state, fn worker, acc_state ->
         IdleWorkers.remove(acc_state, worker)
       end)

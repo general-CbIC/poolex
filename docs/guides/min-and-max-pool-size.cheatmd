@@ -1,0 +1,94 @@
+# Controlling Pool Size with `min_pool_size` and `max_pool_size`
+
+Poolex lets you set hard boundaries on the number of **base workers** (idle + busy, excluding overflow workers) through the `min_pool_size` and `max_pool_size` options. These limits are enforced whenever you call `add_idle_workers!/2` or `remove_idle_workers!/2` at runtime.
+
+## Configuration options
+
+| Option          | Type                        | Default      | Description                                    |
+|-----------------|-----------------------------|--------------|------------------------------------------------|
+| `min_pool_size` | `non_neg_integer()`         | `0`          | Minimum number of base workers in the pool     |
+| `max_pool_size` | `pos_integer() \| :infinity` | `:infinity` | Maximum number of base workers in the pool     |
+
+> **Base workers** = idle workers + busy workers. Overflow workers created via `max_overflow` are not counted.
+
+## Setting an upper bound with `max_pool_size`
+
+Use `max_pool_size` when you want to prevent the pool from growing beyond a certain size even if callers request more workers at runtime.
+
+```elixir
+children = [
+  {Poolex,
+    worker_module: MyApp.Worker,
+    workers_count: 10,
+    max_pool_size: 20}
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+If `add_idle_workers!/2` is called and adding all requested workers would exceed the limit, only as many workers as the remaining headroom allows are started. The rest are skipped and an error is logged:
+
+```
+Failed to add 5 worker(s): max_pool_size limit of 20 reached
+```
+
+## Setting a lower bound with `min_pool_size`
+
+Use `min_pool_size` to guarantee that the pool never shrinks below a certain number of base workers, even when callers request removals at runtime.
+
+```elixir
+children = [
+  {Poolex,
+    worker_module: MyApp.Worker,
+    workers_count: 10,
+    min_pool_size: 5}
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+If `remove_idle_workers!/2` is called and removing all requested workers would drop the base count below the minimum, only as many workers as the available headroom allows are removed. The rest are skipped and an error is logged:
+
+```
+Failed to remove 3 worker(s): min_pool_size limit of 5 reached
+```
+
+## Using both options together
+
+You can combine both options to define an allowed range for the pool size:
+
+```elixir
+children = [
+  {Poolex,
+    worker_module: MyApp.Worker,
+    workers_count: 10,
+    min_pool_size: 5,
+    max_pool_size: 20}
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+`min_pool_size` must be less than or equal to `max_pool_size`. If this invariant is violated at startup, an `ArgumentError` is raised:
+
+```
+ArgumentError: min_pool_size (10) must be <= max_pool_size (5)
+```
+
+## Validation rules
+
+The following values are rejected at startup with an `ArgumentError`:
+
+- `max_pool_size` is not a positive integer and is not `:infinity`
+- `min_pool_size` is not a non-negative integer
+- `min_pool_size > max_pool_size`
+
+## Partial execution
+
+Both `add_idle_workers!/2` and `remove_idle_workers!/2` always return `:ok`. When a limit prevents some workers from being added or removed, the operation is applied partially — as many workers as the limit allows are processed, and the remainder are skipped after logging an error message.
+
+## When to use these options
+
+- **`max_pool_size`**: when you want a hard cap on resource usage (e.g., database connections) and use `add_idle_workers!/2` to scale up dynamically.
+- **`min_pool_size`**: when you need a guaranteed pool floor (e.g., always keep at least N workers warm) and use `remove_idle_workers!/2` to scale down during low traffic.
+- **Both together**: when you manage pool size dynamically and want guardrails in both directions.

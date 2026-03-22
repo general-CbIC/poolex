@@ -10,6 +10,8 @@
 
 Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
 
+See the [Poolex Playground](https://poolex-playground.cbic-dev.com/) — interactive page to play with the library.
+
 > [!IMPORTANT]  
 > Documentation on GitHub corresponds to the current branch. For stable versions' docs see [Hexdocs](https://hexdocs.pm/poolex/).
 
@@ -48,9 +50,9 @@ Poolex makes working with worker pools easy and flexible:
 
 | Library                 | Elixir     | Erlang/OTP |
 |-------------------------|------------|------------|
-| from `0.1.0` to `1.2.1` | `>= 1.7`   | `>= 22`    |
-| `1.3.0`                 | `>= 1 .11` | `>= 24`    |
 | `>= 1.4.0`              | `>= 1.17`  | `>= 25`    |
+| `1.3.0`                 | `>= 1 .11` | `>= 24`    |
+| from `0.1.0` to `1.2.1` | `>= 1.7`   | `>= 22`    |
 
 ## Installation
 
@@ -122,6 +124,11 @@ A detailed description of the available configuration options and usage examples
   - [Callers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#callers)
   - [Workers](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#workers)
   - [Writing custom implementations](https://hexdocs.pm/poolex/workers-and-callers-implementations.html#writing-custom-implementations)
+- [Controlling Pool Size with `min_pool_size` and `max_pool_size`](https://hexdocs.pm/poolex/min-and-max-pool-size.html)
+  - [Setting an upper bound with `max_pool_size`](https://hexdocs.pm/poolex/min-and-max-pool-size.html#setting-an-upper-bound-with-max-pool-size)
+  - [Setting a lower bound with `min_pool_size`](https://hexdocs.pm/poolex/min-and-max-pool-size.html#setting-a-lower-bound-with-min-pool-size)
+  - [Using both options together](https://hexdocs.pm/poolex/min-and-max-pool-size.html#using-both-options-together)
+  - [Partial execution](https://hexdocs.pm/poolex/min-and-max-pool-size.html#partial-execution)
 - [Using `worker_shutdown_delay` for Overflow Workers](https://hexdocs.pm/poolex/worker-shutdown-delay.html)
   - [What are overflow workers?](https://hexdocs.pm/poolex/worker-shutdown-delay.html#what-are-overflow-workers)
   - [The problem with immediate overflow worker shutdown](https://hexdocs.pm/poolex/worker-shutdown-delay.html#the-problem-with-immediate-overflow-worker-shutdown)
