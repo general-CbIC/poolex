@@ -8,6 +8,13 @@ defmodule Poolex.Private.Options.Parser do
 
   @spec parse(list(Poolex.poolex_option())) :: Parsed.t()
   def parse(options) do
+    min_pool_size = parse_optional_non_neg_integer(options, :min_pool_size, 0)
+    max_pool_size = parse_optional_pos_integer_or_infinity(options, :max_pool_size, :infinity)
+
+    if min_pool_size > max_pool_size do
+      raise ArgumentError, "min_pool_size (#{min_pool_size}) must be <= max_pool_size (#{max_pool_size})"
+    end
+
     %Parsed{
       busy_workers_impl: parse_optional_module(options, :busy_workers_impl, Poolex.Workers.Impl.List),
       failed_workers_retry_interval:
@@ -16,6 +23,8 @@ defmodule Poolex.Private.Options.Parser do
         parse_optional_module(options, :idle_overflowed_workers_impl, Poolex.Workers.Impl.List),
       idle_workers_impl: parse_optional_module(options, :idle_workers_impl, Poolex.Workers.Impl.List),
       max_overflow: parse_optional_non_neg_integer(options, :max_overflow, 0),
+      max_pool_size: max_pool_size,
+      min_pool_size: min_pool_size,
       pool_id: parse_pool_id(options),
       pool_size_metrics: parse_optional_boolean(options, :pool_size_metrics, false),
       waiting_callers_impl: parse_optional_module(options, :waiting_callers_impl, Poolex.Callers.Impl.ErlangQueue),
@@ -153,5 +162,18 @@ defmodule Poolex.Private.Options.Parser do
 
   defp validate_atom(value) do
     raise ArgumentError, "Expected an atom, got: #{inspect(value)}"
+  end
+
+  defp parse_optional_pos_integer_or_infinity(options, key, default) do
+    options
+    |> parse_optional_option(key, default)
+    |> validate_pos_integer_or_infinity()
+  end
+
+  defp validate_pos_integer_or_infinity(value) when is_integer(value) and value > 0, do: value
+  defp validate_pos_integer_or_infinity(:infinity), do: :infinity
+
+  defp validate_pos_integer_or_infinity(value) do
+    raise ArgumentError, "Expected a positive integer or :infinity, got: #{inspect(value)}"
   end
 end
