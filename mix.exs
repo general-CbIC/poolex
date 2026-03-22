@@ -68,6 +68,7 @@ defmodule Poolex.MixProject do
         "docs/guides/getting-started.cheatmd",
         "docs/guides/manual-worker-management.md",
         "docs/guides/migration-from-poolboy.cheatmd",
+        "docs/guides/min-and-max-pool-size.cheatmd",
         "docs/guides/pool-metrics.cheatmd",
         "docs/guides/worker-shutdown-delay.cheatmd",
         "docs/guides/workers-and-callers-implementations.md",

@@ -17,6 +17,8 @@ defmodule Poolex.Private.Options.ParserTest do
         waiting_callers_impl: ErlangQueue,
         failed_workers_retry_interval: 1000,
         max_overflow: 2,
+        min_pool_size: 2,
+        max_pool_size: 10,
         pool_size_metrics: true,
         worker_args: [arg1: "value1", arg2: "value2"],
         worker_shutdown_delay: 500,
@@ -36,6 +38,8 @@ defmodule Poolex.Private.Options.ParserTest do
       waiting_callers_impl: ErlangQueue,
       failed_workers_retry_interval: 1000,
       max_overflow: 2,
+      min_pool_size: 2,
+      max_pool_size: 10,
       pool_size_metrics: true,
       worker_args: [arg1: "value1", arg2: "value2"],
       worker_shutdown_delay: 500,
@@ -548,6 +552,106 @@ defmodule Poolex.Private.Options.ParserTest do
       options_without_pool_id = Keyword.delete(options, :pool_id)
       result = Parser.parse(options_without_pool_id)
       assert result.pool_id == SomeWorker
+    end
+  end
+
+  describe "min_pool_size validation" do
+    test "parse/1 with valid min_pool_size", %{options: options} do
+      result = Parser.parse(Keyword.put(options, :min_pool_size, 3))
+      assert result.min_pool_size == 3
+    end
+
+    test "parse/1 with zero min_pool_size", %{options: options} do
+      result = Parser.parse(Keyword.put(options, :min_pool_size, 0))
+      assert result.min_pool_size == 0
+    end
+
+    test "parse/1 with negative min_pool_size raises ArgumentError", %{options: options} do
+      assert_raise ArgumentError, "Expected a non-negative integer, got: -1", fn ->
+        Parser.parse(Keyword.put(options, :min_pool_size, -1))
+      end
+    end
+
+    test "parse/1 with float min_pool_size raises ArgumentError", %{options: options} do
+      assert_raise ArgumentError, "Expected a non-negative integer, got: 1.5", fn ->
+        Parser.parse(Keyword.put(options, :min_pool_size, 1.5))
+      end
+    end
+
+    test "parse/1 with string min_pool_size raises ArgumentError", %{options: options} do
+      assert_raise ArgumentError, "Expected a non-negative integer, got: \"3\"", fn ->
+        Parser.parse(Keyword.put(options, :min_pool_size, "3"))
+      end
+    end
+
+    test "parse/1 without min_pool_size uses default value of 0", %{options: options} do
+      result = Parser.parse(Keyword.delete(options, :min_pool_size))
+      assert result.min_pool_size == 0
+    end
+  end
+
+  describe "max_pool_size validation" do
+    test "parse/1 with valid positive integer max_pool_size", %{options: options} do
+      result = Parser.parse(Keyword.put(options, :max_pool_size, 20))
+      assert result.max_pool_size == 20
+    end
+
+    test "parse/1 with :infinity max_pool_size", %{options: options} do
+      result = Parser.parse(Keyword.put(options, :max_pool_size, :infinity))
+      assert result.max_pool_size == :infinity
+    end
+
+    test "parse/1 with zero max_pool_size raises ArgumentError", %{options: options} do
+      assert_raise ArgumentError, "Expected a positive integer or :infinity, got: 0", fn ->
+        Parser.parse(Keyword.put(options, :max_pool_size, 0))
+      end
+    end
+
+    test "parse/1 with negative max_pool_size raises ArgumentError", %{options: options} do
+      assert_raise ArgumentError, "Expected a positive integer or :infinity, got: -5", fn ->
+        Parser.parse(Keyword.put(options, :max_pool_size, -5))
+      end
+    end
+
+    test "parse/1 with float max_pool_size raises ArgumentError", %{options: options} do
+      assert_raise ArgumentError, "Expected a positive integer or :infinity, got: 5.5", fn ->
+        Parser.parse(Keyword.put(options, :max_pool_size, 5.5))
+      end
+    end
+
+    test "parse/1 with string max_pool_size raises ArgumentError", %{options: options} do
+      assert_raise ArgumentError, "Expected a positive integer or :infinity, got: \"10\"", fn ->
+        Parser.parse(Keyword.put(options, :max_pool_size, "10"))
+      end
+    end
+
+    test "parse/1 without max_pool_size uses default value of :infinity", %{options: options} do
+      result = Parser.parse(Keyword.delete(options, :max_pool_size))
+      assert result.max_pool_size == :infinity
+    end
+  end
+
+  describe "min_pool_size and max_pool_size consistency" do
+    test "parse/1 raises when min_pool_size exceeds max_pool_size", %{options: options} do
+      invalid_options =
+        options
+        |> Keyword.put(:min_pool_size, 10)
+        |> Keyword.put(:max_pool_size, 5)
+
+      assert_raise ArgumentError, "min_pool_size (10) must be <= max_pool_size (5)", fn ->
+        Parser.parse(invalid_options)
+      end
+    end
+
+    test "parse/1 accepts equal min_pool_size and max_pool_size", %{options: options} do
+      result =
+        options
+        |> Keyword.put(:min_pool_size, 5)
+        |> Keyword.put(:max_pool_size, 5)
+        |> Parser.parse()
+
+      assert result.min_pool_size == 5
+      assert result.max_pool_size == 5
     end
   end
 end

@@ -8,6 +8,8 @@ defmodule Poolex.Private.State do
   @enforce_keys [
     :failed_workers_retry_interval,
     :max_overflow,
+    :max_pool_size,
+    :min_pool_size,
     :pool_id,
     :supervisor,
     :worker_args,
@@ -45,6 +47,8 @@ defmodule Poolex.Private.State do
           idle_workers_state: nil | Poolex.Workers.Behaviour.state(),
           manual_monitors: %{(worker_pid :: pid()) => {caller_pid :: pid(), monitor_pid :: pid()}},
           max_overflow: non_neg_integer(),
+          max_pool_size: pos_integer() | :infinity,
+          min_pool_size: non_neg_integer(),
           monitors: %{reference() => Poolex.Private.Monitoring.kind_of_process()},
           overflow: non_neg_integer(),
           pool_id: Poolex.pool_id(),

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `min_pool_size` and `max_pool_size` configuration options to control the allowed range of base workers. `add_idle_workers!/2` and `remove_idle_workers!/2` respect these limits: extra workers that would exceed `max_pool_size` or drop below `min_pool_size` are skipped and an error is logged. See the [documentation](https://hexdocs.pm/poolex/min-and-max-pool-size.html) for details.
+
 ## [1.5.0] - 2026-03-03
 
 ### Added

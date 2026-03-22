@@ -13,6 +13,7 @@ defmodule PoolexTest do
       }
     ]
 
+  import ExUnit.CaptureLog
   import PoolHelpers
 
   alias Poolex.Private.BusyWorkers
@@ -706,6 +707,34 @@ defmodule PoolexTest do
         Poolex.add_idle_workers!(pool_name, 0)
       end)
     end
+
+    @tag capture_log: true
+    test "partially adds workers when max_pool_size would be exceeded", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.merge(workers_count: 3, max_pool_size: 5) |> start_pool()
+
+      assert %DebugInfo{idle_workers_count: 3} = DebugInfo.get_debug_info(pool_name)
+
+      log =
+        capture_log(fn ->
+          assert :ok = Poolex.add_idle_workers!(pool_name, 5)
+        end)
+
+      assert %DebugInfo{idle_workers_count: 5} = DebugInfo.get_debug_info(pool_name)
+      assert log =~ "Failed to add 3 worker(s): max_pool_size limit of 5 reached"
+    end
+
+    @tag capture_log: true
+    test "does not add any workers when max_pool_size is already reached", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.merge(workers_count: 5, max_pool_size: 5) |> start_pool()
+
+      log =
+        capture_log(fn ->
+          assert :ok = Poolex.add_idle_workers!(pool_name, 3)
+        end)
+
+      assert %DebugInfo{idle_workers_count: 5} = DebugInfo.get_debug_info(pool_name)
+      assert log =~ "Failed to add 3 worker(s): max_pool_size limit of 5 reached"
+    end
   end
 
   describe "remove_idle_workers!/2" do
@@ -735,6 +764,34 @@ defmodule PoolexTest do
       assert_raise(ArgumentError, fn ->
         Poolex.remove_idle_workers!(pool_name, 0)
       end)
+    end
+
+    @tag capture_log: true
+    test "partially removes workers when min_pool_size would be violated", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.merge(workers_count: 5, min_pool_size: 3) |> start_pool()
+
+      assert %DebugInfo{idle_workers_count: 5} = DebugInfo.get_debug_info(pool_name)
+
+      log =
+        capture_log(fn ->
+          assert :ok = Poolex.remove_idle_workers!(pool_name, 5)
+        end)
+
+      assert %DebugInfo{idle_workers_count: 3} = DebugInfo.get_debug_info(pool_name)
+      assert log =~ "Failed to remove 3 worker(s): min_pool_size limit of 3 reached"
+    end
+
+    @tag capture_log: true
+    test "does not remove any workers when min_pool_size is already reached", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.merge(workers_count: 3, min_pool_size: 3) |> start_pool()
+
+      log =
+        capture_log(fn ->
+          assert :ok = Poolex.remove_idle_workers!(pool_name, 3)
+        end)
+
+      assert %DebugInfo{idle_workers_count: 3} = DebugInfo.get_debug_info(pool_name)
+      assert log =~ "Failed to remove 3 worker(s): min_pool_size limit of 3 reached"
     end
   end
 

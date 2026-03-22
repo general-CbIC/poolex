@@ -30,6 +30,8 @@ Supervisor.start_link(children, strategy: :one_for_one)
   | `idle_workers_impl`              | Module that describes how to work with idle workers                | `SomeIdleWorkersImpl`           | `Poolex.Workers.Impl.List`        |
   | `idle_overflowed_workers_impl`   | Module that describes how to work with idle overflowed workers     | `SomeIdleOverflowedWorkersImpl` | `Poolex.Workers.Impl.List`        |
   | `max_overflow`                   | How many workers can be created over the limit                     | `2`                             | `0`                               |
+  | `max_pool_size`                  | Maximum number of base workers allowed (idle + busy)               | `100`                           | `:infinity`                       |
+  | `min_pool_size`                  | Minimum number of base workers allowed (idle + busy)               | `5`                             | `0`                               |
   | `worker_shutdown_delay`          | Delay (ms) before shutting down overflow worker after release      | `5000`                          | `0`                               |
   | `pool_id`                        | Identifier by which you will access the pool                       | `:my_pool`                      | `worker_module` value             |
   | `pool_size_metrics`              | Whether to dispatch pool size metrics                              | `true`                          | `false`                           |
