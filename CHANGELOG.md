@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added new fields to `DebugInfo` structure:
+  - `min_pool_size`
+  - `max_pool_size`
+  - `total_workers_count`
+
 ## [1.6.0] - 2026-03-22
 
 ### Added

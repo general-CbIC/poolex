@@ -497,19 +497,25 @@ defmodule Poolex do
   end
 
   def handle_call(:get_debug_info, _from, %State{} = state) do
+    idle_workers_count = IdleWorkers.count(state)
+    busy_workers_count = BusyWorkers.count(state)
+
     debug_info = %DebugInfo{
-      busy_workers_count: BusyWorkers.count(state),
+      busy_workers_count: busy_workers_count,
       busy_workers_impl: state.busy_workers_impl,
       busy_workers_pids: BusyWorkers.to_list(state),
       failed_to_start_workers_count: state.failed_to_start_workers_count,
       idle_overflowed_workers_count: IdleOverflowedWorkers.count(state),
       idle_overflowed_workers_impl: state.idle_overflowed_workers_impl,
       idle_overflowed_workers_pids: IdleOverflowedWorkers.to_list(state),
-      idle_workers_count: IdleWorkers.count(state),
+      idle_workers_count: idle_workers_count,
       idle_workers_impl: state.idle_workers_impl,
       idle_workers_pids: IdleWorkers.to_list(state),
       max_overflow: state.max_overflow,
+      max_pool_size: state.max_pool_size,
+      min_pool_size: state.min_pool_size,
       overflow: state.overflow,
+      total_workers_count: idle_workers_count + busy_workers_count,
       waiting_callers: WaitingCallers.to_list(state),
       waiting_callers_impl: state.waiting_callers_impl,
       worker_args: state.worker_args,
