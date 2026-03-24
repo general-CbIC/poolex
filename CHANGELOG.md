@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-03-24
+
+### Added
+
+- Added new fields to `DebugInfo` structure:
+  - `min_pool_size`
+  - `max_pool_size`
+  - `total_workers_count`
+
 ## [1.6.0] - 2026-03-22
 
 ### Added
@@ -373,7 +382,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.0...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/general-CbIC/poolex/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/general-CbIC/poolex/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/general-CbIC/poolex/compare/v1.4.2...v1.5.0
 [1.4.2]: https://github.com/general-CbIC/poolex/compare/v1.4.1...v1.4.2

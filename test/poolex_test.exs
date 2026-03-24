@@ -53,6 +53,9 @@ defmodule PoolexTest do
       assert debug_info.worker_shutdown_delay == 0
       assert debug_info.waiting_callers == []
       assert debug_info.waiting_callers_impl == Poolex.Callers.Impl.ErlangQueue
+      assert debug_info.total_workers_count == 5
+      assert debug_info.min_pool_size == 0
+      assert debug_info.max_pool_size
     end
 
     test "valid configured implementations", %{pool_options: pool_options} do
@@ -85,6 +88,21 @@ defmodule PoolexTest do
       debug_info = DebugInfo.get_debug_info(pool_name)
 
       assert debug_info.worker_shutdown_delay == shutdown_delay
+    end
+
+    test "valid configured pool sizes", %{pool_options: pool_options} do
+      min_pool_size = 5
+      max_pool_size = 10
+
+      pool_name =
+        pool_options
+        |> Keyword.merge(min_pool_size: min_pool_size, max_pool_size: max_pool_size)
+        |> start_pool()
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+
+      assert debug_info.min_pool_size == min_pool_size
+      assert debug_info.max_pool_size == max_pool_size
     end
 
     test "valid after using the worker", %{pool_options: pool_options} do
