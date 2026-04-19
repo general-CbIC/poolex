@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-04-19
+
+### Fixed
+
+- Fixed typespecs in `Poolex.Private.State.t/0`:
+  - Introduced public `Poolex.Private.State.monotonic_time/0` type and replaced incorrect `Time.t()` with it for the `idle_overflowed_workers_last_touches` field, which stores `System.monotonic_time(:millisecond)` values.
+- Fixed typespecs in `Poolex.Private.DebugInfo.t/0`:
+  - Added missing `idle_overflowed_workers_count`, `idle_overflowed_workers_impl`, and `idle_overflowed_workers_pids` fields that were present in the struct and returned by `get_debug_info/1` but absent from the type.
+  - Corrected the `waiting_callers` field type from `list(pid())` to `list(Poolex.Caller.t())`.
+
+### Changed
+
+- Refactored internal `available_to_add_count/2` and `available_to_remove_count/2` functions to return `{allowed, skipped}` tuples instead of just `allowed`, improving clarity of the min/max pool size enforcement logic.
+
 ## [1.6.1] - 2026-03-24
 
 ### Added
@@ -382,7 +396,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.1...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/general-CbIC/poolex/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/general-CbIC/poolex/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/general-CbIC/poolex/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/general-CbIC/poolex/compare/v1.4.2...v1.5.0
