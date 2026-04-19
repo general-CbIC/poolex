@@ -384,18 +384,36 @@ defmodule Poolex do
     IdleWorkers.count(state) + BusyWorkers.count(state)
   end
 
-  @spec available_to_add_count(State.t(), non_neg_integer()) :: non_neg_integer()
-  defp available_to_add_count(%State{max_pool_size: :infinity}, workers_count), do: workers_count
+  @spec available_to_add_count(State.t(), non_neg_integer()) :: {non_neg_integer(), non_neg_integer()}
+  defp available_to_add_count(%State{max_pool_size: :infinity}, workers_count), do: {workers_count, 0}
 
   defp available_to_add_count(%State{max_pool_size: max} = state, workers_count) do
-    max(0, min(workers_count, max - base_workers_count(state)))
+    current = base_workers_count(state)
+
+    allowed =
+      cond do
+        current >= max -> 0
+        current + workers_count > max -> max - current
+        true -> workers_count
+      end
+
+    {allowed, workers_count - allowed}
   end
 
-  @spec available_to_remove_count(State.t(), non_neg_integer()) :: non_neg_integer()
-  defp available_to_remove_count(%State{min_pool_size: 0}, workers_count), do: workers_count
+  @spec available_to_remove_count(State.t(), non_neg_integer()) :: {non_neg_integer(), non_neg_integer()}
+  defp available_to_remove_count(%State{min_pool_size: 0}, workers_count), do: {workers_count, 0}
 
   defp available_to_remove_count(%State{min_pool_size: min} = state, workers_count) do
-    max(0, min(workers_count, base_workers_count(state) - min))
+    current = base_workers_count(state)
+
+    allowed =
+      cond do
+        current <= min -> 0
+        current - workers_count < min -> current - min
+        true -> workers_count
+      end
+
+    {allowed, workers_count - allowed}
   end
 
   @spec start_workers(non_neg_integer(), State.t()) :: {[pid], State.t()}
@@ -529,8 +547,7 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_call({:add_idle_workers, workers_count}, _from, %State{} = state) do
-    allowed = available_to_add_count(state, workers_count)
-    skipped = workers_count - allowed
+    {allowed, skipped} = available_to_add_count(state, workers_count)
 
     if skipped > 0 do
       Logger.error("Failed to add #{skipped} worker(s): max_pool_size limit of #{state.max_pool_size} reached")
@@ -556,9 +573,7 @@ defmodule Poolex do
   def handle_call({:remove_idle_workers, workers_count}, _from, %State{} = state) do
     # removable is capped by idle count (can't remove workers that aren't idle)
     removable = min(workers_count, IdleWorkers.count(state))
-    allowed = available_to_remove_count(state, removable)
-
-    skipped = removable - allowed
+    {allowed, skipped} = available_to_remove_count(state, removable)
 
     if skipped > 0 do
       Logger.error("Failed to remove #{skipped} worker(s): min_pool_size limit of #{state.min_pool_size} reached")

@@ -5,6 +5,14 @@ defmodule Poolex.Private.State do
   Can be used for debugging.
   """
 
+  @typedoc """
+  A point in time expressed in milliseconds as returned by `System.monotonic_time(:millisecond)`.
+
+  Only meaningful for measuring durations against other values obtained from `System.monotonic_time/1`
+  — not comparable with `DateTime` or `Time`.
+  """
+  @type monotonic_time() :: integer()
+
   @enforce_keys [
     :failed_workers_retry_interval,
     :max_overflow,
@@ -41,7 +49,7 @@ defmodule Poolex.Private.State do
           failed_to_start_workers_count: non_neg_integer(),
           failed_workers_retry_interval: timeout() | nil,
           idle_overflowed_workers_impl: module(),
-          idle_overflowed_workers_last_touches: %{pid() => Time.t()},
+          idle_overflowed_workers_last_touches: %{pid() => monotonic_time()},
           idle_overflowed_workers_state: nil | Poolex.Workers.Behaviour.state(),
           idle_workers_impl: module(),
           idle_workers_state: nil | Poolex.Workers.Behaviour.state(),
