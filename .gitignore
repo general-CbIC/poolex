@@ -25,6 +25,9 @@ poolex-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+# Local git worktrees used for isolated work.
+/.worktrees/
+
 .claude/settings.local.json
 
 examples/poolex_example/.claude/settings.local.json
