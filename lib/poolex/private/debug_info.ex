@@ -44,7 +44,7 @@ defmodule Poolex.Private.DebugInfo do
           overflow: non_neg_integer(),
           total_workers_count: non_neg_integer(),
           waiting_callers_impl: module(),
-          waiting_callers: list(pid()),
+          waiting_callers: list(Poolex.Caller.t()),
           worker_args: list(any()),
           worker_module: module(),
           worker_shutdown_delay: timeout(),
