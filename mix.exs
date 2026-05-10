@@ -47,7 +47,7 @@ defmodule Poolex.MixProject do
 
   defp package do
     [
-      files: ~w(lib mix.exs LICENSE),
+      files: ~w(lib mix.exs LICENSE README.md),
       licenses: ["MIT"],
       links: %{
         "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md",
