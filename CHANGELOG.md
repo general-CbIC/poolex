@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-05-10
+
+### Changed
+
+- Updated logo (just having fun with new ChatGPT image generator)
+
+### Fixed
+
+- Added `README.md` to package settings to fix page view on Hex.pm.
+
 ## [1.6.2] - 2026-04-19
 
 ### Fixed
