@@ -15,7 +15,7 @@ defmodule Poolex.MixProject do
       package: package(),
       source_url: "https://github.com/general-CbIC/poolex",
       start_permanent: Mix.env() == :prod,
-      version: "1.6.2"
+      version: "1.6.3"
     ]
   end
 
@@ -47,7 +47,7 @@ defmodule Poolex.MixProject do
 
   defp package do
     [
-      files: ~w(lib mix.exs LICENSE),
+      files: ~w(lib mix.exs LICENSE README.md),
       licenses: ["MIT"],
       links: %{
         "Changelog" => "https://github.com/general-CbIC/poolex/blob/develop/CHANGELOG.md",

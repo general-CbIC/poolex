@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-05-10
+
+### Changed
+
+- Updated logo (just having fun with new ChatGPT image generator)
+
+### Fixed
+
+- Added `README.md` to package settings to fix page view on Hex.pm.
+
 ## [1.6.2] - 2026-04-19
 
 ### Fixed
@@ -396,7 +406,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.2...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.3...HEAD
+[1.6.3]: https://github.com/general-CbIC/poolex/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/general-CbIC/poolex/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/general-CbIC/poolex/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/general-CbIC/poolex/compare/v1.5.0...v1.6.0
