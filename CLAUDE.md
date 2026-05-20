@@ -110,14 +110,7 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 
 ### Known Issues
 
-1. **Flaky Tests (~10-20% failure rate)**
-   - **Root cause**: Parameterized tests with identical `pool_id` (`:SomeWorker`)
-   - **Problem**: `launch_long_task` spawns processes with 4-second delays that outlive test execution
-   - **Impact**: Spawned processes from first parameterized run try to access pool in second run → crashes
-   - **Status**: Investigated but not fixed (would require systematic test refactoring)
-   - **Affected tests**: Various overflow and timeout tests
-
-2. **`remove_idle_workers!/2` Design Issue**
+1. **`remove_idle_workers!/2` Design Issue**
    - **Current behavior**: Removes workers from idle list but doesn't stop them
    - **Problem**: Workers continue running but are inaccessible to pool (potential resource leak)
    - **Root cause**: Can't easily unmonitor by pid (only by reference)
@@ -131,10 +124,11 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 - Uses `Process.monitor` with `%{reference() => kind_of_process()}` map
 - Limitation: Can't unmonitor by pid, only by reference
 - Makes features like `remove_idle_workers!` difficult to implement correctly
+- Pool sets `trap_exit: true` in `init/1` and handles `{:EXIT, pid, reason}` in `handle_info` (stops the pool gracefully on exit signals)
 
 **Proposed Future Improvement (see TODO.md):**
 
-- Replace `Process.monitor` with `Process.link` + `trap_exit`
+- Replace `Process.monitor` with `Process.link` + `trap_exit` (full refactoring)
 - Would eliminate need for monitors map entirely
 - Would make `remove_idle_workers!` trivial: `Process.unlink(worker) + terminate_child`
 - Significant architectural simplification
@@ -143,5 +137,4 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 
 - When adding new worker lifecycle features, be aware of monitoring limitations
 - Consider the `Process.link` refactoring (in TODO.md) for major features requiring worker removal
-- Test flakiness is a known issue; run tests multiple times to verify changes
 - Always run `mix check` before committing (includes tests, dialyzer, credo)
