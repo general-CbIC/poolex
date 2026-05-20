@@ -927,7 +927,7 @@ defmodule PoolexTest do
     end
 
     test "overflowed workers terminates independently of each other", %{pool_options: pool_options} do
-      shutdown_delay = 200
+      shutdown_delay = 500
 
       pool_name =
         pool_options
@@ -938,7 +938,7 @@ defmodule PoolexTest do
       launch_long_task(pool_name)
 
       # Launch first task to trigger overflow
-      launch_long_task(pool_name, 100)
+      launch_long_task(pool_name, 400)
 
       # Wait a bit before launching the second overflowed worker
       :timer.sleep(50)
@@ -959,24 +959,24 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_count == 2
       assert debug_info.overflow == 2
 
-      # Wait until first overflowed worker is released
-      :timer.sleep(50)
+      # Wait until first overflowed worker is released (~400ms task)
+      :timer.sleep(350)
 
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.idle_overflowed_workers_count == 2
       assert debug_info.busy_workers_count == 1
       assert debug_info.overflow == 2
 
-      # Wait for the first overflowed worker shutdown delay
-      :timer.sleep(150)
+      # Wait for the second overflowed worker (idle since ~70ms) shutdown delay (~580ms)
+      :timer.sleep(300)
 
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.idle_overflowed_workers_count == 1
       assert debug_info.busy_workers_count == 1
       assert debug_info.overflow == 1
 
-      # Wait for the second overflowed worker shutdown delay
-      :timer.sleep(100)
+      # Wait for the first overflowed worker (idle since ~410ms) shutdown delay (~920ms)
+      :timer.sleep(300)
 
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.idle_overflowed_workers_count == 0

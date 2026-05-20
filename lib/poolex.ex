@@ -702,6 +702,11 @@ defmodule Poolex do
     end
   end
 
+  @impl GenServer
+  def handle_info({:EXIT, _pid, reason}, state) do
+    {:stop, reason, state}
+  end
+
   @spec release_busy_worker(State.t(), worker()) :: State.t()
   defp release_busy_worker(%State{} = state, worker) do
     if BusyWorkers.member?(state, worker) do
