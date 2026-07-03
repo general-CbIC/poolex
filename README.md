@@ -1,34 +1,35 @@
-# Poolex
+<div align="center">
+  <img alt="Poolex logo" src="https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/poolex.png" width="250" height="250"/>
 
-![Build and tests workflow](https://github.com/general-CbIC/poolex/actions/workflows/ci-tests.yml/badge.svg)
-[![hex.pm version](https://img.shields.io/hexpm/v/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/poolex/)
-[![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
-[![Weekly Downloads](https://img.shields.io/hexpm/dw/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
-[![Total Downloads](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
-[![Elixir Forum](https://img.shields.io/badge/Elixir_Forum-purple?style=flat&logo=elixir)](https://elixirforum.com/t/poolex-a-library-for-managing-pools-of-workers/54800)
+  A library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy). See the [Poolex Playground](https://poolex-playground.cbic-dev.com/) — interactive page to play with the library.
 
-Poolex is a library for managing pools of workers. Inspired by [poolboy](https://github.com/devinus/poolboy).
+  ![Build and tests workflow](https://github.com/general-CbIC/poolex/actions/workflows/ci-tests.yml/badge.svg)
+  [![hex.pm version](https://img.shields.io/hexpm/v/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
+  [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg?style=flat)](https://hexdocs.pm/poolex/)
+  [![License](https://img.shields.io/hexpm/l/poolex.svg?style=flat)](https://github.com/general-CbIC/poolex/blob/main/LICENSE)
+  [![Weekly Downloads](https://img.shields.io/hexpm/dw/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
+  [![Total Downloads](https://img.shields.io/hexpm/dt/poolex.svg?style=flat)](https://hex.pm/packages/poolex)
+  [![Elixir Forum](https://img.shields.io/badge/Elixir_Forum-purple?style=flat&logo=elixir)](https://elixirforum.com/t/poolex-a-library-for-managing-pools-of-workers/54800)
+</div>
 
-See the [Poolex Playground](https://poolex-playground.cbic-dev.com/) — interactive page to play with the library.
+---
 
 > [!IMPORTANT]  
 > Documentation on GitHub corresponds to the current branch. For stable versions' docs see [Hexdocs](https://hexdocs.pm/poolex/).
 
+---
+
 ## Table of Contents
 
-<img alt="Poolex logo" src="https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/poolex.png" width="250" height="250" align="right"/>
-
-- [Poolex](#poolex)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Requirements](#requirements)
-  - [Installation](#installation)
-  - [Usage](#usage)
-  - [Guides](#guides)
-  - [Used by](#used-by)
-  - [Contributions](#contributions)
-  - [Support the Project](#support-the-project)
+- [Table of Contents](#table-of-contents)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Guides](#guides)
+- [Used by](#used-by)
+- [Contributions](#contributions)
+- [Support the Project](#support-the-project)
 
 ## Features
 
