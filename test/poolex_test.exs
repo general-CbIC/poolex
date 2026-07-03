@@ -498,6 +498,131 @@ defmodule PoolexTest do
       send(process_2, :finish)
       assert_receive {:DOWN, ^reference_2, :process, ^process_2, _}
     end
+
+    test "worker provided to a caller that already timed out is reclaimed", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
+      {:ok, worker} = Poolex.acquire(pool_name)
+
+      test_pid = self()
+
+      waiting_caller =
+        spawn(fn ->
+          result = Poolex.run(pool_name, fn _pid -> :ok end, checkout_timeout: 100)
+          send(test_pid, {:checkout_result, result})
+
+          receive do
+            :finish -> :ok
+          end
+        end)
+
+      :timer.sleep(10)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert length(debug_info.waiting_callers) == 1
+
+      # Suspend the pool so that the released worker and the caller's timeout "cross paths":
+      # the pool hands the worker to the caller only after the caller has given up waiting,
+      # so the reply is lost.
+      :sys.suspend(pool_name)
+      Poolex.release(pool_name, worker)
+      assert_receive {:checkout_result, {:error, :checkout_timeout}}, 1000
+      :sys.resume(pool_name)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_pids == [worker]
+      assert Enum.empty?(debug_info.waiting_callers)
+
+      send(waiting_caller, :finish)
+    end
+
+    test "worker released to a dead waiting caller is returned to the pool", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
+      {:ok, worker} = Poolex.acquire(pool_name)
+
+      waiting_caller =
+        spawn(fn ->
+          Poolex.run(pool_name, fn _pid -> :ok end, checkout_timeout: :infinity)
+        end)
+
+      :timer.sleep(10)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert length(debug_info.waiting_callers) == 1
+
+      # The pool processes the release only after the waiting caller has died,
+      # but before the caller's DOWN message.
+      :sys.suspend(pool_name)
+      Poolex.release(pool_name, worker)
+
+      reference = Process.monitor(waiting_caller)
+      Process.exit(waiting_caller, :kill)
+      assert_receive {:DOWN, ^reference, :process, ^waiting_caller, :killed}, 1000
+
+      :sys.resume(pool_name)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_pids == [worker]
+    end
+
+    test "worker handed to a waiting caller that dies before confirming is reclaimed", %{
+      pool_options: pool_options
+    } do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
+      {:ok, worker} = Poolex.acquire(pool_name)
+
+      test_pid = self()
+
+      # Bypasses acquire/2 to simulate the caller dying between receiving the worker
+      # and confirming the acquisition
+      waiting_caller =
+        spawn(fn ->
+          {:ok, worker_pid} = GenServer.call(pool_name, {:get_idle_worker, make_ref()}, :infinity)
+          send(test_pid, {:got_worker, worker_pid})
+          Process.sleep(:infinity)
+        end)
+
+      :timer.sleep(10)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert length(debug_info.waiting_callers) == 1
+
+      Poolex.release(pool_name, worker)
+      assert_receive {:got_worker, ^worker}, 1000
+
+      reference = Process.monitor(waiting_caller)
+      Process.exit(waiting_caller, :kill)
+      assert_receive {:DOWN, ^reference, :process, ^waiting_caller, :killed}, 1000
+
+      :timer.sleep(10)
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_pids == [worker]
+    end
+
+    test "cancel_waiting after a lost checkout reply reclaims the worker", %{pool_options: pool_options} do
+      pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
+
+      caller_reference = make_ref()
+
+      # Simulate a caller whose `call` timed out right when the pool replied:
+      # the worker is checked out, but the caller never received it and cancels.
+      assert {:ok, worker} = GenServer.call(pool_name, {:get_idle_worker, caller_reference})
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 1
+
+      GenServer.cast(pool_name, {:cancel_waiting, caller_reference})
+
+      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert debug_info.busy_workers_count == 0
+      assert debug_info.idle_workers_pids == [worker]
+    end
   end
 
   describe "overflow" do

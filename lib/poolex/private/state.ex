@@ -39,6 +39,7 @@ defmodule Poolex.Private.State do
                 manual_monitors: %{},
                 monitors: %{},
                 overflow: 0,
+                unconfirmed_checkouts: %{},
                 waiting_callers_impl: nil,
                 waiting_callers_state: nil
               ]
@@ -61,6 +62,7 @@ defmodule Poolex.Private.State do
           overflow: non_neg_integer(),
           pool_id: Poolex.pool_id(),
           supervisor: pid(),
+          unconfirmed_checkouts: %{(worker_pid :: pid()) => {caller_pid :: pid(), caller_reference :: reference()}},
           waiting_callers_impl: module(),
           waiting_callers_state: nil | Poolex.Callers.Behaviour.state(),
           worker_args: list(any()),

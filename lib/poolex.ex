@@ -301,9 +301,13 @@ defmodule Poolex do
       GenServer.call(pool_id, {:get_idle_worker, caller_reference}, checkout_timeout)
     catch
       :exit, {:timeout, {GenServer, :call, [_pool_id, {:get_idle_worker, ^caller_reference}, _timeout]}} ->
+        # The pool may have provided a worker right as the call timed out — then the reply is
+        # lost. `cancel_waiting` either removes the caller from the waiting queue or reclaims
+        # the worker from the unconfirmed checkout. It must not be sent on the success path:
+        # there it would reclaim a worker the caller legitimately holds.
+        GenServer.cast(pool_id, {:cancel_waiting, caller_reference})
+
         {:error, :checkout_timeout}
-    after
-      GenServer.cast(pool_id, {:cancel_waiting, caller_reference})
     end
   end
 
@@ -467,14 +471,22 @@ defmodule Poolex do
       not IdleOverflowedWorkers.empty?(state) ->
         # If there are overflowed idle workers, we can immediately provide one to the caller
         {overflowed_worker_pid, state} = IdleOverflowedWorkers.pop(state)
-        state = BusyWorkers.add(state, overflowed_worker_pid)
+
+        state =
+          state
+          |> BusyWorkers.add(overflowed_worker_pid)
+          |> record_unconfirmed_checkout(overflowed_worker_pid, from_pid, caller_reference)
 
         {:reply, {:ok, overflowed_worker_pid}, state}
 
       not IdleWorkers.empty?(state) ->
         # If there are idle workers, we can immediately provide one to the caller
         {idle_worker_pid, state} = IdleWorkers.pop(state)
-        state = BusyWorkers.add(state, idle_worker_pid)
+
+        state =
+          state
+          |> BusyWorkers.add(idle_worker_pid)
+          |> record_unconfirmed_checkout(idle_worker_pid, from_pid, caller_reference)
 
         {:reply, {:ok, idle_worker_pid}, state}
 
@@ -483,7 +495,10 @@ defmodule Poolex do
         case start_worker(state) do
           {:ok, new_worker, state} ->
             # When worker created successfully
-            state = BusyWorkers.add(state, new_worker)
+            state =
+              state
+              |> BusyWorkers.add(new_worker)
+              |> record_unconfirmed_checkout(new_worker, from_pid, caller_reference)
 
             {:reply, {:ok, new_worker}, %{state | overflow: state.overflow + 1}}
 
@@ -510,6 +525,10 @@ defmodule Poolex do
 
   def handle_call({:register_manual_acquisition, caller_pid, worker_pid}, _from, %State{} = state) do
     monitor_pid = start_manual_monitor(state.pool_id, caller_pid, worker_pid)
+
+    # The caller has confirmed that it received the worker, no need to track the hand-off anymore
+    state = remove_unconfirmed_checkout(state, worker_pid)
+
     new_state = put_in(state.manual_monitors[worker_pid], {caller_pid, monitor_pid})
     {:reply, :ok, new_state}
   end
@@ -592,13 +611,7 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_cast({:release_busy_worker, worker}, %State{} = state) do
-    if WaitingCallers.empty?(state) do
-      new_state = release_busy_worker(state, worker)
-      {:noreply, new_state}
-    else
-      new_state = provide_worker_to_waiting_caller(state, worker)
-      {:noreply, new_state}
-    end
+    {:noreply, return_worker_to_pool(state, worker)}
   end
 
   @impl GenServer
@@ -624,11 +637,7 @@ defmodule Poolex do
     # Only release worker if caller was the owner
     new_state =
       if caller_is_owner do
-        if WaitingCallers.empty?(state) do
-          release_busy_worker(state, worker_pid)
-        else
-          provide_worker_to_waiting_caller(state, worker_pid)
-        end
+        return_worker_to_pool(state, worker_pid)
       else
         state
       end
@@ -660,7 +669,12 @@ defmodule Poolex do
 
   @impl GenServer
   def handle_cast({:cancel_waiting, caller_reference}, %State{} = state) do
-    {:noreply, WaitingCallers.remove_by_reference(state, caller_reference)}
+    state =
+      state
+      |> WaitingCallers.remove_by_reference(caller_reference)
+      |> reclaim_unconfirmed_checkout(caller_reference)
+
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -735,13 +749,81 @@ defmodule Poolex do
     end
   end
 
+  # Returns a busy worker back to the pool: gives it to a waiting caller if there is one,
+  # otherwise makes it idle (or shuts it down if it is an overflow worker).
+  @spec return_worker_to_pool(State.t(), worker()) :: State.t()
+  defp return_worker_to_pool(%State{} = state, worker) do
+    if WaitingCallers.empty?(state) do
+      release_busy_worker(state, worker)
+    else
+      provide_worker_to_waiting_caller(state, worker)
+    end
+  end
+
   @spec provide_worker_to_waiting_caller(State.t(), worker()) :: State.t()
   defp provide_worker_to_waiting_caller(%State{} = state, worker) do
-    {caller, state} = WaitingCallers.pop(state)
+    {%Poolex.Caller{reference: caller_reference, from: {caller_pid, _tag} = from}, state} = WaitingCallers.pop(state)
 
-    GenServer.reply(caller.from, {:ok, worker})
+    if caller_alive?(caller_pid) do
+      GenServer.reply(from, {:ok, worker})
 
-    state
+      record_unconfirmed_checkout(state, worker, caller_pid, caller_reference)
+    else
+      # The caller died while waiting, but its DOWN message has not been processed yet.
+      # Give the worker to the next waiting caller or return it to the pool.
+      return_worker_to_pool(state, worker)
+    end
+  end
+
+  # Pids from remote nodes cannot be checked with `Process.alive?/1`, assume they are alive:
+  # lost hand-offs to them are still reclaimed via `cancel_waiting` or their DOWN message.
+  @spec caller_alive?(pid()) :: boolean()
+  defp caller_alive?(caller_pid) do
+    node(caller_pid) != node() or Process.alive?(caller_pid)
+  end
+
+  # A reply with a worker can be lost: the caller's `GenServer.call` may time out at the same
+  # moment the pool replies, or the caller may die before receiving the reply. Until the caller
+  # confirms the receipt with `register_manual_acquisition`, the hand-off is tracked in
+  # `unconfirmed_checkouts` so the worker can be reclaimed instead of leaking in busy workers.
+  @spec record_unconfirmed_checkout(State.t(), worker(), pid(), reference()) :: State.t()
+  defp record_unconfirmed_checkout(%State{} = state, worker, caller_pid, caller_reference) do
+    %{state | unconfirmed_checkouts: Map.put(state.unconfirmed_checkouts, worker, {caller_pid, caller_reference})}
+  end
+
+  @spec remove_unconfirmed_checkout(State.t(), worker()) :: State.t()
+  defp remove_unconfirmed_checkout(%State{} = state, worker) do
+    %{state | unconfirmed_checkouts: Map.delete(state.unconfirmed_checkouts, worker)}
+  end
+
+  # Called when a caller reports with `cancel_waiting` that it has given up (checkout timeout).
+  # If a worker was already handed to that caller, the reply was lost — reclaim the worker.
+  @spec reclaim_unconfirmed_checkout(State.t(), reference()) :: State.t()
+  defp reclaim_unconfirmed_checkout(%State{} = state, caller_reference) do
+    case Enum.find(state.unconfirmed_checkouts, fn {_worker, {_caller_pid, reference}} ->
+           reference == caller_reference
+         end) do
+      nil ->
+        state
+
+      {worker, _} ->
+        state
+        |> remove_unconfirmed_checkout(worker)
+        |> return_worker_to_pool(worker)
+    end
+  end
+
+  # Called when a monitored caller dies: reclaim workers that were handed to it
+  # but whose receipt was never confirmed.
+  @spec reclaim_unconfirmed_checkouts_of_caller(State.t(), pid()) :: State.t()
+  defp reclaim_unconfirmed_checkouts_of_caller(%State{} = state, caller_pid) do
+    state.unconfirmed_checkouts
+    |> Enum.filter(fn {_worker, {pid, _reference}} -> pid == caller_pid end)
+    |> Enum.reduce(state, fn {worker, _}, acc_state ->
+      acc_state
+      |> remove_unconfirmed_checkout(worker)
+      |> return_worker_to_pool(worker)
+    end)
   end
 
   @spec handle_down_worker(State.t(), pid()) :: State.t()
@@ -751,6 +833,7 @@ defmodule Poolex do
       |> IdleWorkers.remove(dead_process_pid)
       |> BusyWorkers.remove(dead_process_pid)
       |> IdleOverflowedWorkers.remove(dead_process_pid)
+      |> remove_unconfirmed_checkout(dead_process_pid)
 
     cond do
       not WaitingCallers.empty?(state) ->
@@ -785,7 +868,9 @@ defmodule Poolex do
 
   @spec handle_down_waiting_caller(State.t(), pid()) :: State.t()
   defp handle_down_waiting_caller(%State{} = state, dead_process_pid) do
-    WaitingCallers.remove_by_pid(state, dead_process_pid)
+    state
+    |> WaitingCallers.remove_by_pid(dead_process_pid)
+    |> reclaim_unconfirmed_checkouts_of_caller(dead_process_pid)
   end
 
   @impl GenServer
