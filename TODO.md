@@ -54,46 +54,6 @@ end
 
 Pass `caller_pid` alongside `worker_pid` when sending `{:stop_worker}` from the monitor process.
 
-### Fix worker leak on simultaneous timeout and release
-
-**Current problem (`lib/poolex.ex:297`):**
-
-A worker can get permanently stuck in `BusyWorkers` if a caller's checkout timeout races with a worker becoming available:
-
-1. No idle workers — caller is added to `waiting_callers`
-2. Caller times out → `GenServer.call` returns `{:error, :checkout_timeout}`
-3. Simultaneously, a worker is released → pool calls `provide_worker_to_waiting_caller` (`lib/poolex.ex:739`) → `GenServer.reply(caller.from, {:ok, worker})`
-4. The reply is lost (caller already returned from its timed-out `call`)
-5. Pool then processes `{:cancel_waiting, ref}` — but the caller was already popped from the queue
-6. Worker is now stuck in `BusyWorkers` indefinitely (until it crashes)
-
-**Proposed fix:**
-In `provide_worker_to_waiting_caller`, check that the caller process is still alive before replying:
-
-```elixir
-defp provide_worker_to_waiting_caller(%State{} = state, worker) do
-  {caller, state} = WaitingCallers.pop(state)
-  {from_pid, _tag} = caller.from
-
-  if Process.alive?(from_pid) do
-    GenServer.reply(caller.from, {:ok, worker})
-    state
-  else
-    # Dead caller — try the next one, or return the worker to the pool
-    if WaitingCallers.empty?(state) do
-      release_busy_worker(state, worker)
-    else
-      provide_worker_to_waiting_caller(state, worker)
-    end
-  end
-end
-```
-
-**Notes:**
-
-- `Process.alive?/1` is not perfectly atomic but eliminates the common case. A fully correct solution would require a two-phase acknowledgement protocol.
-- `Process.alive?/1` raises for remote pids — guard with `node(from_pid) == node()` if cross-node calls should be supported.
-
 ### Fix dangling caller monitors (both timeout and success paths)
 
 **Current problem:**
@@ -111,6 +71,8 @@ The pool monitors every caller placed into the waiting queue (`Monitoring.add(fr
 **Proposed fix:**
 Demonitor when the caller leaves the queue (both paths). Easiest path: store `monitor_ref` inside `Poolex.Caller` so it is available on pop/remove. Cleaner path: after the `Process.link` refactor below, this bookkeeping goes away.
 
+**Caveat:** `handle_down_waiting_caller/2` now also reclaims unconfirmed checkouts (see `reclaim_unconfirmed_checkouts_of_caller/2`) and relies on the caller staying monitored after the hand-off. When adding demonitor-on-hand-off, keep the caller monitored until the checkout is confirmed via `register_manual_acquisition`, or reclaim unconfirmed workers some other way.
+
 ### Make `acquire/2` atomic (race between `get_idle_worker` and `register_manual_acquisition`)
 
 **Current problem (`lib/poolex.ex:249-260`):**
@@ -120,10 +82,12 @@ Demonitor when the caller leaves the queue (both paths). Easiest path: store `mo
 1. `{:get_idle_worker, ref}` — worker is moved to `BusyWorkers`
 2. `{:register_manual_acquisition, self(), worker_pid}` — monitor is set up
 
-If the caller process dies **between** these two calls, the worker is stuck in `BusyWorkers` with no monitor and no entry in `manual_monitors` — pool has no way to reclaim it until the worker itself crashes.
+If the caller process dies **between** these two calls, the worker is stuck in `BusyWorkers` with no monitor and no entry in `manual_monitors`.
+
+Since the unconfirmed-checkouts tracking was added, callers that went through the waiting queue are covered: they are monitored, and their DOWN message reclaims the unconfirmed worker. The gap remains for **direct** checkouts (worker was available immediately): the caller is not monitored at that point, so the worker and its `unconfirmed_checkouts` entry are stuck until the worker itself crashes.
 
 **Proposed fix:**
-Collapse into a single atomic call that takes the worker and registers the monitor in one `handle_call`. The caller pid is trivially available via `GenServer.call`'s `from` argument, so no extra data needs to be passed.
+Collapse into a single atomic call that takes the worker and registers the monitor in one `handle_call`. The caller pid is trivially available via `GenServer.call`'s `from` argument, so no extra data needs to be passed. This also makes the unconfirmed-checkouts bookkeeping simpler: hand-off and confirmation become one step.
 
 ## Architecture Improvements
 
@@ -199,15 +163,6 @@ monitors: %{reference() => :worker | :waiting_caller}
 - Drop `start_manual_monitor/3`, `:cleanup_manual_monitor`, `:stop_worker` casts entirely.
 
 Eliminates the race condition, removes a whole layer of processes, reduces mailbox churn.
-
-### Skip `cancel_waiting` cast on successful checkout
-
-**Current problem (`lib/poolex.ex:306`):**
-
-The `after` block in `get_idle_worker/2` casts `{:cancel_waiting, ref}` on **every** call, including successful checkouts. On success the caller is guaranteed not to be in the waiting queue (it was either replied to directly or popped before the reply), so the pool does a useless O(n) `:queue.filter` pass per checkout.
-
-**Proposed fix:**
-Move the cast from the `after` block into the timeout `catch` branch. Non-timeout exits mean the pool itself is down, so no cleanup is needed there either.
 
 ### Stop always-on retry ticker
 

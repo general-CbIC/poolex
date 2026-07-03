@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed a worker leak: when a worker hand-off raced with the caller's checkout timeout (or the caller's death), the lost reply left the worker permanently stuck among busy workers. The pool now tracks unconfirmed hand-offs and reclaims such workers.
+
+### Changed
+
+- `cancel_waiting` is no longer sent to the pool on every successful checkout, only when the checkout times out.
+
 ## [1.6.3] - 2026-05-10
 
 ### Changed
