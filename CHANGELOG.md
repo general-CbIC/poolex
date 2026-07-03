@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-07-03
+
 ### Fixed
 
 - Fixed a worker leak: when a worker hand-off raced with the caller's checkout timeout (or the caller's death), the lost reply left the worker permanently stuck among busy workers. The pool now tracks unconfirmed hand-offs and reclaims such workers.
@@ -414,7 +416,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.3...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.4...HEAD
+[1.6.4]: https://github.com/general-CbIC/poolex/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/general-CbIC/poolex/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/general-CbIC/poolex/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/general-CbIC/poolex/compare/v1.6.0...v1.6.1
