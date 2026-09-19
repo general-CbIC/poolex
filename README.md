@@ -141,7 +141,7 @@ A detailed description of the available configuration options and usage examples
 
 ## Used by
 
-[![Aviasales](https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/companies/aviasales_logo.svg)](https://aviasales.tp.st/VlJlf7Ar)
+[![Aviasales](https://raw.githubusercontent.com/general-CbIC/poolex/develop/assets/companies/aviasales_logo.svg)](https://aviasales.tpo.mx/vkeRTqek)
 
 <!-- ## Sponsored by
 
