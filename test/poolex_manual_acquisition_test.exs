@@ -351,4 +351,96 @@ defmodule PoolexManualAcquisitionTest do
       assert map_size(state_final.manual_monitors) == 0
     end
   end
+
+  describe "caller dies abnormally right after release" do
+    # The caller releases its worker and exits abnormally before the pool has processed the release.
+    # Its monitor sees the death and reports it, but by then the worker already belongs to the next
+    # caller. The pool is suspended to hold the release and the monitor's report in its mailbox,
+    # as happens under load.
+    for exit_reason <- [:boom, :shutdown] do
+      test "worker handed to the next caller survives (exit reason #{inspect(exit_reason)})" do
+        pool_id = start_pool(worker_module: SomeWorker, workers_count: 1)
+        test_pid = self()
+
+        first_caller =
+          spawn(fn ->
+            Poolex.run(pool_id, fn worker ->
+              send(test_pid, {:first_got, worker})
+              receive do: (:finish -> :ok)
+            end)
+
+            exit(unquote(exit_reason))
+          end)
+
+        assert_receive {:first_got, worker_pid}
+        wait_until(fn -> Map.has_key?(:sys.get_state(pool_id).manual_monitors, worker_pid) end)
+        {^first_caller, monitor_pid} = :sys.get_state(pool_id).manual_monitors[worker_pid]
+
+        second_caller = spawn_waiting_caller(pool_id, test_pid)
+        wait_until(fn -> not WaitingCallers.empty?(:sys.get_state(pool_id)) end)
+
+        :sys.suspend(pool_id)
+        first_caller_ref = Process.monitor(first_caller)
+        monitor_ref = Process.monitor(monitor_pid)
+        send(first_caller, :finish)
+        assert_receive {:DOWN, ^first_caller_ref, _, _, unquote(exit_reason)}
+        # The monitor has already reported the abnormal exit to the pool
+        assert_receive {:DOWN, ^monitor_ref, _, _, :normal}
+        :sys.resume(pool_id)
+
+        assert_receive {:second_got, ^worker_pid}
+        worker_ref = Process.monitor(worker_pid)
+        refute_receive {:DOWN, ^worker_ref, _, _, _}, 100
+
+        state = :sys.get_state(pool_id)
+        assert BusyWorkers.member?(state, worker_pid)
+        assert {^second_caller, _monitor_pid} = state.manual_monitors[worker_pid]
+      end
+    end
+
+    test "late report does not touch the next caller's acquisition" do
+      pool_id = start_pool(worker_module: SomeWorker, workers_count: 1)
+      test_pid = self()
+
+      {:ok, worker_pid} = Poolex.acquire(pool_id)
+      {_caller_pid, stale_monitor_pid} = :sys.get_state(pool_id).manual_monitors[worker_pid]
+      second_caller = spawn_waiting_caller(pool_id, test_pid)
+      wait_until(fn -> not WaitingCallers.empty?(:sys.get_state(pool_id)) end)
+
+      Poolex.release(pool_id, worker_pid)
+      assert_receive {:second_got, ^worker_pid}
+      wait_until(fn -> match?({^second_caller, _}, :sys.get_state(pool_id).manual_monitors[worker_pid]) end)
+      {^second_caller, monitor_pid} = :sys.get_state(pool_id).manual_monitors[worker_pid]
+
+      # The report of the first acquisition's monitor arrives after the second caller registered
+      GenServer.cast(pool_id, {:manual_caller_down, worker_pid, stale_monitor_pid})
+
+      worker_ref = Process.monitor(worker_pid)
+      refute_receive {:DOWN, ^worker_ref, _, _, _}, 100
+      assert Process.alive?(monitor_pid)
+      assert {^second_caller, ^monitor_pid} = :sys.get_state(pool_id).manual_monitors[worker_pid]
+
+      # The second caller can still release the worker
+      send(second_caller, :release)
+      wait_until(fn -> IdleWorkers.member?(:sys.get_state(pool_id), worker_pid) end)
+    end
+  end
+
+  # Starts a caller that waits for a worker, reports it and releases it on request.
+  defp spawn_waiting_caller(pool_id, test_pid) do
+    spawn(fn ->
+      {:ok, worker_pid} = Poolex.acquire(pool_id)
+      send(test_pid, {:second_got, worker_pid})
+      receive do: (:release -> Poolex.release(pool_id, worker_pid))
+      Process.sleep(:infinity)
+    end)
+  end
+
+  defp wait_until(fun, attempts \\ 100) do
+    cond do
+      fun.() -> :ok
+      attempts == 0 -> flunk("Condition was not met in time")
+      true -> Process.sleep(5) && wait_until(fun, attempts - 1)
+    end
+  end
 end
