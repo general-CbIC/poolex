@@ -89,17 +89,18 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 
 - Test files are in `test/` directory
 - Test support modules in `test/support/`
-- Use `Poolex.start_link/1` to start pools in tests
+- Start pools with `PoolHelpers.start_pool/1` (`test/support/pool_helpers.ex`, wraps `start_supervised`); the default `pool_id` is the worker module
 - Common test pattern: start pool → call `Poolex.run/3` → verify behavior
-- Use `Process.sleep/1` for timing-sensitive tests
+- Prefer waiting on a condition (poll `:sys.get_state/1`, `assert_receive` an explicit signal) over fixed `Process.sleep/1`; fixed sleeps and "ready" messages sent before the action under test are the usual source of flakes (known flaky test: see "Tests" in TODO.md)
+- To reproduce races between messages in the pool's mailbox deterministically, `:sys.suspend(pool)` → trigger the senders → wait for them (e.g. `assert_receive {:DOWN, ...}`) → `:sys.resume(pool)`. This emulates a loaded pool. Example: `describe "caller dies abnormally right after release"` in `test/poolex_manual_acquisition_test.exs`
 - Registry-based naming for test isolation
 
 ## Git Workflow
 
-- Uses git-flow: `main` for releases, `develop` for development
-- Feature branches: `git flow feature start <feature_name>`
+- Uses git-flow branch naming: `main` for releases, `develop` for development; PRs target `develop`
+- `git flow` tooling is not initialized in the repo — create feature branches with plain `git checkout -b feature/<name>` from `develop`
 - Always rebase, never merge when integrating upstream changes
-- Run `mix check` before committing
+- Run `mix check` before committing. After a failed run, `mix check` re-runs only the failed tools (retry mode); use `mix check --no-retry` for a full run
 
 ## Requirements
 
@@ -125,6 +126,7 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 - Limitation: Can't unmonitor by pid, only by reference
 - Makes features like `remove_idle_workers!` difficult to implement correctly
 - Pool sets `trap_exit: true` in `init/1` and handles `{:EXIT, pid, reason}` in `handle_info` (stops the pool gracefully on exit signals)
+- Every `acquire/2` (and so every `run/3`) spawns a watcher process (`start_manual_monitor/3`) that reports an abnormal caller death as `{:manual_caller_down, worker, monitor_pid}`. The report is asynchronous and can arrive after the worker was released and handed to another caller, so the pool acts on it only while `manual_monitors[worker]` still points at that monitor. Any new asynchronous message about a specific worker needs the same kind of ownership check
 
 **Proposed Future Improvement (see TODO.md):**
 
