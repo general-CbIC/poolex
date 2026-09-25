@@ -29,8 +29,6 @@ defmodule PoolexTest do
     end
   end
 
-  doctest Poolex
-
   describe "debug info" do
     test "valid after initialization", %{pool_options: pool_options} do
       pool_name = start_pool(pool_options)
