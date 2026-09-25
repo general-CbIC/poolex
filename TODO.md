@@ -206,16 +206,6 @@ The four-branch `cond` (`lib/poolex.ex:465-509`) spans ~45 lines with inline sta
 
 `release_overflowed_worker/2` (`lib/poolex.ex:728`) schedules `{:delayed_stop_worker, worker}` with `worker_shutdown_delay + 10` ms and then relies on `expired?/2` (`idle_overflowed_workers.ex:87`) doing a monotonic-time comparison. If we instead stored the timer reference per worker and called `Process.cancel_timer/1` on pop, we could drop both the `+ 10` fudge and the `expired?` helper entirely.
 
-## Tests
-
-### Flaky "provides new workers to waiting callers"
-
-`test/poolex_test.exs` ("provides new workers to waiting callers") fails in about 1 of 30 runs with `Enum.count(debug_info.waiting_callers) == 1` getting `0`. The spawned caller sends its "ready" message to the test process *before* calling `Poolex.run/3`, so the test can read `DebugInfo` before the caller joins the waiting queue.
-
-**Fix:** poll until the caller is queued (e.g. `WaitingCallers.empty?(:sys.get_state(pool))` turns false) instead of relying on the pre-`run` message.
-
-**Broader:** the suite has ~50 fixed `Process.sleep`/`:timer.sleep` waits (`poolex_test.exs`, `poolex_manual_acquisition_test.exs`). Each is a potential flake on a loaded CI runner; prefer polling pool state or `assert_receive` on an explicit signal.
-
 ## Minor
 
 ### Dead clause in `Poolex.Workers.Impl.List.pop/1`

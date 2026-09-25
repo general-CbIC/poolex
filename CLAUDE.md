@@ -91,7 +91,11 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 - Test support modules in `test/support/`
 - Start pools with `PoolHelpers.start_pool/1` (`test/support/pool_helpers.ex`, wraps `start_supervised`); the default `pool_id` is the worker module
 - Common test pattern: start pool → call `Poolex.run/3` → verify behavior
-- Prefer waiting on a condition (poll `:sys.get_state/1`, `assert_receive` an explicit signal) over fixed `Process.sleep/1`; fixed sleeps and "ready" messages sent before the action under test are the usual source of flakes (known flaky test: see "Tests" in TODO.md)
+- Don't wait for the pool with a fixed `Process.sleep/1` — that is what made the suite flaky on loaded CI runners. Wrap the assertion in `PoolHelpers.eventually/2` (retries until it passes or times out), or `assert_receive` an explicit signal sent *after* the action under test. `launch_long_task(s)` already returns only once every caller holds a worker or is queued
+- Make sure an `eventually` assertion can't pass on the initial state (e.g. await the tasks that change the state first)
+- Casts sent by the test process are handled before its next `:sys.get_state/1` or `GenServer.call` to the pool, so no wait is needed in between
+- Keep fixed sleeps only for checking that something does *not* happen, or where elapsed time is the point (shutdown delays); leave margins of hundreds of milliseconds
+- Timing flakes rarely show up on an idle dev machine. To shake them out locally, run the suite under CPU contention, e.g. start one `yes > /dev/null` per core and loop `ERL_FLAGS="+S 2:2" mix test --seed $RANDOM` (under such load sleeps overshoot by up to ~400 ms)
 - To reproduce races between messages in the pool's mailbox deterministically, `:sys.suspend(pool)` → trigger the senders → wait for them (e.g. `assert_receive {:DOWN, ...}`) → `:sys.resume(pool)`. This emulates a loaded pool. Example: `describe "caller dies abnormally right after release"` in `test/poolex_manual_acquisition_test.exs`
 - Registry-based naming for test isolation
 
