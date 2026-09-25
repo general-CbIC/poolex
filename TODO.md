@@ -14,46 +14,6 @@ Pool size metrics (idle/busy workers count, overflow flag) are already implement
 
 ## Bugs & Correctness
 
-### Fix race condition in `start_manual_monitor`
-
-**Current problem (`lib/poolex.ex:802`):**
-A monitor process is spawned for every `acquire/2` call (and therefore for every `run/3` call) to watch the caller and kill the worker if the caller dies abnormally. This creates a race condition:
-
-1. Caller A holds Worker W
-2. Caller A calls `release/2` → pool removes W from `manual_monitors`, calls `Process.exit(monitor_pid, :kill)`
-3. But the monitor process **already received** `{:DOWN, ...}` before being killed (caller died abnormally just before release)
-4. Monitor sends `GenServer.cast(pool_id, {:stop_worker, W})`
-5. Pool may have already given W to Caller B
-6. Pool receives `{:stop_worker, W}` → kills W, which now belongs to Caller B
-
-**Contributing issue:**
-`handle_cast({:stop_worker, worker_pid})` does not check the worker's current state before killing it:
-
-```elixir
-# lib/poolex.ex:640 — no ownership check
-def handle_cast({:stop_worker, worker_pid}, %State{} = state) do
-  stop_worker(state.supervisor, worker_pid)
-  {:noreply, state}
-end
-```
-
-**Proposed fix:**
-Before stopping, verify the worker is still in `BusyWorkers` and still owned by the expected caller:
-
-```elixir
-def handle_cast({:stop_worker, worker_pid, caller_pid}, %State{} = state) do
-  case Map.get(state.manual_monitors, worker_pid) do
-    {^caller_pid, _monitor_pid} ->
-      stop_worker(state.supervisor, worker_pid)
-    _ ->
-      :ok  # worker already released or belongs to another caller — do nothing
-  end
-  {:noreply, state}
-end
-```
-
-Pass `caller_pid` alongside `worker_pid` when sending `{:stop_worker}` from the monitor process.
-
 ### Fix dangling caller monitors (both timeout and success paths)
 
 **Current problem:**
@@ -88,6 +48,14 @@ Since the unconfirmed-checkouts tracking was added, callers that went through th
 
 **Proposed fix:**
 Collapse into a single atomic call that takes the worker and registers the monitor in one `handle_call`. The caller pid is trivially available via `GenServer.call`'s `from` argument, so no extra data needs to be passed. This also makes the unconfirmed-checkouts bookkeeping simpler: hand-off and confirmation become one step.
+
+### Investigate worker found dead in "workers stop before the pool with reason :exit"
+
+Failed once on CI (develop, OTP 27 / Elixir 1.18, seed 80271, `{:global, SomeWorkerGlobal}` parameters): the worker's `:DOWN` came with `:noproc` instead of `:shutdown`. So the worker was already dead when the test monitored it, right after `Poolex.run/3` returned it and before the test sent the exit to the pool. The pool's stop log shows it stopped because of the test's exit signal, not earlier.
+
+Not reproduced locally (~30 full runs and 40 runs of the test alone under CPU load, 3000 iterations of the same sequence in a script). No code path found that stops a worker of a fresh pool without overflow: `manual_caller_down` requires the reporting monitor to still guard the worker, and late messages from earlier tests' callers carry other workers' pids. Nothing was logged for the worker, so it did not crash: it exited with `:shutdown`, `:killed` or `:normal`.
+
+The test now appends diagnostics to its failure: the pool's `:sys.log` events, its state and supervisor children right after `run/3`, and a trace of the initial worker's exit reason and unlinks (a worker stopped by `DynamicSupervisor.terminate_child/2` is unlinked from the supervisor first). Use them on the next failure, then remove the instrumentation.
 
 ## Architecture Improvements
 
@@ -153,16 +121,16 @@ monitors: %{reference() => :worker | :waiting_caller}
 
 ### Replace per-acquire spawn monitor with `Process.monitor` in the pool
 
-**Current problem (`lib/poolex.ex:802`):**
-`start_manual_monitor/3` spawns a dedicated process for every manual acquisition just to watch the caller and cast `{:stop_worker, W}` if it dies. Since `run/3` is built on `acquire/release`, **every single checkout** pays for this extra process (plus a `Process.exit(_, :kill)` on release). The pool **already** traps exits and handles `{:DOWN, ...}` messages, so this extra process is pure ceremony — and it's the source of the `:stop_worker` race condition above.
+**Current problem:**
+`start_manual_monitor/3` spawns a dedicated process for every manual acquisition just to watch the caller and cast `{:manual_caller_down, W, monitor_pid}` if it dies. Since `run/3` is built on `acquire/release`, **every single checkout** pays for this extra process (plus a `Process.exit(_, :kill)` on release). The pool **already** traps exits and handles `{:DOWN, ...}` messages, so this extra process is pure ceremony. Its asynchronous report can also arrive after the worker was released and handed to another caller; the pool has to filter such late reports by the monitor pid.
 
 **Proposed fix:**
 - On `register_manual_acquisition`: `ref = Process.monitor(caller_pid)`; store `%{manual_acquisitions => %{ref => worker_pid, worker_pid => ref}}` (or a bidirectional map).
 - On `release_manual_worker`: `Process.demonitor(ref, [:flush])` and clean up.
 - In `handle_info({:DOWN, ref, ...})`: look up the worker, stop it, release or replace as usual.
-- Drop `start_manual_monitor/3`, `:cleanup_manual_monitor`, `:stop_worker` casts entirely.
+- Drop `start_manual_monitor/3` and the `:manual_caller_down` cast entirely.
 
-Eliminates the race condition, removes a whole layer of processes, reduces mailbox churn.
+Eliminates late reports by construction, removes a whole layer of processes, reduces mailbox churn.
 
 ### Stop always-on retry ticker
 

@@ -89,17 +89,22 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 
 - Test files are in `test/` directory
 - Test support modules in `test/support/`
-- Use `Poolex.start_link/1` to start pools in tests
+- Start pools with `PoolHelpers.start_pool/1` (`test/support/pool_helpers.ex`, wraps `start_supervised`); the default `pool_id` is the worker module
 - Common test pattern: start pool → call `Poolex.run/3` → verify behavior
-- Use `Process.sleep/1` for timing-sensitive tests
+- Don't wait for the pool with a fixed `Process.sleep/1` — that is what made the suite flaky on loaded CI runners. Wrap the assertion in `PoolHelpers.eventually/2` (retries until it passes or times out), or `assert_receive` an explicit signal sent *after* the action under test. `launch_long_task(s)` already returns only once every caller holds a worker or is queued
+- Make sure an `eventually` assertion can't pass on the initial state (e.g. await the tasks that change the state first)
+- Casts sent by the test process are handled before its next `:sys.get_state/1` or `GenServer.call` to the pool, so no wait is needed in between
+- Keep fixed sleeps only for checking that something does *not* happen, or where elapsed time is the point (shutdown delays); leave margins of hundreds of milliseconds
+- Timing flakes rarely show up on an idle dev machine. To shake them out locally, run the suite under CPU contention, e.g. start one `yes > /dev/null` per core and loop `ERL_FLAGS="+S 2:2" mix test --seed $RANDOM` (under such load sleeps overshoot by up to ~400 ms)
+- To reproduce races between messages in the pool's mailbox deterministically, `:sys.suspend(pool)` → trigger the senders → wait for them (e.g. `assert_receive {:DOWN, ...}`) → `:sys.resume(pool)`. This emulates a loaded pool. Example: `describe "caller dies abnormally right after release"` in `test/poolex_manual_acquisition_test.exs`
 - Registry-based naming for test isolation
 
 ## Git Workflow
 
-- Uses git-flow: `main` for releases, `develop` for development
-- Feature branches: `git flow feature start <feature_name>`
+- Uses git-flow branch naming: `main` for releases, `develop` for development; PRs target `develop`
+- `git flow` tooling is not initialized in the repo — create feature branches with plain `git checkout -b feature/<name>` from `develop`
 - Always rebase, never merge when integrating upstream changes
-- Run `mix check` before committing
+- Run `mix check` before committing. After a failed run, `mix check` re-runs only the failed tools (retry mode); use `mix check --no-retry` for a full run
 
 ## Requirements
 
@@ -125,6 +130,7 @@ Key pool configuration (see `Poolex.poolex_option()` type):
 - Limitation: Can't unmonitor by pid, only by reference
 - Makes features like `remove_idle_workers!` difficult to implement correctly
 - Pool sets `trap_exit: true` in `init/1` and handles `{:EXIT, pid, reason}` in `handle_info` (stops the pool gracefully on exit signals)
+- Every `acquire/2` (and so every `run/3`) spawns a watcher process (`start_manual_monitor/3`) that reports an abnormal caller death as `{:manual_caller_down, worker, monitor_pid}`. The report is asynchronous and can arrive after the worker was released and handed to another caller, so the pool acts on it only while `manual_monitors[worker]` still points at that monitor. Any new asynchronous message about a specific worker needs the same kind of ownership check
 
 **Proposed Future Improvement (see TODO.md):**
 

@@ -20,6 +20,7 @@ defmodule PoolexTest do
   alias Poolex.Private.DebugInfo
   alias Poolex.Private.IdleOverflowedWorkers
   alias Poolex.Private.Options.Parser, as: OptionsParser
+  alias Poolex.Private.State
 
   setup_all do
     if Version.match?(System.version(), ">= 1.18.0") do
@@ -28,8 +29,6 @@ defmodule PoolexTest do
       [pool_options: [pool_id: SomeWorker, worker_module: SomeWorker, workers_count: 5]]
     end
   end
-
-  doctest Poolex
 
   describe "debug info" do
     test "valid after initialization", %{pool_options: pool_options} do
@@ -200,12 +199,10 @@ defmodule PoolexTest do
 
       Process.exit(some_worker_pid, :kill)
 
-      # To be sure that DOWN message will be handed
-      :timer.sleep(1)
-
-      [new_worker_pid] = DebugInfo.get_debug_info(pool_name).idle_workers_pids
-
-      assert some_worker_pid != new_worker_pid
+      eventually(fn ->
+        assert [new_worker_pid] = DebugInfo.get_debug_info(pool_name).idle_workers_pids
+        assert some_worker_pid != new_worker_pid
+      end)
     end
 
     test "works on busy workers", %{pool_options: pool_options} do
@@ -228,12 +225,10 @@ defmodule PoolexTest do
 
       Process.exit(some_worker_pid, :kill)
 
-      # To be sure that DOWN message will be handed
-      :timer.sleep(1)
-
-      [new_worker_pid] = DebugInfo.get_debug_info(pool_name).idle_workers_pids
-
-      assert some_worker_pid != new_worker_pid
+      eventually(fn ->
+        assert [new_worker_pid] = DebugInfo.get_debug_info(pool_name).idle_workers_pids
+        assert some_worker_pid != new_worker_pid
+      end)
     end
 
     test "restart busy workers when pending callers", %{pool_options: pool_options} do
@@ -248,26 +243,20 @@ defmodule PoolexTest do
       [busy_worker_pid] = debug_info.busy_workers_pids
       Process.exit(busy_worker_pid, :kill)
 
-      # To be sure that DOWN message will be handed
-      :timer.sleep(1)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.busy_workers_count == 1
-      assert Enum.empty?(debug_info.waiting_callers)
-
-      [new_worker_pid] = debug_info.busy_workers_pids
-
-      assert busy_worker_pid != new_worker_pid
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert Enum.empty?(debug_info.waiting_callers)
+        assert [new_worker_pid] = debug_info.busy_workers_pids
+        assert busy_worker_pid != new_worker_pid
+      end)
     end
 
     test "works on callers", %{pool_options: pool_options} do
       pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
-      Enum.each(1..10, fn _ ->
-        spawn(fn ->
-          Poolex.run(pool_name, fn pid -> GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)}) end)
-        end)
-      end)
+      # One caller takes the only worker, nine wait. Launched first, so that `waiting_caller` below
+      # is guaranteed to end up in the queue.
+      launch_long_tasks(pool_name, 10)
 
       waiting_caller =
         spawn(fn ->
@@ -276,24 +265,25 @@ defmodule PoolexTest do
           end)
         end)
 
-      :timer.sleep(10)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert length(debug_info.waiting_callers) == 10
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert length(debug_info.waiting_callers) == 10
-
-      assert Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
-               pid == waiting_caller
-             end)
+        assert Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
+                 pid == waiting_caller
+               end)
+      end)
 
       Process.exit(waiting_caller, :kill)
-      :timer.sleep(10)
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert length(debug_info.waiting_callers) == 9
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert length(debug_info.waiting_callers) == 9
 
-      refute Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
-               pid == waiting_caller
-             end)
+        refute Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
+                 pid == waiting_caller
+               end)
+      end)
     end
 
     test "release busy worker when caller dies", %{pool_options: pool_options} do
@@ -306,27 +296,25 @@ defmodule PoolexTest do
           end)
         end)
 
-      :timer.sleep(10)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.idle_workers_count == 1
-
-      [busy_worker_pid] = debug_info.busy_workers_pids
+      busy_worker_pid =
+        eventually(fn ->
+          debug_info = DebugInfo.get_debug_info(pool_name)
+          assert debug_info.idle_workers_count == 1
+          assert [busy_worker_pid] = debug_info.busy_workers_pids
+          busy_worker_pid
+        end)
 
       Process.exit(caller, :kill)
 
-      :timer.sleep(10)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
+        assert debug_info.busy_workers_count == 0
+        assert debug_info.idle_workers_count == 2
 
-      assert debug_info.busy_workers_count == 0
-      assert debug_info.idle_workers_count == 2
-
-      # Busy worker should be restarted if caller dies
-      # NOTE: may be I should write a test using :do_some_work_with_delay
-      refute busy_worker_pid in debug_info.idle_workers_pids
+        # Busy worker should be restarted if caller dies
+        refute busy_worker_pid in debug_info.idle_workers_pids
+      end)
     end
 
     test "release busy worker when caller dies (overflow case)", %{pool_options: pool_options} do
@@ -339,21 +327,21 @@ defmodule PoolexTest do
           end)
         end)
 
-      :timer.sleep(10)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.idle_workers_count == 0
+        assert debug_info.busy_workers_count == 1
+        assert debug_info.idle_workers_count == 0
+      end)
 
       Process.exit(caller, :kill)
 
-      :timer.sleep(10)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-
-      assert debug_info.busy_workers_count == 0
-      assert debug_info.idle_workers_count == 0
+        assert debug_info.busy_workers_count == 0
+        assert debug_info.idle_workers_count == 0
+      end)
     end
 
     test "runtime errors", %{pool_options: pool_options} do
@@ -361,13 +349,13 @@ defmodule PoolexTest do
 
       catch_exit(Poolex.run(pool_name, fn pid -> GenServer.call(pid, :do_raise) end))
 
-      :timer.sleep(10)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-
-      assert debug_info.busy_workers_count == 0
-      assert debug_info.idle_workers_count == 1
-      assert debug_info.idle_workers_pids |> hd() |> Process.alive?()
+        assert debug_info.busy_workers_count == 0
+        assert debug_info.idle_workers_count == 1
+        assert debug_info.idle_workers_pids |> hd() |> Process.alive?()
+      end)
     end
   end
 
@@ -384,24 +372,28 @@ defmodule PoolexTest do
             fn pid ->
               GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)})
             end,
-            checkout_timeout: 100
+            checkout_timeout: 1_000
           )
         end)
 
-      :timer.sleep(10)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert length(debug_info.waiting_callers) == 1
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert length(debug_info.waiting_callers) == 1
+        assert Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
+                 pid == waiting_caller
+               end)
+      end)
 
-      assert Enum.any?(debug_info.waiting_callers, fn %Poolex.Caller{from: {pid, _tag}} ->
-               pid == waiting_caller
-             end)
-
-      :timer.sleep(100)
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert Enum.empty?(debug_info.waiting_callers)
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.idle_workers_count == 0
+      eventually(
+        fn ->
+          debug_info = DebugInfo.get_debug_info(pool_name)
+          assert Enum.empty?(debug_info.waiting_callers)
+          assert debug_info.busy_workers_count == 1
+          assert debug_info.idle_workers_count == 0
+        end,
+        2_000
+      )
     end
 
     test "run/3 returns error on checkout timeout", %{pool_options: pool_options} do
@@ -418,12 +410,12 @@ defmodule PoolexTest do
 
       assert result == {:error, :checkout_timeout}
 
-      :timer.sleep(10)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert Enum.empty?(debug_info.waiting_callers)
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.idle_workers_count == 0
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert Enum.empty?(debug_info.waiting_callers)
+        assert debug_info.busy_workers_count == 1
+        assert debug_info.idle_workers_count == 0
+      end)
     end
 
     test "handle worker's timeout", %{pool_options: pool_options} do
@@ -449,7 +441,8 @@ defmodule PoolexTest do
 
       pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
-      delay = 100
+      # Long enough for the second process to find the worker busy even on a loaded machine
+      delay = 500
 
       process_1 =
         spawn(fn ->
@@ -462,8 +455,8 @@ defmodule PoolexTest do
 
       reference_1 = Process.monitor(process_1)
 
-      # Wait a bit to ensure the first process sended the message
-      Process.sleep(10)
+      # The first process holds the worker now
+      assert_receive {:worker, worker}, 1000
 
       process_2 =
         spawn(fn ->
@@ -485,15 +478,15 @@ defmodule PoolexTest do
 
       reference_2 = Process.monitor(process_2)
 
-      assert_receive {:worker, worker}, 1000
       assert_receive {:waiting, ^process_2}, 1000
-      assert_receive {:DOWN, ^reference_1, :process, ^process_1, _}, 1000
+      assert_receive {:DOWN, ^reference_1, :process, ^process_1, _}, 2_000
       refute_received _
 
-      Process.sleep(100)
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.busy_workers_count == 0
-      assert debug_info.idle_workers_pids == [worker]
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert debug_info.busy_workers_count == 0
+        assert debug_info.idle_workers_pids == [worker]
+      end)
 
       send(process_2, :finish)
       assert_receive {:DOWN, ^reference_2, :process, ^process_2, _}
@@ -508,7 +501,7 @@ defmodule PoolexTest do
 
       waiting_caller =
         spawn(fn ->
-          result = Poolex.run(pool_name, fn _pid -> :ok end, checkout_timeout: 100)
+          result = Poolex.run(pool_name, fn _pid -> :ok end, checkout_timeout: 1_000)
           send(test_pid, {:checkout_result, result})
 
           receive do
@@ -516,17 +509,14 @@ defmodule PoolexTest do
           end
         end)
 
-      :timer.sleep(10)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert length(debug_info.waiting_callers) == 1
+      eventually(fn -> assert length(DebugInfo.get_debug_info(pool_name).waiting_callers) == 1 end)
 
       # Suspend the pool so that the released worker and the caller's timeout "cross paths":
       # the pool hands the worker to the caller only after the caller has given up waiting,
       # so the reply is lost.
       :sys.suspend(pool_name)
       Poolex.release(pool_name, worker)
-      assert_receive {:checkout_result, {:error, :checkout_timeout}}, 1000
+      assert_receive {:checkout_result, {:error, :checkout_timeout}}, 2_000
       :sys.resume(pool_name)
 
       debug_info = DebugInfo.get_debug_info(pool_name)
@@ -547,10 +537,7 @@ defmodule PoolexTest do
           Poolex.run(pool_name, fn _pid -> :ok end, checkout_timeout: :infinity)
         end)
 
-      :timer.sleep(10)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert length(debug_info.waiting_callers) == 1
+      eventually(fn -> assert length(DebugInfo.get_debug_info(pool_name).waiting_callers) == 1 end)
 
       # The pool processes the release only after the waiting caller has died,
       # but before the caller's DOWN message.
@@ -586,10 +573,7 @@ defmodule PoolexTest do
           Process.sleep(:infinity)
         end)
 
-      :timer.sleep(10)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert length(debug_info.waiting_callers) == 1
+      eventually(fn -> assert length(DebugInfo.get_debug_info(pool_name).waiting_callers) == 1 end)
 
       Poolex.release(pool_name, worker)
       assert_receive {:got_worker, ^worker}, 1000
@@ -598,11 +582,11 @@ defmodule PoolexTest do
       Process.exit(waiting_caller, :kill)
       assert_receive {:DOWN, ^reference, :process, ^waiting_caller, :killed}, 1000
 
-      :timer.sleep(10)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.busy_workers_count == 0
-      assert debug_info.idle_workers_pids == [worker]
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert debug_info.busy_workers_count == 0
+        assert debug_info.idle_workers_pids == [worker]
+      end)
     end
 
     test "cancel_waiting after a lost checkout reply reclaims the worker", %{pool_options: pool_options} do
@@ -663,16 +647,19 @@ defmodule PoolexTest do
 
       launch_long_task(pool_name)
 
-      spawn(fn -> Poolex.run(pool_name, &is_pid/1) end)
-      spawn(fn -> Poolex.run(pool_name, &is_pid/1) end)
+      [{:ok, true}, {:ok, true}] =
+        Task.await_many([
+          Task.async(fn -> Poolex.run(pool_name, &is_pid/1) end),
+          Task.async(fn -> Poolex.run(pool_name, &is_pid/1) end)
+        ])
 
-      :timer.sleep(50)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.idle_workers_count == 0
-      assert debug_info.overflow == 0
+        assert debug_info.busy_workers_count == 1
+        assert debug_info.idle_workers_count == 0
+        assert debug_info.overflow == 0
+      end)
     end
 
     test "allows workers_count: 0", %{pool_options: pool_options} do
@@ -690,7 +677,7 @@ defmodule PoolexTest do
 
       spawn(fn ->
         Poolex.run(pool_name, fn server ->
-          SomeWorker.traceable_call(server, pid, :foo, 50)
+          SomeWorker.traceable_call(server, pid, :foo, 300)
         end)
       end)
 
@@ -705,14 +692,17 @@ defmodule PoolexTest do
       assert debug_info.busy_workers_pids == [worker_pid]
       assert debug_info.overflow == 1
 
-      assert_receive {:traceable_end, :foo, ^worker_pid}
-      debug_info = DebugInfo.get_debug_info(pool_name)
+      assert_receive {:traceable_end, :foo, ^worker_pid}, 1000
 
-      assert debug_info.idle_workers_count == 0
-      assert debug_info.idle_workers_pids == []
-      assert debug_info.busy_workers_count == 0
-      assert debug_info.busy_workers_pids == []
-      assert debug_info.overflow == 0
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+
+        assert debug_info.idle_workers_count == 0
+        assert debug_info.idle_workers_pids == []
+        assert debug_info.busy_workers_count == 0
+        assert debug_info.busy_workers_pids == []
+        assert debug_info.overflow == 0
+      end)
     end
   end
 
@@ -764,36 +754,66 @@ defmodule PoolexTest do
 
       pool_pid = GenServer.whereis(pool_name)
 
+      # Diagnostics for a rare CI failure (see TODO.md): the worker was already dead when the test
+      # monitored it. Record the messages the pool handles and how its workers exit.
+      :ok = :sys.log(pool_pid, {true, 100})
+
       state = :sys.get_state(pool_name)
 
       supervisor_pid = state.supervisor
+      worker_tracer = trace_worker_exits(supervisor_pid)
+
       {:ok, worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      after_run = %{
+        at: :erlang.monotonic_time(),
+        worker_alive?: Process.alive?(worker_pid),
+        pool_state: :sys.get_state(pool_name),
+        pool_events: pool_events(pool_pid),
+        supervisor_children: DynamicSupervisor.which_children(supervisor_pid)
+      }
 
       pool_monitor_ref = Process.monitor(pool_pid)
       supervisor_monitor_ref = Process.monitor(supervisor_pid)
       worker_monitor_ref = Process.monitor(worker_pid)
 
+      exit_sent_at = :erlang.monotonic_time()
       Process.exit(pool_pid, :exit)
 
-      :timer.sleep(30)
+      try do
+        eventually(fn -> assert {:message_queue_len, 3} = Process.info(self(), :message_queue_len) end)
 
-      assert {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
+        assert {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
 
-      assert elem(message_1, 0) == :DOWN
-      assert elem(message_1, 1) == worker_monitor_ref
-      assert elem(message_1, 2) == :process
-      assert elem(message_1, 3) == worker_pid
-      assert elem(message_1, 4) == :shutdown
+        assert elem(message_1, 0) == :DOWN
+        assert elem(message_1, 1) == worker_monitor_ref
+        assert elem(message_1, 2) == :process
+        assert elem(message_1, 3) == worker_pid
+        assert elem(message_1, 4) == :shutdown
 
-      assert elem(message_2, 0) == :DOWN
-      assert elem(message_2, 1) == supervisor_monitor_ref
-      assert elem(message_2, 2) == :process
-      assert elem(message_2, 3) == supervisor_pid
+        assert elem(message_2, 0) == :DOWN
+        assert elem(message_2, 1) == supervisor_monitor_ref
+        assert elem(message_2, 2) == :process
+        assert elem(message_2, 3) == supervisor_pid
 
-      assert elem(message_3, 0) == :DOWN
-      assert elem(message_3, 1) == pool_monitor_ref
-      assert elem(message_3, 2) == :process
-      assert elem(message_3, 3) == pool_pid
+        assert elem(message_3, 0) == :DOWN
+        assert elem(message_3, 1) == pool_monitor_ref
+        assert elem(message_3, 2) == :process
+        assert elem(message_3, 3) == pool_pid
+      rescue
+        error in ExUnit.AssertionError ->
+          diagnostics = %{
+            worker_pid: worker_pid,
+            supervisor_pid: supervisor_pid,
+            after_run: after_run,
+            exit_sent_at: exit_sent_at,
+            messages: Process.info(self(), :messages),
+            worker_trace: trace_events(worker_tracer)
+          }
+
+          message = error.message <> "\n\nDiagnostics:\n" <> inspect(diagnostics, pretty: true, limit: :infinity)
+          reraise %{error | message: message}, __STACKTRACE__
+      end
     end
   end
 
@@ -812,22 +832,17 @@ defmodule PoolexTest do
       test_process = self()
 
       spawn(fn ->
-        Process.send(test_process, nil, [])
-
         Poolex.run(pool_name, fn _pid ->
           Process.send(test_process, :started_work, [])
           :timer.sleep(to_timeout(second: 5))
         end)
       end)
 
-      receive do
-        _message -> nil
-      end
+      eventually(fn -> assert Enum.count(DebugInfo.get_debug_info(pool_name).waiting_callers) == 1 end)
 
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.busy_workers_count == 0
       assert debug_info.idle_workers_count == 0
-      assert Enum.count(debug_info.waiting_callers) == 1
       refute_received :started_work
 
       assert :ok = Poolex.add_idle_workers!(pool_name, 1)
@@ -959,11 +974,11 @@ defmodule PoolexTest do
       # Increase the agent value to allow the remaining workers to start
       Agent.update(control_agent, fn _ -> 2 end)
 
-      :timer.sleep(150)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.failed_to_start_workers_count == 0
-      assert debug_info.idle_workers_count == 5
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert debug_info.failed_to_start_workers_count == 0
+        assert debug_info.idle_workers_count == 5
+      end)
     end
   end
 
@@ -989,11 +1004,8 @@ defmodule PoolexTest do
       state = :sys.get_state(pool_name)
       refute BusyWorkers.member?(state, overflowed_worker_pid)
 
-      # Wait for the shutdown delay
-      :timer.sleep(shutdown_delay + 50)
-
-      # Check that the overflowed worker is no longer alive
-      refute Process.alive?(overflowed_worker_pid)
+      # Check that the overflowed worker is stopped after the shutdown delay
+      eventually(fn -> refute Process.alive?(overflowed_worker_pid) end, shutdown_delay + 1_000)
     end
 
     test "overflowed worker is not terminated if used again", %{pool_options: pool_options} do
@@ -1041,10 +1053,8 @@ defmodule PoolexTest do
       # Launch another task to trigger overflow
       {:ok, overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
 
-      :timer.sleep(10)
-
-      # Ensure the overflowed worker is alive
-      refute Process.alive?(overflowed_worker_pid)
+      # Ensure the overflowed worker is stopped
+      eventually(fn -> refute Process.alive?(overflowed_worker_pid) end)
 
       debug_info = DebugInfo.get_debug_info(pool_name)
       assert debug_info.idle_overflowed_workers_count == 0
@@ -1052,7 +1062,7 @@ defmodule PoolexTest do
     end
 
     test "overflowed workers terminates independently of each other", %{pool_options: pool_options} do
-      shutdown_delay = 500
+      shutdown_delay = 600
 
       pool_name =
         pool_options
@@ -1062,55 +1072,58 @@ defmodule PoolexTest do
       # Launch a long task to occupy the worker
       launch_long_task(pool_name)
 
-      # Launch first task to trigger overflow
-      launch_long_task(pool_name, 400)
+      # The first overflowed worker is held until the test releases it
+      test_pid = self()
 
-      # Wait a bit before launching the second overflowed worker
-      :timer.sleep(50)
+      holder =
+        spawn(fn ->
+          Poolex.run(pool_name, fn pid ->
+            send(test_pid, {:holding, pid})
+            receive do: (:release -> :ok)
+          end)
+        end)
+
+      assert_receive {:holding, first_overflowed_worker}, 1000
+
+      # The second overflowed worker is released right away
+      {:ok, second_overflowed_worker} = Poolex.run(pool_name, fn pid -> pid end)
 
       debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.idle_overflowed_workers_count == 0
-      assert debug_info.busy_workers_count == 2
-      assert debug_info.overflow == 1
-
-      # Launch second task to trigger another overflow
-      Poolex.run(pool_name, fn pid -> pid end)
-
-      # Wait to ensure all messages are processed
-      :timer.sleep(20)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.idle_overflowed_workers_count == 1
+      assert debug_info.idle_overflowed_workers_pids == [second_overflowed_worker]
       assert debug_info.busy_workers_count == 2
       assert debug_info.overflow == 2
 
-      # Wait until first overflowed worker is released (~400ms task)
-      :timer.sleep(350)
+      first_ref = Process.monitor(first_overflowed_worker)
+      second_ref = Process.monitor(second_overflowed_worker)
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.idle_overflowed_workers_count == 2
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.overflow == 2
+      # Release the first overflowed worker half a shutdown delay later
+      Process.sleep(div(shutdown_delay, 2))
+      send(holder, :release)
 
-      # Wait for the second overflowed worker (idle since ~70ms) shutdown delay (~580ms)
-      :timer.sleep(300)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert first_overflowed_worker in debug_info.idle_overflowed_workers_pids
+        assert debug_info.busy_workers_count == 1
+      end)
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.idle_overflowed_workers_count == 1
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.overflow == 1
+      # Each worker is stopped after its own idle period, so the second one goes first
+      assert_receive {:DOWN, ref, :process, _pid, _reason}, shutdown_delay + 1_000
+      assert ref == second_ref
+      assert_receive {:DOWN, ^first_ref, :process, _pid, _reason}, shutdown_delay + 1_000
 
-      # Wait for the first overflowed worker (idle since ~410ms) shutdown delay (~920ms)
-      :timer.sleep(300)
-
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.idle_overflowed_workers_count == 0
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.overflow == 0
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert debug_info.idle_overflowed_workers_count == 0
+        assert debug_info.busy_workers_count == 1
+        assert debug_info.overflow == 0
+      end)
     end
 
     test "overflowed worker can be released many times without errors", %{pool_options: pool_options} do
-      shutdown_delay = 100
+      # Reuses are spaced by `reuse_interval`, well within `shutdown_delay`, so the worker must survive
+      # the stale shutdown timers scheduled by earlier releases.
+      shutdown_delay = 800
+      reuse_interval = 300
 
       pool_name =
         pool_options
@@ -1126,22 +1139,13 @@ defmodule PoolexTest do
       # Ensure the overflowed worker is alive
       assert Process.alive?(overflowed_worker_pid)
 
-      # Wait a bit before using the overflowed worker again
-      :timer.sleep(50)
+      # Use the overflowed worker again three times; by the last release the timer from the first
+      # release has already fired, but the worker has never been idle long enough
+      for _i <- 1..3 do
+        Process.sleep(reuse_interval)
+        assert {:ok, ^overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+      end
 
-      # Use the overflowed worker again
-      assert {:ok, ^overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
-
-      # Wait a bit ont more time before using the overflowed worker again
-      :timer.sleep(50)
-
-      # Use the overflowed worker again
-      assert {:ok, ^overflowed_worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
-
-      # Wait a bit again before checking the overflowed worker
-      :timer.sleep(50)
-
-      # Check that the overflowed worker is still alive
       assert Process.alive?(overflowed_worker_pid)
 
       debug_info = DebugInfo.get_debug_info(pool_name)
@@ -1151,18 +1155,61 @@ defmodule PoolexTest do
       assert debug_info.overflow == 1
       assert debug_info.max_overflow == 2
 
-      # Wait for the shutdown delay
-      :timer.sleep(shutdown_delay + 50)
+      # Check that the overflowed worker is stopped after the shutdown delay
+      eventually(fn -> refute Process.alive?(overflowed_worker_pid) end, shutdown_delay + 1_000)
 
-      # Check that the overflowed worker is no longer alive
-      refute Process.alive?(overflowed_worker_pid)
+      eventually(fn ->
+        debug_info = DebugInfo.get_debug_info(pool_name)
+        assert debug_info.idle_overflowed_workers_count == 0
+        assert debug_info.idle_overflowed_workers_pids == []
+        assert debug_info.busy_workers_count == 1
+        assert debug_info.overflow == 0
+        assert debug_info.max_overflow == 2
+      end)
+    end
+  end
 
-      debug_info = DebugInfo.get_debug_info(pool_name)
-      assert debug_info.idle_overflowed_workers_count == 0
-      assert debug_info.idle_overflowed_workers_pids == []
-      assert debug_info.busy_workers_count == 1
-      assert debug_info.overflow == 0
-      assert debug_info.max_overflow == 2
+  # Traces exits, links and unlinks of the supervisor's current workers. A worker stopped by its
+  # supervisor gets unlinked from it before the exit; the trace timestamps are `:erlang.monotonic_time/0`.
+  defp trace_worker_exits(supervisor_pid) do
+    tracer = spawn_link(fn -> collect_trace_events([]) end)
+
+    for {_id, worker, _type, _modules} <- DynamicSupervisor.which_children(supervisor_pid), is_pid(worker) do
+      try do
+        :erlang.trace(worker, true, [:procs, :monotonic_timestamp, {:tracer, tracer}])
+      rescue
+        ArgumentError -> send(tracer, {:not_traced, worker, :already_dead})
+      end
+    end
+
+    tracer
+  end
+
+  defp collect_trace_events(events) do
+    receive do
+      {:get_trace_events, from} -> send(from, {:trace_events, Enum.reverse(events)})
+      event -> collect_trace_events([event | events])
+    end
+  end
+
+  # Messages handled by the pool since `:sys.log/2` was enabled, without the state after each of them
+  defp pool_events(pool_pid) do
+    {:ok, events} = :sys.log(pool_pid, :get)
+
+    Enum.map(events, fn
+      {:out, reply, to, %State{}} -> {:out, reply, to}
+      {:noreply, %State{}} -> :noreply
+      event -> event
+    end)
+  end
+
+  defp trace_events(tracer) do
+    send(tracer, {:get_trace_events, self()})
+
+    receive do
+      {:trace_events, events} -> events
+    after
+      1_000 -> :no_reply_from_tracer
     end
   end
 end

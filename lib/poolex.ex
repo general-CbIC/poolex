@@ -220,11 +220,11 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start_link(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 2)
-      iex> {:ok, worker} = Poolex.acquire(:my_pool)
+      iex> Poolex.start_link(pool_id: :acquire_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 2)
+      iex> {:ok, worker} = Poolex.acquire(:acquire_pool)
       iex> Agent.get(worker, & &1)
       0
-      iex> Poolex.release(:my_pool, worker)
+      iex> Poolex.release(:acquire_pool, worker)
       :ok
 
   ## Safety
@@ -646,22 +646,17 @@ defmodule Poolex do
   end
 
   @impl GenServer
-  def handle_cast({:stop_worker, worker_pid}, %State{} = state) do
-    stop_worker(state.supervisor, worker_pid)
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_cast({:cleanup_manual_monitor, worker_pid}, %State{} = state) do
-    # Clean up manual monitor when worker is killed due to caller crash
+  def handle_cast({:manual_caller_down, worker_pid, monitor_pid}, %State{} = state) do
+    # The monitor may have seen its caller die right after the caller released the worker, and the
+    # worker may already belong to another caller. Stop it only if this monitor still guards it.
     state =
       case Map.get(state.manual_monitors, worker_pid) do
-        nil ->
-          state
-
-        {_caller_pid, monitor_pid} ->
-          Process.exit(monitor_pid, :kill)
+        {_caller_pid, ^monitor_pid} ->
+          stop_worker(state.supervisor, worker_pid)
           %{state | manual_monitors: Map.delete(state.manual_monitors, worker_pid)}
+
+        _released_or_reacquired ->
+          state
       end
 
     {:noreply, state}
@@ -893,8 +888,7 @@ defmodule Poolex do
           # Only kill worker if caller died abnormally (not :normal shutdown)
           # Normal shutdown means release/2 was called explicitly
           if reason != :normal do
-            GenServer.cast(pool_id, {:stop_worker, worker})
-            GenServer.cast(pool_id, {:cleanup_manual_monitor, worker})
+            GenServer.cast(pool_id, {:manual_caller_down, worker, self()})
           end
       end
     end)

@@ -93,16 +93,17 @@ defmodule PoolexManualAcquisitionTest do
 
       # Crash the caller
       send(crashed_caller, :crash)
-      Process.sleep(50)
 
       # Verify worker was killed (restarted, not the same PID)
-      state_after = :sys.get_state(pool_id)
-      refute BusyWorkers.member?(state_after, worker_pid)
-      refute IdleWorkers.member?(state_after, worker_pid)
-      refute Map.has_key?(state_after.manual_monitors, worker_pid)
+      eventually(fn ->
+        state_after = :sys.get_state(pool_id)
+        refute BusyWorkers.member?(state_after, worker_pid)
+        refute IdleWorkers.member?(state_after, worker_pid)
+        refute Map.has_key?(state_after.manual_monitors, worker_pid)
 
-      # A new worker should have been started to replace it
-      assert IdleWorkers.count(state_after) == 2
+        # A new worker should have been started to replace it
+        assert IdleWorkers.count(state_after) == 2
+      end)
     end
 
     test "monitor process dies after releasing worker" do
@@ -119,10 +120,9 @@ defmodule PoolexManualAcquisitionTest do
 
       # Release worker
       GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
-      Process.sleep(10)
 
       # Verify monitor process killed
-      refute Process.alive?(monitor_pid)
+      eventually(fn -> refute Process.alive?(monitor_pid) end)
 
       # Verify removed from state
       state_after = :sys.get_state(pool_id)
@@ -146,7 +146,6 @@ defmodule PoolexManualAcquisitionTest do
 
       # Release explicitly
       GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
-      Process.sleep(10)
 
       # Verify returned to idle
       state_after = :sys.get_state(pool_id)
@@ -163,7 +162,6 @@ defmodule PoolexManualAcquisitionTest do
 
       # Should not crash
       GenServer.cast(pool_id, {:release_manual_worker, self(), fake_worker_pid})
-      Process.sleep(10)
 
       # Pool should still be operational
       assert {:ok, _worker} = GenServer.call(pool_id, {:get_idle_worker, make_ref()}, 5_000)
@@ -178,7 +176,6 @@ defmodule PoolexManualAcquisitionTest do
 
       # Release once
       GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
-      Process.sleep(10)
 
       # Verify worker returned to idle
       state_after_first = :sys.get_state(pool_id)
@@ -187,7 +184,6 @@ defmodule PoolexManualAcquisitionTest do
 
       # Release again (should be ignored)
       GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
-      Process.sleep(10)
 
       # State should not change
       state_after_second = :sys.get_state(pool_id)
@@ -210,7 +206,6 @@ defmodule PoolexManualAcquisitionTest do
       # Try to release from a different process (should be ignored)
       other_pid = spawn(fn -> :timer.sleep(1000) end)
       GenServer.cast(pool_id, {:release_manual_worker, other_pid, worker_pid})
-      Process.sleep(10)
 
       # Worker should still be busy
       state_after = :sys.get_state(pool_id)
@@ -237,11 +232,8 @@ defmodule PoolexManualAcquisitionTest do
           send(test_pid, {:got_worker, result})
         end)
 
-      Process.sleep(50)
-
       # Verify caller is waiting
-      state_waiting = :sys.get_state(pool_id)
-      assert length(WaitingCallers.to_list(state_waiting)) == 1
+      eventually(fn -> assert length(WaitingCallers.to_list(:sys.get_state(pool_id))) == 1 end)
 
       # Release worker
       GenServer.cast(pool_id, {:release_manual_worker, self(), worker_pid})
@@ -265,35 +257,43 @@ defmodule PoolexManualAcquisitionTest do
       assert initial_idle_count == 5
 
       # Spawn 100 processes that acquire and crash immediately
-      for _i <- 1..100 do
-        spawn(fn ->
-          case GenServer.call(pool_id, {:get_idle_worker, make_ref()}, 100) do
-            {:ok, worker_pid} ->
-              :ok = GenServer.call(pool_id, {:register_manual_acquisition, self(), worker_pid})
-              # Crash immediately
-              exit(:boom)
+      callers =
+        for _i <- 1..100 do
+          spawn_monitor(fn ->
+            case GenServer.call(pool_id, {:get_idle_worker, make_ref()}, 100) do
+              {:ok, worker_pid} ->
+                :ok = GenServer.call(pool_id, {:register_manual_acquisition, self(), worker_pid})
+                # Crash immediately
+                exit(:boom)
 
-            {:error, :checkout_timeout} ->
-              # Expected when pool is busy
-              :ok
-          end
-        end)
-      end
+              {:error, :checkout_timeout} ->
+                # Expected when pool is busy
+                :ok
+            end
+          end)
+        end
 
       # Wait for all processes to finish
-      Process.sleep(500)
+      for {pid, ref} <- callers do
+        assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 5_000
+      end
 
       # Verify all workers returned to idle (no leaks)
-      state_final = :sys.get_state(pool_id)
-      final_idle_count = IdleWorkers.count(state_final)
-      final_busy_count = BusyWorkers.count(state_final)
-      final_monitors_count = map_size(state_final.manual_monitors)
+      eventually(
+        fn ->
+          state_final = :sys.get_state(pool_id)
+          final_idle_count = IdleWorkers.count(state_final)
+          final_busy_count = BusyWorkers.count(state_final)
+          final_monitors_count = map_size(state_final.manual_monitors)
 
-      assert final_idle_count == 5, "Expected 5 idle workers, got #{final_idle_count}"
-      assert final_busy_count == 0, "Expected 0 busy workers, got #{final_busy_count}"
+          assert final_idle_count == 5, "Expected 5 idle workers, got #{final_idle_count}"
+          assert final_busy_count == 0, "Expected 0 busy workers, got #{final_busy_count}"
 
-      assert final_monitors_count == 0,
-             "Expected 0 monitors, got #{final_monitors_count} (monitor leak)"
+          assert final_monitors_count == 0,
+                 "Expected 0 monitors, got #{final_monitors_count} (monitor leak)"
+        end,
+        2_000
+      )
     end
 
     test "concurrent acquire and release operations are safe" do
@@ -341,14 +341,97 @@ defmodule PoolexManualAcquisitionTest do
 
       assert released_count + timeout_count == 50
 
-      # Wait for all releases to complete
-      Process.sleep(100)
-
-      # Verify final state is clean
-      state_final = :sys.get_state(pool_id)
-      assert IdleWorkers.count(state_final) == 10
-      assert BusyWorkers.count(state_final) == 0
-      assert map_size(state_final.manual_monitors) == 0
+      # Verify final state is clean once all releases are processed
+      eventually(fn ->
+        state_final = :sys.get_state(pool_id)
+        assert IdleWorkers.count(state_final) == 10
+        assert BusyWorkers.count(state_final) == 0
+        assert map_size(state_final.manual_monitors) == 0
+      end)
     end
+  end
+
+  describe "caller dies abnormally right after release" do
+    # The caller releases its worker and exits abnormally before the pool has processed the release.
+    # Its monitor sees the death and reports it, but by then the worker already belongs to the next
+    # caller. The pool is suspended to hold the release and the monitor's report in its mailbox,
+    # as happens under load.
+    for exit_reason <- [:boom, :shutdown] do
+      test "worker handed to the next caller survives (exit reason #{inspect(exit_reason)})" do
+        pool_id = start_pool(worker_module: SomeWorker, workers_count: 1)
+        test_pid = self()
+
+        first_caller =
+          spawn(fn ->
+            Poolex.run(pool_id, fn worker ->
+              send(test_pid, {:first_got, worker})
+              receive do: (:finish -> :ok)
+            end)
+
+            exit(unquote(exit_reason))
+          end)
+
+        assert_receive {:first_got, worker_pid}
+        eventually(fn -> assert Map.has_key?(:sys.get_state(pool_id).manual_monitors, worker_pid) end)
+        {^first_caller, monitor_pid} = :sys.get_state(pool_id).manual_monitors[worker_pid]
+
+        second_caller = spawn_waiting_caller(pool_id, test_pid)
+        eventually(fn -> refute WaitingCallers.empty?(:sys.get_state(pool_id)) end)
+
+        :sys.suspend(pool_id)
+        first_caller_ref = Process.monitor(first_caller)
+        monitor_ref = Process.monitor(monitor_pid)
+        send(first_caller, :finish)
+        assert_receive {:DOWN, ^first_caller_ref, _, _, unquote(exit_reason)}
+        # The monitor has already reported the abnormal exit to the pool
+        assert_receive {:DOWN, ^monitor_ref, _, _, :normal}
+        :sys.resume(pool_id)
+
+        assert_receive {:second_got, ^worker_pid}
+        worker_ref = Process.monitor(worker_pid)
+        refute_receive {:DOWN, ^worker_ref, _, _, _}, 100
+
+        state = :sys.get_state(pool_id)
+        assert BusyWorkers.member?(state, worker_pid)
+        assert {^second_caller, _monitor_pid} = state.manual_monitors[worker_pid]
+      end
+    end
+
+    test "late report does not touch the next caller's acquisition" do
+      pool_id = start_pool(worker_module: SomeWorker, workers_count: 1)
+      test_pid = self()
+
+      {:ok, worker_pid} = Poolex.acquire(pool_id)
+      {_caller_pid, stale_monitor_pid} = :sys.get_state(pool_id).manual_monitors[worker_pid]
+      second_caller = spawn_waiting_caller(pool_id, test_pid)
+      eventually(fn -> refute WaitingCallers.empty?(:sys.get_state(pool_id)) end)
+
+      Poolex.release(pool_id, worker_pid)
+      assert_receive {:second_got, ^worker_pid}
+      eventually(fn -> assert {^second_caller, _} = :sys.get_state(pool_id).manual_monitors[worker_pid] end)
+      {^second_caller, monitor_pid} = :sys.get_state(pool_id).manual_monitors[worker_pid]
+
+      # The report of the first acquisition's monitor arrives after the second caller registered
+      GenServer.cast(pool_id, {:manual_caller_down, worker_pid, stale_monitor_pid})
+
+      worker_ref = Process.monitor(worker_pid)
+      refute_receive {:DOWN, ^worker_ref, _, _, _}, 100
+      assert Process.alive?(monitor_pid)
+      assert {^second_caller, ^monitor_pid} = :sys.get_state(pool_id).manual_monitors[worker_pid]
+
+      # The second caller can still release the worker
+      send(second_caller, :release)
+      eventually(fn -> assert IdleWorkers.member?(:sys.get_state(pool_id), worker_pid) end)
+    end
+  end
+
+  # Starts a caller that waits for a worker, reports it and releases it on request.
+  defp spawn_waiting_caller(pool_id, test_pid) do
+    spawn(fn ->
+      {:ok, worker_pid} = Poolex.acquire(pool_id)
+      send(test_pid, {:second_got, worker_pid})
+      receive do: (:release -> Poolex.release(pool_id, worker_pid))
+      Process.sleep(:infinity)
+    end)
   end
 end

@@ -100,7 +100,8 @@ defmodule Poolex.MetricsCase do
 
   defp do_assert_receive(msg_type, name, measurement, metadata) do
     quote do
-      assert_receive {unquote(msg_type), unquote(name), unquote(measurement), unquote(metadata)}
+      # The first pool size event comes from `:telemetry_poller`, which may take a while under load
+      assert_receive {unquote(msg_type), unquote(name), unquote(measurement), unquote(metadata)}, 1_000
     end
   end
 end
