@@ -20,6 +20,7 @@ defmodule PoolexTest do
   alias Poolex.Private.DebugInfo
   alias Poolex.Private.IdleOverflowedWorkers
   alias Poolex.Private.Options.Parser, as: OptionsParser
+  alias Poolex.Private.State
 
   setup_all do
     if Version.match?(System.version(), ">= 1.18.0") do
@@ -28,8 +29,6 @@ defmodule PoolexTest do
       [pool_options: [pool_id: SomeWorker, worker_module: SomeWorker, workers_count: 5]]
     end
   end
-
-  doctest Poolex
 
   describe "debug info" do
     test "valid after initialization", %{pool_options: pool_options} do
@@ -755,36 +754,66 @@ defmodule PoolexTest do
 
       pool_pid = GenServer.whereis(pool_name)
 
+      # Diagnostics for a rare CI failure (see TODO.md): the worker was already dead when the test
+      # monitored it. Record the messages the pool handles and how its workers exit.
+      :ok = :sys.log(pool_pid, {true, 100})
+
       state = :sys.get_state(pool_name)
 
       supervisor_pid = state.supervisor
+      worker_tracer = trace_worker_exits(supervisor_pid)
+
       {:ok, worker_pid} = Poolex.run(pool_name, fn pid -> pid end)
+
+      after_run = %{
+        at: :erlang.monotonic_time(),
+        worker_alive?: Process.alive?(worker_pid),
+        pool_state: :sys.get_state(pool_name),
+        pool_events: pool_events(pool_pid),
+        supervisor_children: DynamicSupervisor.which_children(supervisor_pid)
+      }
 
       pool_monitor_ref = Process.monitor(pool_pid)
       supervisor_monitor_ref = Process.monitor(supervisor_pid)
       worker_monitor_ref = Process.monitor(worker_pid)
 
+      exit_sent_at = :erlang.monotonic_time()
       Process.exit(pool_pid, :exit)
 
-      eventually(fn -> assert {:message_queue_len, 3} = Process.info(self(), :message_queue_len) end)
+      try do
+        eventually(fn -> assert {:message_queue_len, 3} = Process.info(self(), :message_queue_len) end)
 
-      assert {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
+        assert {:messages, [message_1, message_2, message_3]} = Process.info(self(), :messages)
 
-      assert elem(message_1, 0) == :DOWN
-      assert elem(message_1, 1) == worker_monitor_ref
-      assert elem(message_1, 2) == :process
-      assert elem(message_1, 3) == worker_pid
-      assert elem(message_1, 4) == :shutdown
+        assert elem(message_1, 0) == :DOWN
+        assert elem(message_1, 1) == worker_monitor_ref
+        assert elem(message_1, 2) == :process
+        assert elem(message_1, 3) == worker_pid
+        assert elem(message_1, 4) == :shutdown
 
-      assert elem(message_2, 0) == :DOWN
-      assert elem(message_2, 1) == supervisor_monitor_ref
-      assert elem(message_2, 2) == :process
-      assert elem(message_2, 3) == supervisor_pid
+        assert elem(message_2, 0) == :DOWN
+        assert elem(message_2, 1) == supervisor_monitor_ref
+        assert elem(message_2, 2) == :process
+        assert elem(message_2, 3) == supervisor_pid
 
-      assert elem(message_3, 0) == :DOWN
-      assert elem(message_3, 1) == pool_monitor_ref
-      assert elem(message_3, 2) == :process
-      assert elem(message_3, 3) == pool_pid
+        assert elem(message_3, 0) == :DOWN
+        assert elem(message_3, 1) == pool_monitor_ref
+        assert elem(message_3, 2) == :process
+        assert elem(message_3, 3) == pool_pid
+      rescue
+        error in ExUnit.AssertionError ->
+          diagnostics = %{
+            worker_pid: worker_pid,
+            supervisor_pid: supervisor_pid,
+            after_run: after_run,
+            exit_sent_at: exit_sent_at,
+            messages: Process.info(self(), :messages),
+            worker_trace: trace_events(worker_tracer)
+          }
+
+          message = error.message <> "\n\nDiagnostics:\n" <> inspect(diagnostics, pretty: true, limit: :infinity)
+          reraise %{error | message: message}, __STACKTRACE__
+      end
     end
   end
 
@@ -1137,6 +1166,50 @@ defmodule PoolexTest do
         assert debug_info.overflow == 0
         assert debug_info.max_overflow == 2
       end)
+    end
+  end
+
+  # Traces exits, links and unlinks of the supervisor's current workers. A worker stopped by its
+  # supervisor gets unlinked from it before the exit; the trace timestamps are `:erlang.monotonic_time/0`.
+  defp trace_worker_exits(supervisor_pid) do
+    tracer = spawn_link(fn -> collect_trace_events([]) end)
+
+    for {_id, worker, _type, _modules} <- DynamicSupervisor.which_children(supervisor_pid), is_pid(worker) do
+      try do
+        :erlang.trace(worker, true, [:procs, :monotonic_timestamp, {:tracer, tracer}])
+      rescue
+        ArgumentError -> send(tracer, {:not_traced, worker, :already_dead})
+      end
+    end
+
+    tracer
+  end
+
+  defp collect_trace_events(events) do
+    receive do
+      {:get_trace_events, from} -> send(from, {:trace_events, Enum.reverse(events)})
+      event -> collect_trace_events([event | events])
+    end
+  end
+
+  # Messages handled by the pool since `:sys.log/2` was enabled, without the state after each of them
+  defp pool_events(pool_pid) do
+    {:ok, events} = :sys.log(pool_pid, :get)
+
+    Enum.map(events, fn
+      {:out, reply, to, %State{}} -> {:out, reply, to}
+      {:noreply, %State{}} -> :noreply
+      event -> event
+    end)
+  end
+
+  defp trace_events(tracer) do
+    send(tracer, {:get_trace_events, self()})
+
+    receive do
+      {:trace_events, events} -> events
+    after
+      1_000 -> :no_reply_from_tracer
     end
   end
 end

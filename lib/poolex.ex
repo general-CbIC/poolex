@@ -220,11 +220,11 @@ defmodule Poolex do
 
   ## Examples
 
-      iex> Poolex.start_link(pool_id: :my_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 2)
-      iex> {:ok, worker} = Poolex.acquire(:my_pool)
+      iex> Poolex.start_link(pool_id: :acquire_pool, worker_module: Agent, worker_args: [fn -> 0 end], workers_count: 2)
+      iex> {:ok, worker} = Poolex.acquire(:acquire_pool)
       iex> Agent.get(worker, & &1)
       0
-      iex> Poolex.release(:my_pool, worker)
+      iex> Poolex.release(:acquire_pool, worker)
       :ok
 
   ## Safety
