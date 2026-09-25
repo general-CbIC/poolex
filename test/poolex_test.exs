@@ -255,11 +255,9 @@ defmodule PoolexTest do
     test "works on callers", %{pool_options: pool_options} do
       pool_name = pool_options |> Keyword.put(:workers_count, 1) |> start_pool()
 
-      Enum.each(1..10, fn _ ->
-        spawn(fn ->
-          Poolex.run(pool_name, fn pid -> GenServer.call(pid, {:do_some_work_with_delay, to_timeout(second: 4)}) end)
-        end)
-      end)
+      # One caller takes the only worker, nine wait. Launched first, so that `waiting_caller` below
+      # is guaranteed to end up in the queue.
+      launch_long_tasks(pool_name, 10)
 
       waiting_caller =
         spawn(fn ->
