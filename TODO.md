@@ -49,6 +49,14 @@ Since the unconfirmed-checkouts tracking was added, callers that went through th
 **Proposed fix:**
 Collapse into a single atomic call that takes the worker and registers the monitor in one `handle_call`. The caller pid is trivially available via `GenServer.call`'s `from` argument, so no extra data needs to be passed. This also makes the unconfirmed-checkouts bookkeeping simpler: hand-off and confirmation become one step.
 
+### Investigate worker found dead in "workers stop before the pool with reason :exit"
+
+Failed once on CI (develop, OTP 27 / Elixir 1.18, seed 80271, `{:global, SomeWorkerGlobal}` parameters): the worker's `:DOWN` came with `:noproc` instead of `:shutdown`. So the worker was already dead when the test monitored it, right after `Poolex.run/3` returned it and before the test sent the exit to the pool. The pool's stop log shows it stopped because of the test's exit signal, not earlier.
+
+Not reproduced locally (~30 full runs and 40 runs of the test alone under CPU load, 3000 iterations of the same sequence in a script). No code path found that stops a worker of a fresh pool without overflow: `manual_caller_down` requires the reporting monitor to still guard the worker, and late messages from earlier tests' callers carry other workers' pids. Nothing was logged for the worker, so it did not crash: it exited with `:shutdown`, `:killed` or `:normal`.
+
+The test now appends diagnostics to its failure: the pool's `:sys.log` events, its state and supervisor children right after `run/3`, and a trace of the initial worker's exit reason and unlinks (a worker stopped by `DynamicSupervisor.terminate_child/2` is unlinked from the supervisor first). Use them on the next failure, then remove the instrumentation.
+
 ## Architecture Improvements
 
 ### Refactor monitoring to use `Process.link` instead of `Process.monitor`
