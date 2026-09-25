@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.5] - 2026-09-25
+
 ### Fixed
 
 - Fixed a race that could kill a worker belonging to another caller: when a caller released a worker and then exited abnormally (including `:shutdown` or an exception raised in the `run/3` function) before the pool processed the release, its monitor still asked the pool to stop the worker, which by then could have been handed to the next caller. The same late report also removed the next caller's monitor, after which its release was ignored and the worker stayed busy. The pool now ignores reports from monitors that no longer guard the worker.
@@ -420,7 +422,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported main interface `Poolex.run/3` with `:timeout` option.
 
-[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.4...HEAD
+[unreleased]: https://github.com/general-CbIC/poolex/compare/v1.6.5...HEAD
+[1.6.5]: https://github.com/general-CbIC/poolex/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/general-CbIC/poolex/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/general-CbIC/poolex/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/general-CbIC/poolex/compare/v1.6.1...v1.6.2
